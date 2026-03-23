@@ -111,7 +111,7 @@ const Index = () => {
     );
   }
 
-  const goldFutures = rawData?.fredResults?.['GOLDAMGBD228NLBM'] || [];
+  const goldFutures = rawData?.fredResults?.['GOLDPMGBD228NLBM'] || [];
   const goldSpot = rawData?.goldSpot?.length ? rawData.goldSpot : goldFutures;
 
   return (
