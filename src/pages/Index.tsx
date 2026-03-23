@@ -188,6 +188,16 @@ const Index = () => {
             errors={rawData?.errors || []}
           />
         )}
+
+        <CentralBankManager
+          initialData={rawData?.centralBank || []}
+          onDataChange={(newCbData) => {
+            if (rawData) {
+              const updated = { ...rawData, centralBank: newCbData };
+              setRawData(updated);
+            }
+          }}
+        />
       </div>
     </div>
   );
