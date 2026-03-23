@@ -36,6 +36,15 @@ const Index = () => {
   const [timeRange, setTimeRange] = useState('5Y');
   const [lastUpdated, setLastUpdated] = useState<string>('');
 
+  const heroChartRef = useRef<HTMLDivElement>(null);
+  const scenarioRef = useRef<HTMLDivElement>(null);
+  const componentRef = useRef<HTMLDivElement>(null);
+
+  const scrollToChart = useCallback(() => heroChartRef.current?.scrollIntoView({ behavior: 'smooth' }), []);
+  const scrollToScenarios = useCallback(() => scenarioRef.current?.scrollIntoView({ behavior: 'smooth' }), []);
+  const handleLogicMapVarClick = useCallback((varId: string) => {
+    componentRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
   useEffect(() => {
     async function load() {
       try {
