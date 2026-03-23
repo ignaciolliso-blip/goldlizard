@@ -169,6 +169,9 @@ const AnalysisPanel = ({
           <div className="p-3 sm:p-4 space-y-4 sm:space-y-5">
             {/* Probability Bar */}
             <div>
+              <GuideTooltip id="prob-bar" text="The GDI reading automatically maps to scenario probabilities using a Gaussian kernel function. A higher GDI shifts probability toward the bull scenario. These update every time the data refreshes — you never set them manually." position="bottom">
+                <h4 className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Probabilities</h4>
+              </GuideTooltip>
               <div className="h-6 rounded-full overflow-hidden flex text-[10px] font-mono font-semibold">
                 <div className="bg-bullish flex items-center justify-center text-background transition-all" style={{ width: `${probs.bull * 100}%` }}>
                   {(probs.bull * 100).toFixed(0)}%
