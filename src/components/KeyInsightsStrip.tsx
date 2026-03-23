@@ -1,6 +1,7 @@
 import { Crosshair, TrendingUp, Zap, CheckCircle } from 'lucide-react';
 import type { GDIResult } from '@/lib/gdiEngine';
 import type { Observation } from '@/lib/dataFetcher';
+import { GuideTooltip } from './GuideMode';
 
 interface KeyInsightsStripProps {
   gdiResult: GDIResult;
