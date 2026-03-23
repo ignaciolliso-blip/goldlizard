@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { fetchAllData, type Observation, type CentralBankEntry } from '@/lib/dataFetcher';
 import { calculateGDI, type GDIResult } from '@/lib/gdiEngine';
 import { fetchScenarioTargets } from '@/lib/scenarioFetcher';
@@ -15,6 +15,7 @@ import AnalysisPanel from '@/components/AnalysisPanel';
 import KeyInsightsStrip from '@/components/KeyInsightsStrip';
 import CentralBankManager from '@/components/CentralBankManager';
 import NarratorPanel from '@/components/NarratorPanel';
+import LogicMap from '@/components/LogicMap';
 import { GuideModeProvider } from '@/components/GuideMode';
 
 const Index = () => {
