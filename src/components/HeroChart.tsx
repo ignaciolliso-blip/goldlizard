@@ -9,6 +9,7 @@ import type { ForecastPoint, BankConsensus, ScenarioProbabilities } from '@/lib/
 import { BANK_CONSENSUS } from '@/lib/scenarioEngine';
 import HeroChartTooltip from './HeroChartTooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { GuideTooltip } from './GuideMode';
 
 interface HeroChartProps {
   gdiResult: GDIResult;
