@@ -133,7 +133,7 @@ export function calculateGDI(
 
   // Remove unavailable series and renormalize
   const availableVars = Array.from(aligned.keys()).filter(
-    id => id !== 'GOLDPMGBD228NLBM' && weights[id] !== undefined
+    id => weights[id] !== undefined
   );
 
   if (weightMode === 'rolling' && goldData && goldData.length > 0) {
