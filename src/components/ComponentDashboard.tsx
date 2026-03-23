@@ -2,9 +2,13 @@ import { useState, useMemo } from 'react';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 import { ChevronRight } from 'lucide-react';
 import type { GDIResult, VariableDetail } from '@/lib/gdiEngine';
+import type { Observation } from '@/lib/dataFetcher';
+import DrillDownPanel from './DrillDownPanel';
 
 interface ComponentDashboardProps {
   gdiResult: GDIResult;
+  goldSpot: Observation[];
+  timeRange: string;
 }
 
 const UNIT_MAP: Record<string, string> = {
