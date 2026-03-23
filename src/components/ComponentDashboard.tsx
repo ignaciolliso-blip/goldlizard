@@ -14,7 +14,7 @@ interface ComponentDashboardProps {
 const UNIT_MAP: Record<string, string> = {
   DFII10: '%',
   DTWEXBGS: '',
-  central_bank_gold: 't/qtr',
+  central_bank_gold: 't',
   T10Y2Y: '%',
   VIXCLS: '',
   DCOILBRENTEU: '$/bbl',
@@ -39,7 +39,6 @@ function getSparklineData(
   const series = alignedData.get(varId);
   if (!series) return [];
   const recentDates = dates.slice(-count);
-  // Sample down to ~30 points for sparkline
   const step = Math.max(1, Math.floor(recentDates.length / 30));
   const points: { v: number }[] = [];
   for (let i = 0; i < recentDates.length; i += step) {
@@ -62,10 +61,16 @@ function get30dChange(
   return current - past;
 }
 
+function formatCardValue(val: number, unit: string): string {
+  if (unit === '%') return `${val.toFixed(2)}%`;
+  if (unit === '$/bbl') return `$${val.toFixed(1)}`;
+  if (unit === 't') return `${Math.round(val).toLocaleString()}t`;
+  return val.toFixed(2);
+}
+
 const ComponentDashboard = ({ gdiResult, goldSpot, timeRange }: ComponentDashboardProps) => {
   const [selectedVar, setSelectedVar] = useState<string | null>(null);
 
-  // Variables are already sorted by absolute contribution in gdiEngine
   const { variables, sparklines, changes } = useMemo(() => {
     const sparklines: Record<string, { v: number }[]> = {};
     const changes: Record<string, number | null> = {};
@@ -82,8 +87,9 @@ const ComponentDashboard = ({ gdiResult, goldSpot, timeRange }: ComponentDashboa
 
   return (
     <div className="space-y-4">
-      <h2 className="font-display text-lg text-foreground px-1">Component Indicators</h2>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <h2 className="font-display text-base sm:text-lg text-foreground px-1">Component Indicators</h2>
+      {/* 2 cols mobile, 3 cols tablet, 4 cols desktop */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
         {variables.map((v) => (
           <IndicatorCard
             key={v.id}
@@ -136,50 +142,41 @@ const IndicatorCard = ({
   return (
     <button
       onClick={onClick}
-      className={`relative rounded-lg border p-3 text-left transition-all cursor-pointer hover:border-gold/40 ${
+      className={`relative rounded-lg border p-2.5 sm:p-3 text-left transition-all cursor-pointer hover:border-gold/40 ${
         isSelected ? 'border-gold shadow-[0_0_12px_rgba(201,168,76,0.15)]' : 'border-card-border'
       }`}
       style={{ backgroundColor: heatBg || 'hsl(var(--card))' }}
     >
-      {/* Top row */}
-      <div className="flex items-start justify-between mb-2">
+      <div className="flex items-start justify-between mb-1.5 sm:mb-2">
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-bold text-foreground truncate">{variable.name}</div>
-          <div className="text-[10px] text-muted-foreground">{(variable.weight * 100).toFixed(0)}% weight</div>
+          <div className="text-[11px] sm:text-xs font-bold text-foreground truncate">{variable.name}</div>
+          <div className="text-[9px] sm:text-[10px] text-muted-foreground">{(variable.weight * 100).toFixed(0)}% weight</div>
         </div>
-        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0 mt-0.5" />
+        <ChevronRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-muted-foreground/50 flex-shrink-0 mt-0.5" />
       </div>
 
-      {/* Middle row */}
-      <div className="flex items-baseline gap-2 mb-2">
-        <span className="text-lg font-mono font-semibold text-foreground">
-          {variable.currentValue.toFixed(2)}{unit}
+      <div className="flex items-baseline gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+        <span className="text-base sm:text-lg font-mono font-semibold text-foreground">
+          {formatCardValue(variable.currentValue, unit)}
         </span>
-        <span className={`text-xs font-mono ${zColor}`}>
-          {zArrow} {variable.adjustedZScore.toFixed(1)}
+        <span className={`text-[10px] sm:text-xs font-mono ${zColor}`}>
+          {zArrow} {variable.adjustedZScore > 0 ? '+' : ''}{variable.adjustedZScore.toFixed(1)}
         </span>
       </div>
 
-      {/* Bottom row - sparkline */}
-      <div className="h-8 w-full mb-1">
+      {/* Sparkline - no labels, no axes, just shape */}
+      <div className="h-7 sm:h-8 w-full mb-1">
         {sparklineData.length > 2 && (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={sparklineData}>
-              <Line
-                dataKey="v"
-                stroke={sparkColor}
-                strokeWidth={1.5}
-                dot={false}
-                isAnimationActive={false}
-              />
+              <Line dataKey="v" stroke={sparkColor} strokeWidth={1.5} strokeOpacity={0.6} dot={false} isAnimationActive={false} />
             </LineChart>
           </ResponsiveContainer>
         )}
       </div>
 
-      {/* 30d change */}
       {change30d !== null && (
-        <div className={`text-[10px] font-mono ${changeColor}`}>
+        <div className={`text-[9px] sm:text-[10px] font-mono ${changeColor}`}>
           {changeArrow} {Math.abs(change30d).toFixed(2)} from 30d ago
         </div>
       )}
