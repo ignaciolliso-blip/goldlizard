@@ -92,7 +92,9 @@ const KeyInsightsStrip = ({ gdiResult, goldSpot, currentGDI }: KeyInsightsStripP
               <Crosshair className="w-4 h-4 text-gold" />
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Key Driver Right Now</h4>
+              <GuideTooltip id="key-driver" text="The single variable contributing the most to the GDI right now — positive or negative. When this changes, it usually signals a regime shift." position="top">
+                <h4 className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Key Driver Right Now</h4>
+              </GuideTooltip>
               <p className="text-sm text-foreground leading-relaxed">
                 <span className="font-semibold">{keyDriver.name}</span> is the dominant{' '}
                 <span className={driverDirection === 'bullish' ? 'text-bullish' : 'text-bearish'}>
