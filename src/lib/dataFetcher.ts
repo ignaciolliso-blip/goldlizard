@@ -32,7 +32,6 @@ export async function fetchFredSeries(
   seriesId: string,
   onStatus?: (msg: string) => void
 ): Promise<Observation[]> {
-  // Check cache — use maybeSingle to avoid 406 on empty result
   const { data: cached } = await supabase
     .from('data_cache')
     .select('*')
@@ -62,7 +61,6 @@ export async function fetchFredSeries(
 
   const observations = parseObservations(data.observations);
 
-  // Update cache
   await supabase.from('data_cache').upsert({
     series_id: seriesId,
     data_json: observations as any,
@@ -86,14 +84,25 @@ export async function fetchGoldSpot(onStatus?: (msg: string) => void): Promise<O
   onStatus?.('Fetching Gold Spot Price...');
 
   try {
-    const res = await fetch('https://api.freegoldapi.com/v1/daily?start=2005-01-01&end=2026-03-23');
-    const json = await res.json();
+    // Proxy through edge function to avoid CORS
+    const { data: json, error } = await supabase.functions.invoke('fred-proxy', {
+      body: { action: 'gold_price', observation_start: '2005-01-01' },
+    });
+
+    if (error) {
+      console.error('Gold proxy error:', error);
+      return [];
+    }
 
     let observations: Observation[] = [];
     if (Array.isArray(json)) {
-      observations = json.map((d: any) => ({ date: d.date, value: d.price }));
-    } else if (json.data && Array.isArray(json.data)) {
-      observations = json.data.map((d: any) => ({ date: d.date, value: d.price || d.value }));
+      observations = json
+        .filter((d: any) => d.date && (d.price || d.value))
+        .map((d: any) => ({ date: d.date, value: d.price ?? d.value }));
+    } else if (json?.data && Array.isArray(json.data)) {
+      observations = json.data
+        .filter((d: any) => d.date && (d.price || d.value))
+        .map((d: any) => ({ date: d.date, value: d.price ?? d.value }));
     }
 
     if (observations.length > 0) {
@@ -125,10 +134,8 @@ export async function fetchAllData(onStatus?: (msg: string) => void) {
   const fredResults: Record<string, Observation[]> = {};
   const errors: string[] = [];
 
-  // Fetch CB data first (no external API)
   const cbPromise = fetchCentralBankGold();
 
-  // Fetch all FRED series in parallel
   const fredPromises = FRED_SERIES.map(async (series) => {
     try {
       const obs = await fetchFredSeries(series.id, onStatus);
@@ -139,7 +146,6 @@ export async function fetchAllData(onStatus?: (msg: string) => void) {
     }
   });
 
-  // Fetch gold spot
   const goldPromise = fetchGoldSpot(onStatus);
 
   const [, goldSpot, centralBank] = await Promise.all([
