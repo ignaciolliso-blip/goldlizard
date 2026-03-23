@@ -161,6 +161,26 @@ const Index = () => {
           <ComponentDashboard gdiResult={gdiResult} goldSpot={goldSpot} timeRange={timeRange} />
         )}
 
+        {gdiResult && scenarioConfig && (
+          <AnalysisPanel
+            gdiResult={gdiResult}
+            weightMode={weightMode}
+            probs={probs}
+            scenarioConfig={scenarioConfig}
+            currentGDI={currentGDI}
+            currentGoldPrice={goldSpot.length > 0 ? goldSpot[goldSpot.length - 1].value : 3000}
+            onScenarioUpdate={setScenarioConfig}
+          />
+        )}
+
+        {gdiResult && (
+          <KeyInsightsStrip
+            gdiResult={gdiResult}
+            goldSpot={goldSpot}
+            currentGDI={currentGDI}
+          />
+        )}
+
         {gdiResult && (
           <VariableTable
             variables={gdiResult.variableDetails}
