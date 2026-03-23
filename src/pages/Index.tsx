@@ -156,6 +156,10 @@ const Index = () => {
         )}
 
         {gdiResult && (
+          <ComponentDashboard gdiResult={gdiResult} />
+        )}
+
+        {gdiResult && (
           <VariableTable
             variables={gdiResult.variableDetails}
             errors={rawData?.errors || []}
