@@ -62,7 +62,7 @@ function get30dChange(
   return current - past;
 }
 
-const ComponentDashboard = ({ gdiResult }: ComponentDashboardProps) => {
+const ComponentDashboard = ({ gdiResult, goldSpot, timeRange }: ComponentDashboardProps) => {
   const [selectedVar, setSelectedVar] = useState<string | null>(null);
 
   // Variables are already sorted by absolute contribution in gdiEngine
