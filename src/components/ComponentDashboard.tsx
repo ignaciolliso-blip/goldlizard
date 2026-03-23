@@ -4,6 +4,7 @@ import { ChevronRight } from 'lucide-react';
 import type { GDIResult, VariableDetail } from '@/lib/gdiEngine';
 import type { Observation } from '@/lib/dataFetcher';
 import DrillDownPanel from './DrillDownPanel';
+import { GuideTooltip } from './GuideMode';
 
 interface ComponentDashboardProps {
   gdiResult: GDIResult;
@@ -87,7 +88,9 @@ const ComponentDashboard = ({ gdiResult, goldSpot, timeRange }: ComponentDashboa
 
   return (
     <div className="space-y-4">
-      <h2 className="font-display text-base sm:text-lg text-foreground px-1">Component Indicators</h2>
+      <GuideTooltip id="card-bg-color" text="Green = this variable is currently supporting gold prices. Red = it's a headwind. The deeper the color, the more extreme the reading relative to the past 10 years." position="right">
+        <h2 className="font-display text-base sm:text-lg text-foreground px-1">Component Indicators</h2>
+      </GuideTooltip>
       {/* 2 cols mobile, 3 cols tablet, 4 cols desktop */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
         {variables.map((v) => (
@@ -159,9 +162,11 @@ const IndicatorCard = ({
         <span className="text-base sm:text-lg font-mono font-semibold text-foreground">
           {formatCardValue(variable.currentValue, unit)}
         </span>
-        <span className={`text-[10px] sm:text-xs font-mono ${zColor}`}>
-          {zArrow} {variable.adjustedZScore > 0 ? '+' : ''}{variable.adjustedZScore.toFixed(1)}
-        </span>
+        <GuideTooltip id={`zscore-${variable.id}`} text="The z-score tells you how unusual this reading is. A z-score of +2.0 means this variable is 2 standard deviations above its 10-year average — very unusual. After directional adjustment, positive always means gold-supportive." position="top">
+          <span className={`text-[10px] sm:text-xs font-mono ${zColor}`}>
+            {zArrow} {variable.adjustedZScore > 0 ? '+' : ''}{variable.adjustedZScore.toFixed(1)}
+          </span>
+        </GuideTooltip>
       </div>
 
       {/* Sparkline - no labels, no axes, just shape */}

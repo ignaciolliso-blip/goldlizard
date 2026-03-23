@@ -53,6 +53,27 @@ export type Database = {
         }
         Relationships: []
       }
+      narrator_cache: {
+        Row: {
+          briefing_text: string
+          data_hash: string
+          generated_at: string
+          id: number
+        }
+        Insert: {
+          briefing_text?: string
+          data_hash?: string
+          generated_at?: string
+          id?: number
+        }
+        Update: {
+          briefing_text?: string
+          data_hash?: string
+          generated_at?: string
+          id?: number
+        }
+        Relationships: []
+      }
       scenario_targets: {
         Row: {
           config_json: Json
