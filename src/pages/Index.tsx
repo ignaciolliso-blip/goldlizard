@@ -9,6 +9,7 @@ import {
 import DashboardHeader from '@/components/DashboardHeader';
 import LoadingProgress from '@/components/LoadingProgress';
 import VariableTable from '@/components/VariableTable';
+import ComponentDashboard from '@/components/ComponentDashboard';
 import HeroChart from '@/components/HeroChart';
 
 const Index = () => {
