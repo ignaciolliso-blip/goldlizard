@@ -88,7 +88,9 @@ const ComponentDashboard = ({ gdiResult, goldSpot, timeRange }: ComponentDashboa
 
   return (
     <div className="space-y-4">
-      <h2 className="font-display text-base sm:text-lg text-foreground px-1">Component Indicators</h2>
+      <GuideTooltip id="card-bg-color" text="Green = this variable is currently supporting gold prices. Red = it's a headwind. The deeper the color, the more extreme the reading relative to the past 10 years." position="right">
+        <h2 className="font-display text-base sm:text-lg text-foreground px-1">Component Indicators</h2>
+      </GuideTooltip>
       {/* 2 cols mobile, 3 cols tablet, 4 cols desktop */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
         {variables.map((v) => (
