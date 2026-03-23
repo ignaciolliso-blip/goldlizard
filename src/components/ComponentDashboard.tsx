@@ -97,13 +97,19 @@ const ComponentDashboard = ({ gdiResult, goldSpot, timeRange }: ComponentDashboa
         ))}
       </div>
 
-      {selectedVar && (
-        <div className="rounded-lg border border-gold/30 bg-card p-6 text-muted-foreground text-sm">
-          Drill-down: <span className="text-foreground font-semibold">
-            {variables.find(v => v.id === selectedVar)?.name}
-          </span> — details coming in next update
-        </div>
-      )}
+      {selectedVar && (() => {
+        const selVariable = variables.find(v => v.id === selectedVar);
+        if (!selVariable) return null;
+        return (
+          <DrillDownPanel
+            variable={selVariable}
+            gdiResult={gdiResult}
+            goldSpot={goldSpot}
+            timeRange={timeRange}
+            onClose={() => setSelectedVar(null)}
+          />
+        );
+      })()}
     </div>
   );
 };
