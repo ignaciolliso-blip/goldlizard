@@ -11,6 +11,8 @@ import LoadingProgress from '@/components/LoadingProgress';
 import VariableTable from '@/components/VariableTable';
 import ComponentDashboard from '@/components/ComponentDashboard';
 import HeroChart from '@/components/HeroChart';
+import AnalysisPanel from '@/components/AnalysisPanel';
+import KeyInsightsStrip from '@/components/KeyInsightsStrip';
 
 const Index = () => {
   const [loading, setLoading] = useState(true);
@@ -157,6 +159,26 @@ const Index = () => {
 
         {gdiResult && (
           <ComponentDashboard gdiResult={gdiResult} goldSpot={goldSpot} timeRange={timeRange} />
+        )}
+
+        {gdiResult && scenarioConfig && (
+          <AnalysisPanel
+            gdiResult={gdiResult}
+            weightMode={weightMode}
+            probs={probs}
+            scenarioConfig={scenarioConfig}
+            currentGDI={currentGDI}
+            currentGoldPrice={goldSpot.length > 0 ? goldSpot[goldSpot.length - 1].value : 3000}
+            onScenarioUpdate={setScenarioConfig}
+          />
+        )}
+
+        {gdiResult && (
+          <KeyInsightsStrip
+            gdiResult={gdiResult}
+            goldSpot={goldSpot}
+            currentGDI={currentGDI}
+          />
         )}
 
         {gdiResult && (
