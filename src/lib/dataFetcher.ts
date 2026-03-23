@@ -71,6 +71,7 @@ export async function fetchFredSeries(
 }
 
 export async function fetchGoldSpot(onStatus?: (msg: string) => void): Promise<Observation[]> {
+  // Check cache first
   const { data: cached } = await supabase
     .from('data_cache')
     .select('*')
@@ -83,41 +84,25 @@ export async function fetchGoldSpot(onStatus?: (msg: string) => void): Promise<O
 
   onStatus?.('Fetching Gold Spot Price...');
 
+  // Load from bundled historical data file
   try {
-    // Proxy through edge function to avoid CORS
-    const { data: json, error } = await supabase.functions.invoke('fred-proxy', {
-      body: { action: 'gold_price', observation_start: '2005-01-01' },
-    });
-
-    if (error) {
-      console.error('Gold proxy error:', error);
-      return [];
+    const res = await fetch('/data/gold-historical.json');
+    if (res.ok) {
+      const observations: Observation[] = await res.json();
+      if (observations.length > 0) {
+        await supabase.from('data_cache').upsert({
+          series_id: 'GOLD_SPOT',
+          data_json: observations as any,
+          last_fetched: new Date().toISOString(),
+        });
+      }
+      return observations;
     }
-
-    let observations: Observation[] = [];
-    if (Array.isArray(json)) {
-      observations = json
-        .filter((d: any) => d.date && (d.price || d.value))
-        .map((d: any) => ({ date: d.date, value: d.price ?? d.value }));
-    } else if (json?.data && Array.isArray(json.data)) {
-      observations = json.data
-        .filter((d: any) => d.date && (d.price || d.value))
-        .map((d: any) => ({ date: d.date, value: d.price ?? d.value }));
-    }
-
-    if (observations.length > 0) {
-      await supabase.from('data_cache').upsert({
-        series_id: 'GOLD_SPOT',
-        data_json: observations as any,
-        last_fetched: new Date().toISOString(),
-      });
-    }
-
-    return observations;
   } catch (e) {
-    console.error('Gold API failed:', e);
-    return [];
+    console.error('Failed to load gold data:', e);
   }
+
+  return [];
 }
 
 export async function fetchCentralBankGold(): Promise<CentralBankEntry[]> {
