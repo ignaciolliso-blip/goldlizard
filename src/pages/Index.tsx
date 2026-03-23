@@ -44,11 +44,7 @@ const Index = () => {
         setScenarioConfig(scenarios);
         setStatusMsg('Computing GDI...');
         const result = calculateGDI(
-          data.fredResults,
-          data.centralBank,
-          data.errors,
-          weightMode,
-          data.goldSpot
+          data.fredResults, data.centralBank, data.errors, 'fixed', data.goldSpot
         );
         setGdiResult(result);
         setLastUpdated(new Date().toLocaleString('en-US', {
@@ -67,11 +63,7 @@ const Index = () => {
   useEffect(() => {
     if (!rawData) return;
     const result = calculateGDI(
-      rawData.fredResults,
-      rawData.centralBank,
-      rawData.errors,
-      weightMode,
-      rawData.goldSpot
+      rawData.fredResults, rawData.centralBank, rawData.errors, weightMode, rawData.goldSpot
     );
     setGdiResult(result);
   }, [weightMode, rawData]);
@@ -82,34 +74,24 @@ const Index = () => {
     if (!gdiResult || !scenarioConfig) {
       return { probs: { bull: 0.33, base: 0.34, bear: 0.33 } as ScenarioProbabilities, forecastPoints: [] as ForecastPoint[] };
     }
-
     const p = computeScenarioProbabilities(currentGDI);
-
-    // Get current gold price (last available from gold futures or spot)
-    const goldFuturesData = rawData?.goldSpot || [];
-    const goldSpotData = rawData?.goldSpot || [];
-    const lastGoldPrice =
-      goldFuturesData.length > 0
-        ? goldFuturesData[goldFuturesData.length - 1].value
-        : goldSpotData.length > 0
-          ? goldSpotData[goldSpotData.length - 1].value
-          : 3000;
-
+    const goldData = rawData?.goldSpot || [];
+    const lastGoldPrice = goldData.length > 0 ? goldData[goldData.length - 1].value : 3000;
     const fp = buildForecastPoints(lastGoldPrice, scenarioConfig.scenarios, p);
-
     return { probs: p, forecastPoints: fp };
   }, [currentGDI, scenarioConfig, rawData]);
 
-  if (loading) {
-    return <LoadingProgress message={statusMsg} />;
-  }
+  if (loading) return <LoadingProgress message={statusMsg} />;
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center">
-          <h1 className="font-display text-2xl text-bearish mb-2">Error</h1>
-          <p className="text-muted-foreground">{error}</p>
+          <h1 className="font-display text-xl sm:text-2xl text-bearish mb-2">Error</h1>
+          <p className="text-muted-foreground text-sm mb-4">{error}</p>
+          <button onClick={() => window.location.reload()} className="px-4 py-2 bg-gold/20 text-gold rounded text-sm font-medium hover:bg-gold/30 transition-colors">
+            Retry
+          </button>
         </div>
       </div>
     );
@@ -127,15 +109,14 @@ const Index = () => {
         lastUpdated={lastUpdated}
       />
 
-      {/* Main content with top padding for fixed header */}
-      <div className="pt-20 pb-8 px-6 max-w-[1600px] mx-auto space-y-6">
+      <div className="pt-16 sm:pt-20 pb-8 px-3 sm:px-6 max-w-[1600px] mx-auto space-y-4 sm:space-y-6">
         {/* Scenario probability bar */}
-        <div className="flex items-center gap-4 text-xs">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] sm:text-xs">
           <span className="text-muted-foreground">Scenario Probabilities:</span>
           <span className="text-bullish font-mono">Bull {(probs.bull * 100).toFixed(0)}%</span>
           <span className="text-gold font-mono">Base {(probs.base * 100).toFixed(0)}%</span>
           <span className="text-bearish font-mono">Bear {(probs.bear * 100).toFixed(0)}%</span>
-          <div className="flex-1 h-1.5 rounded-full overflow-hidden flex bg-card border border-card-border">
+          <div className="flex-1 min-w-[100px] h-1.5 rounded-full overflow-hidden flex bg-card border border-card-border">
             <div className="bg-bullish transition-all" style={{ width: `${probs.bull * 100}%` }} />
             <div className="bg-gold transition-all" style={{ width: `${probs.base * 100}%` }} />
             <div className="bg-bearish transition-all" style={{ width: `${probs.bear * 100}%` }} />
@@ -175,26 +156,18 @@ const Index = () => {
         )}
 
         {gdiResult && (
-          <KeyInsightsStrip
-            gdiResult={gdiResult}
-            goldSpot={goldSpot}
-            currentGDI={currentGDI}
-          />
+          <KeyInsightsStrip gdiResult={gdiResult} goldSpot={goldSpot} currentGDI={currentGDI} />
         )}
 
         {gdiResult && (
-          <VariableTable
-            variables={gdiResult.variableDetails}
-            errors={rawData?.errors || []}
-          />
+          <VariableTable variables={gdiResult.variableDetails} errors={rawData?.errors || []} />
         )}
 
         <CentralBankManager
           initialData={rawData?.centralBank || []}
           onDataChange={(newCbData) => {
             if (rawData) {
-              const updated = { ...rawData, centralBank: newCbData };
-              setRawData(updated);
+              setRawData({ ...rawData, centralBank: newCbData });
             }
           }}
         />

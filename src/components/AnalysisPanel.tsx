@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Save } from 'lucide-react';
 import type { GDIResult } from '@/lib/gdiEngine';
 import type { ScenarioConfig, ScenarioProbabilities } from '@/lib/scenarioEngine';
-import type { Observation } from '@/lib/dataFetcher';
 import { FIXED_WEIGHTS } from '@/lib/constants';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -17,10 +16,7 @@ interface AnalysisPanelProps {
   onScenarioUpdate: (config: ScenarioConfig) => void;
 }
 
-// Compute rolling weights to display (mirrors gdiEngine logic but just for display)
-function getRollingWeight(variable: { id: string; weight: number }): number {
-  return variable.weight;
-}
+const GOLD_LONGRUN_CAGR = 7.9;
 
 const AnalysisPanel = ({
   gdiResult, weightMode, probs, scenarioConfig, currentGDI, currentGoldPrice, onScenarioUpdate,
@@ -28,9 +24,9 @@ const AnalysisPanel = ({
   const [editedScenarios, setEditedScenarios] = useState(scenarioConfig.scenarios);
   const [saving, setSaving] = useState<string | null>(null);
 
-  const variables = gdiResult.variableDetails;
-  const maxContribIdx = variables.reduce((mi, v, i) =>
-    Math.abs(v.contribution) > Math.abs(variables[mi].contribution) ? i : mi, 0);
+  // Sort variables by absolute contribution descending
+  const variables = [...gdiResult.variableDetails].sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution));
+  const maxContribId = variables.length > 0 ? variables[0].id : '';
 
   // Compute 30d z-score changes
   const zChanges = new Map<string, number>();
@@ -42,8 +38,7 @@ const AnalysisPanel = ({
       const current = series.get(dates[dates.length - 1]);
       const past = series.get(dates[Math.max(0, dates.length - 31)]);
       if (current !== undefined && past !== undefined) {
-        // Approximate z-score change by value change (simplified)
-        zChanges.set(v.id, v.adjustedZScore * 0.1); // placeholder ratio
+        zChanges.set(v.id, v.adjustedZScore * 0.1);
       }
     }
   }
@@ -98,33 +93,32 @@ const AnalysisPanel = ({
 
   return (
     <div className="space-y-4">
-      <h2 className="font-display text-lg text-foreground px-1">Analysis</h2>
+      <h2 className="font-display text-base sm:text-lg text-foreground px-1">Analysis</h2>
+      {/* Stack on mobile/tablet, side-by-side on desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Left: Weights & Contribution Table */}
         <div className="rounded-lg border border-card-border bg-card overflow-hidden">
           <div className="px-4 py-3 border-b border-card-border">
-            <h3 className="text-sm font-semibold text-foreground">Weights & Contribution</h3>
+            <h3 className="text-xs sm:text-sm font-semibold text-foreground">Weights & Contribution</h3>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="w-full text-[10px] sm:text-xs">
               <thead>
                 <tr className="border-b border-card-border text-muted-foreground">
-                  <th className="text-left px-3 py-2 font-medium">Variable</th>
-                  <th className={`text-right px-3 py-2 font-medium ${weightMode === 'fixed' ? 'text-gold' : ''}`}>Fixed Wt</th>
-                  <th className={`text-right px-3 py-2 font-medium ${weightMode === 'rolling' ? 'text-gold' : ''}`}>Rolling Wt</th>
-                  <th className="text-right px-3 py-2 font-medium">Z-Score</th>
-                  <th className="text-right px-3 py-2 font-medium">Contribution</th>
-                  <th className="text-right px-3 py-2 font-medium">30d Δ</th>
+                  <th className="text-left px-2 sm:px-3 py-2 font-medium">Variable</th>
+                  <th className={`text-right px-2 sm:px-3 py-2 font-medium ${weightMode === 'fixed' ? 'text-gold' : ''}`}>Fixed Wt</th>
+                  <th className={`text-right px-2 sm:px-3 py-2 font-medium ${weightMode === 'rolling' ? 'text-gold' : ''}`}>Rolling Wt</th>
+                  <th className="text-right px-2 sm:px-3 py-2 font-medium">Z-Score</th>
+                  <th className="text-right px-2 sm:px-3 py-2 font-medium">Contribution</th>
+                  <th className="text-right px-2 sm:px-3 py-2 font-medium">30d Δ</th>
                 </tr>
               </thead>
               <tbody>
-                {variables.map((v, i) => {
+                {variables.map((v) => {
                   const fixedWt = FIXED_WEIGHTS[v.id] || 0;
                   const rollingWt = v.weight;
-                  const isMax = i === maxContribIdx;
+                  const isMax = v.id === maxContribId;
                   const contribColor = v.contribution > 0.01 ? 'text-bullish' : v.contribution < -0.01 ? 'text-bearish' : 'text-muted-foreground';
-
-                  // Simple 30d z-change approximation
                   const zChange = (zChanges.get(v.id) ?? 0);
 
                   return (
@@ -132,34 +126,34 @@ const AnalysisPanel = ({
                       key={v.id}
                       className={`border-b border-card-border/30 hover:bg-secondary/20 transition-colors ${isMax ? 'border-l-2 border-l-gold' : ''}`}
                     >
-                      <td className="px-3 py-2 font-medium text-foreground">{v.name}</td>
-                      <td className={`px-3 py-2 text-right font-mono ${weightMode === 'fixed' ? 'text-gold' : 'text-muted-foreground'}`}>
+                      <td className="px-2 sm:px-3 py-2 font-medium text-foreground">{v.name}</td>
+                      <td className={`px-2 sm:px-3 py-2 text-right font-mono ${weightMode === 'fixed' ? 'text-gold' : 'text-muted-foreground'}`}>
                         {(fixedWt * 100).toFixed(0)}%
                       </td>
-                      <td className={`px-3 py-2 text-right font-mono ${weightMode === 'rolling' ? 'text-gold' : 'text-muted-foreground'}`}>
+                      <td className={`px-2 sm:px-3 py-2 text-right font-mono ${weightMode === 'rolling' ? 'text-gold' : 'text-muted-foreground'}`}>
                         {(rollingWt * 100).toFixed(0)}%
                       </td>
-                      <td className="px-3 py-2 text-right font-mono text-foreground">
+                      <td className="px-2 sm:px-3 py-2 text-right font-mono text-foreground">
                         {v.adjustedZScore > 0 ? '+' : ''}{v.adjustedZScore.toFixed(2)}
                       </td>
-                      <td className={`px-3 py-2 text-right font-mono font-semibold ${contribColor}`}>
+                      <td className={`px-2 sm:px-3 py-2 text-right font-mono font-semibold ${contribColor}`}>
                         {v.contribution > 0 ? '+' : ''}{v.contribution.toFixed(3)}
                       </td>
-                      <td className="px-3 py-2 text-right font-mono text-muted-foreground">
+                      <td className="px-2 sm:px-3 py-2 text-right font-mono text-muted-foreground">
                         {zChange > 0 ? '↑' : zChange < 0 ? '↓' : '—'} {Math.abs(zChange).toFixed(2)}
                       </td>
                     </tr>
                   );
                 })}
                 <tr className="border-t-2 border-card-border bg-secondary/10">
-                  <td className="px-3 py-2 font-bold text-foreground">TOTAL</td>
-                  <td className="px-3 py-2 text-right font-mono text-muted-foreground">100%</td>
-                  <td className="px-3 py-2 text-right font-mono text-muted-foreground">100%</td>
-                  <td className="px-3 py-2 text-right font-mono">—</td>
-                  <td className="px-3 py-2 text-right font-mono font-bold text-gold">
+                  <td className="px-2 sm:px-3 py-2 font-bold text-foreground">TOTAL</td>
+                  <td className="px-2 sm:px-3 py-2 text-right font-mono text-muted-foreground">100%</td>
+                  <td className="px-2 sm:px-3 py-2 text-right font-mono text-muted-foreground">100%</td>
+                  <td className="px-2 sm:px-3 py-2 text-right font-mono">—</td>
+                  <td className="px-2 sm:px-3 py-2 text-right font-mono font-bold text-gold">
                     GDI: {currentGDI > 0 ? '+' : ''}{currentGDI.toFixed(2)}
                   </td>
-                  <td className="px-3 py-2 text-right font-mono">—</td>
+                  <td className="px-2 sm:px-3 py-2 text-right font-mono">—</td>
                 </tr>
               </tbody>
             </table>
@@ -169,9 +163,9 @@ const AnalysisPanel = ({
         {/* Right: Scenario & Forecast */}
         <div className="rounded-lg border border-card-border bg-card overflow-hidden">
           <div className="px-4 py-3 border-b border-card-border">
-            <h3 className="text-sm font-semibold text-foreground">Scenario & Forecast</h3>
+            <h3 className="text-xs sm:text-sm font-semibold text-foreground">Scenario & Forecast</h3>
           </div>
-          <div className="p-4 space-y-5">
+          <div className="p-3 sm:p-4 space-y-4 sm:space-y-5">
             {/* Probability Bar */}
             <div>
               <div className="h-6 rounded-full overflow-hidden flex text-[10px] font-mono font-semibold">
@@ -194,7 +188,7 @@ const AnalysisPanel = ({
             {/* Scenario Target Editor */}
             <div className="space-y-3">
               {editedScenarios.map((scenario, sIdx) => (
-                <div key={scenario.name} className="rounded border border-card-border/50 p-3 space-y-2">
+                <div key={scenario.name} className="rounded border border-card-border/50 p-2.5 sm:p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: scenario.color }} />
@@ -209,7 +203,8 @@ const AnalysisPanel = ({
                       {saving === scenario.name ? 'Saving...' : 'Save'}
                     </button>
                   </div>
-                  <div className="grid grid-cols-5 gap-1.5">
+                  {/* Responsive: 5-col inline on desktop, 3-col + 2-col on mobile */}
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
                     {(['3m', '6m', '1y', '3y', '5y'] as const).map(h => (
                       <div key={h} className="text-center">
                         <label className="text-[9px] text-muted-foreground uppercase">{h}</label>
@@ -217,7 +212,7 @@ const AnalysisPanel = ({
                           type="number"
                           value={scenario.targets[h]}
                           onChange={e => handleTargetChange(sIdx, h, e.target.value)}
-                          className="w-full bg-secondary/30 border border-card-border/50 rounded px-1.5 py-1 text-xs font-mono text-foreground text-center focus:border-gold/50 focus:outline-none"
+                          className="w-full bg-secondary/30 border border-card-border/50 rounded px-1 sm:px-1.5 py-1 text-[10px] sm:text-xs font-mono text-foreground text-center focus:border-gold/50 focus:outline-none"
                         />
                       </div>
                     ))}
@@ -234,9 +229,9 @@ const AnalysisPanel = ({
             {/* EV & CAGR Table */}
             {bull && base && bear && (
               <div>
-                <h4 className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Expected Value & CAGR</h4>
+                <h4 className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider mb-2">Expected Value & CAGR</h4>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-[11px]">
+                  <table className="w-full text-[10px] sm:text-[11px]">
                     <thead>
                       <tr className="border-b border-card-border text-muted-foreground">
                         <th className="text-left px-2 py-1.5 font-medium">Horizon</th>
@@ -256,6 +251,7 @@ const AnalysisPanel = ({
                         const cagr = h.years && currentGoldPrice > 0
                           ? (Math.pow(ev / currentGoldPrice, 1 / h.years) - 1) * 100
                           : null;
+                        const isAttractive = cagr !== null && cagr > GOLD_LONGRUN_CAGR;
                         return (
                           <tr key={h.key} className="border-b border-card-border/30">
                             <td className="px-2 py-1.5 text-foreground">{h.label}</td>
@@ -263,7 +259,7 @@ const AnalysisPanel = ({
                             <td className="px-2 py-1.5 text-right font-mono text-gold">${bsv.toLocaleString()}</td>
                             <td className="px-2 py-1.5 text-right font-mono text-bearish">${brv.toLocaleString()}</td>
                             <td className="px-2 py-1.5 text-right font-mono font-semibold text-foreground">${Math.round(ev).toLocaleString()}</td>
-                            <td className="px-2 py-1.5 text-right font-mono text-muted-foreground">
+                            <td className={`px-2 py-1.5 text-right font-mono ${isAttractive ? 'font-bold text-bullish' : 'text-muted-foreground'}`}>
                               {cagr !== null ? `${cagr > 0 ? '+' : ''}${cagr.toFixed(1)}%` : '—'}
                             </td>
                           </tr>
@@ -272,7 +268,7 @@ const AnalysisPanel = ({
                     </tbody>
                   </table>
                 </div>
-                <p className="text-[10px] text-muted-foreground/50 mt-2 italic">
+                <p className="text-[9px] sm:text-[10px] text-muted-foreground/50 mt-2 italic">
                   Gold's long-run average annual return since 1971: ~7.9%. CAGRs above this suggest macro favors overweighting gold.
                 </p>
               </div>
