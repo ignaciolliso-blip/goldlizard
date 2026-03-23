@@ -14,7 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      central_bank_gold: {
+        Row: {
+          created_at: string
+          id: number
+          quarter: string
+          tonnes: number
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          quarter: string
+          tonnes: number
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          quarter?: string
+          tonnes?: number
+        }
+        Relationships: []
+      }
+      data_cache: {
+        Row: {
+          data_json: Json
+          last_fetched: string
+          series_id: string
+        }
+        Insert: {
+          data_json: Json
+          last_fetched?: string
+          series_id: string
+        }
+        Update: {
+          data_json?: Json
+          last_fetched?: string
+          series_id?: string
+        }
+        Relationships: []
+      }
+      scenario_targets: {
+        Row: {
+          config_json: Json
+          id: number
+          updated_at: string
+        }
+        Insert: {
+          config_json?: Json
+          id?: number
+          updated_at?: string
+        }
+        Update: {
+          config_json?: Json
+          id?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
