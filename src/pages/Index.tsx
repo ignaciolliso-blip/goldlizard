@@ -13,6 +13,7 @@ import ComponentDashboard from '@/components/ComponentDashboard';
 import HeroChart from '@/components/HeroChart';
 import AnalysisPanel from '@/components/AnalysisPanel';
 import KeyInsightsStrip from '@/components/KeyInsightsStrip';
+import CentralBankManager from '@/components/CentralBankManager';
 
 const Index = () => {
   const [loading, setLoading] = useState(true);
