@@ -104,6 +104,16 @@ const Index = () => {
   const goldSpot = rawData?.goldSpot?.length ? rawData.goldSpot : goldFutures;
   const currentGoldPrice = goldSpot.length > 0 ? goldSpot[goldSpot.length - 1].value : 3000;
 
+  const heroChartRef = useRef<HTMLDivElement>(null);
+  const scenarioRef = useRef<HTMLDivElement>(null);
+  const componentRef = useRef<HTMLDivElement>(null);
+
+  const scrollToChart = useCallback(() => heroChartRef.current?.scrollIntoView({ behavior: 'smooth' }), []);
+  const scrollToScenarios = useCallback(() => scenarioRef.current?.scrollIntoView({ behavior: 'smooth' }), []);
+  const handleLogicMapVarClick = useCallback((varId: string) => {
+    componentRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
   return (
     <GuideModeProvider>
       <div className="min-h-screen">
