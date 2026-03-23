@@ -5,6 +5,7 @@ import type { ScenarioConfig, ScenarioProbabilities } from '@/lib/scenarioEngine
 import { FIXED_WEIGHTS } from '@/lib/constants';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { GuideTooltip } from './GuideMode';
 
 interface AnalysisPanelProps {
   gdiResult: GDIResult;
