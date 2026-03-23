@@ -13,6 +13,7 @@ import ComponentDashboard from '@/components/ComponentDashboard';
 import HeroChart from '@/components/HeroChart';
 import AnalysisPanel from '@/components/AnalysisPanel';
 import KeyInsightsStrip from '@/components/KeyInsightsStrip';
+import CentralBankManager from '@/components/CentralBankManager';
 
 const Index = () => {
   const [loading, setLoading] = useState(true);
@@ -187,6 +188,16 @@ const Index = () => {
             errors={rawData?.errors || []}
           />
         )}
+
+        <CentralBankManager
+          initialData={rawData?.centralBank || []}
+          onDataChange={(newCbData) => {
+            if (rawData) {
+              const updated = { ...rawData, centralBank: newCbData };
+              setRawData(updated);
+            }
+          }}
+        />
       </div>
     </div>
   );
