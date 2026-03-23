@@ -2,9 +2,13 @@ import { useState, useMemo } from 'react';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 import { ChevronRight } from 'lucide-react';
 import type { GDIResult, VariableDetail } from '@/lib/gdiEngine';
+import type { Observation } from '@/lib/dataFetcher';
+import DrillDownPanel from './DrillDownPanel';
 
 interface ComponentDashboardProps {
   gdiResult: GDIResult;
+  goldSpot: Observation[];
+  timeRange: string;
 }
 
 const UNIT_MAP: Record<string, string> = {
@@ -58,7 +62,7 @@ function get30dChange(
   return current - past;
 }
 
-const ComponentDashboard = ({ gdiResult }: ComponentDashboardProps) => {
+const ComponentDashboard = ({ gdiResult, goldSpot, timeRange }: ComponentDashboardProps) => {
   const [selectedVar, setSelectedVar] = useState<string | null>(null);
 
   // Variables are already sorted by absolute contribution in gdiEngine
@@ -93,13 +97,19 @@ const ComponentDashboard = ({ gdiResult }: ComponentDashboardProps) => {
         ))}
       </div>
 
-      {selectedVar && (
-        <div className="rounded-lg border border-gold/30 bg-card p-6 text-muted-foreground text-sm">
-          Drill-down: <span className="text-foreground font-semibold">
-            {variables.find(v => v.id === selectedVar)?.name}
-          </span> — details coming in next update
-        </div>
-      )}
+      {selectedVar && (() => {
+        const selVariable = variables.find(v => v.id === selectedVar);
+        if (!selVariable) return null;
+        return (
+          <DrillDownPanel
+            variable={selVariable}
+            gdiResult={gdiResult}
+            goldSpot={goldSpot}
+            timeRange={timeRange}
+            onClose={() => setSelectedVar(null)}
+          />
+        );
+      })()}
     </div>
   );
 };
