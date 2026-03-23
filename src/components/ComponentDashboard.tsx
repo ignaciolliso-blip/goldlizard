@@ -162,9 +162,11 @@ const IndicatorCard = ({
         <span className="text-base sm:text-lg font-mono font-semibold text-foreground">
           {formatCardValue(variable.currentValue, unit)}
         </span>
-        <span className={`text-[10px] sm:text-xs font-mono ${zColor}`}>
-          {zArrow} {variable.adjustedZScore > 0 ? '+' : ''}{variable.adjustedZScore.toFixed(1)}
-        </span>
+        <GuideTooltip id={`zscore-${variable.id}`} text="The z-score tells you how unusual this reading is. A z-score of +2.0 means this variable is 2 standard deviations above its 10-year average — very unusual. After directional adjustment, positive always means gold-supportive." position="top">
+          <span className={`text-[10px] sm:text-xs font-mono ${zColor}`}>
+            {zArrow} {variable.adjustedZScore > 0 ? '+' : ''}{variable.adjustedZScore.toFixed(1)}
+          </span>
+        </GuideTooltip>
       </div>
 
       {/* Sparkline - no labels, no axes, just shape */}

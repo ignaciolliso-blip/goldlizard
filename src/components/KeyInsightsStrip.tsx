@@ -138,7 +138,9 @@ const KeyInsightsStrip = ({ gdiResult, goldSpot, currentGDI }: KeyInsightsStripP
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Divergence Status</h4>
+              <GuideTooltip id="divergence-card" text="When the GDI and gold price disagree, it's a signal. Bullish divergences (macro says up, price says down) have historically been buying opportunities for long-term holders." position="top">
+                <h4 className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Divergence Status</h4>
+              </GuideTooltip>
               <p className="text-sm text-foreground leading-relaxed">
                 {isBullishDiv && (
                   <>

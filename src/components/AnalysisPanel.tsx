@@ -233,7 +233,11 @@ const AnalysisPanel = ({
             {/* EV & CAGR Table */}
             {bull && base && bear && (
               <div>
-                <h4 className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider mb-2">Expected Value & CAGR</h4>
+                <div className="flex items-center gap-2 mb-2">
+                  <GuideTooltip id="ev-col" text="Expected Value = probability-weighted average of the three scenario prices. This is your single best estimate at each time horizon, accounting for all scenarios." position="bottom">
+                    <h4 className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Expected Value & CAGR</h4>
+                  </GuideTooltip>
+                </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-[10px] sm:text-[11px]">
                     <thead>
