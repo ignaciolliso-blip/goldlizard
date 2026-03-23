@@ -252,7 +252,7 @@ function computeRollingWeights(
   }
 
   // Gold weekly returns (use FRED gold if spot unavailable)
-  const goldSeries = aligned.get('GOLDPMGBD228NLBM') || new Map();
+  const goldSeries = new Map<string, number>();
   const goldReturns = weeklyReturns(goldMap.size > 0 ? goldMap as any : goldSeries);
 
   const correlations: Record<string, number> = {};
