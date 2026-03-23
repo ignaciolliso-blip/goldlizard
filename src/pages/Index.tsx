@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { fetchAllData, type Observation, type CentralBankEntry } from '@/lib/dataFetcher';
 import { calculateGDI, type GDIResult } from '@/lib/gdiEngine';
 import { fetchScenarioTargets } from '@/lib/scenarioFetcher';
@@ -15,6 +15,7 @@ import AnalysisPanel from '@/components/AnalysisPanel';
 import KeyInsightsStrip from '@/components/KeyInsightsStrip';
 import CentralBankManager from '@/components/CentralBankManager';
 import NarratorPanel from '@/components/NarratorPanel';
+import LogicMap from '@/components/LogicMap';
 import { GuideModeProvider } from '@/components/GuideMode';
 
 const Index = () => {
@@ -35,6 +36,15 @@ const Index = () => {
   const [timeRange, setTimeRange] = useState('5Y');
   const [lastUpdated, setLastUpdated] = useState<string>('');
 
+  const heroChartRef = useRef<HTMLDivElement>(null);
+  const scenarioRef = useRef<HTMLDivElement>(null);
+  const componentRef = useRef<HTMLDivElement>(null);
+
+  const scrollToChart = useCallback(() => heroChartRef.current?.scrollIntoView({ behavior: 'smooth' }), []);
+  const scrollToScenarios = useCallback(() => scenarioRef.current?.scrollIntoView({ behavior: 'smooth' }), []);
+  const handleLogicMapVarClick = useCallback((varId: string) => {
+    componentRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
   useEffect(() => {
     async function load() {
       try {
@@ -103,6 +113,7 @@ const Index = () => {
   const goldSpot = rawData?.goldSpot?.length ? rawData.goldSpot : goldFutures;
   const currentGoldPrice = goldSpot.length > 0 ? goldSpot[goldSpot.length - 1].value : 3000;
 
+
   return (
     <GuideModeProvider>
       <div className="min-h-screen">
@@ -140,37 +151,57 @@ const Index = () => {
             />
           )}
 
-          {gdiResult && (
-            <HeroChart
-              gdiResult={gdiResult}
-              goldSpot={goldSpot}
-              goldFutures={goldFutures}
-              forecastPoints={forecastPoints}
-              probs={probs}
-              showFutures={showFutures}
-              onToggleFutures={() => setShowFutures(v => !v)}
-              showBankConsensus={showBankConsensus}
-              onToggleBankConsensus={() => setShowBankConsensus(v => !v)}
-              timeRange={timeRange}
-              onTimeRangeChange={setTimeRange}
-            />
-          )}
+          <div ref={heroChartRef}>
+            {gdiResult && (
+              <HeroChart
+                gdiResult={gdiResult}
+                goldSpot={goldSpot}
+                goldFutures={goldFutures}
+                forecastPoints={forecastPoints}
+                probs={probs}
+                showFutures={showFutures}
+                onToggleFutures={() => setShowFutures(v => !v)}
+                showBankConsensus={showBankConsensus}
+                onToggleBankConsensus={() => setShowBankConsensus(v => !v)}
+                timeRange={timeRange}
+                onTimeRangeChange={setTimeRange}
+              />
+            )}
+          </div>
 
-          {gdiResult && (
-            <ComponentDashboard gdiResult={gdiResult} goldSpot={goldSpot} timeRange={timeRange} />
-          )}
-
+          {/* Logic Map — between hero chart and component cards */}
           {gdiResult && scenarioConfig && (
-            <AnalysisPanel
+            <LogicMap
               gdiResult={gdiResult}
-              weightMode={weightMode}
+              currentGDI={currentGDI}
               probs={probs}
               scenarioConfig={scenarioConfig}
-              currentGDI={currentGDI}
               currentGoldPrice={currentGoldPrice}
-              onScenarioUpdate={setScenarioConfig}
+              onVariableClick={handleLogicMapVarClick}
+              onScrollToChart={scrollToChart}
+              onScrollToScenarios={scrollToScenarios}
             />
           )}
+
+          <div ref={componentRef}>
+            {gdiResult && (
+              <ComponentDashboard gdiResult={gdiResult} goldSpot={goldSpot} timeRange={timeRange} />
+            )}
+          </div>
+
+          <div ref={scenarioRef}>
+            {gdiResult && scenarioConfig && (
+              <AnalysisPanel
+                gdiResult={gdiResult}
+                weightMode={weightMode}
+                probs={probs}
+                scenarioConfig={scenarioConfig}
+                currentGDI={currentGDI}
+                currentGoldPrice={currentGoldPrice}
+                onScenarioUpdate={setScenarioConfig}
+              />
+            )}
+          </div>
 
           {gdiResult && (
             <KeyInsightsStrip gdiResult={gdiResult} goldSpot={goldSpot} currentGDI={currentGDI} />
