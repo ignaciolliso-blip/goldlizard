@@ -4,6 +4,7 @@ import { ChevronRight } from 'lucide-react';
 import type { GDIResult, VariableDetail } from '@/lib/gdiEngine';
 import type { Observation } from '@/lib/dataFetcher';
 import DrillDownPanel from './DrillDownPanel';
+import { GuideTooltip } from './GuideMode';
 
 interface ComponentDashboardProps {
   gdiResult: GDIResult;
