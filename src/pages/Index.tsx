@@ -156,7 +156,7 @@ const Index = () => {
         )}
 
         {gdiResult && (
-          <ComponentDashboard gdiResult={gdiResult} />
+          <ComponentDashboard gdiResult={gdiResult} goldSpot={goldSpot} timeRange={timeRange} />
         )}
 
         {gdiResult && (
