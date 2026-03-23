@@ -6,7 +6,6 @@ export const FRED_SERIES = [
   { id: 'T10YIE', name: '10Y Breakeven Inflation', unit: '%' },
   { id: 'DFF', name: 'Fed Funds Rate', unit: '%' },
   { id: 'T10Y2Y', name: '10Y-2Y Spread', unit: '%' },
-  { id: 'GOLDAMGBD228NLBM', name: 'Gold London Fix', unit: '$/oz' },
 ] as const;
 
 export type FredSeriesId = typeof FRED_SERIES[number]['id'];

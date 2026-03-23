@@ -32,7 +32,6 @@ export async function fetchFredSeries(
   seriesId: string,
   onStatus?: (msg: string) => void
 ): Promise<Observation[]> {
-  // Check cache — use maybeSingle to avoid 406 on empty result
   const { data: cached } = await supabase
     .from('data_cache')
     .select('*')
@@ -62,7 +61,6 @@ export async function fetchFredSeries(
 
   const observations = parseObservations(data.observations);
 
-  // Update cache
   await supabase.from('data_cache').upsert({
     series_id: seriesId,
     data_json: observations as any,
@@ -73,6 +71,7 @@ export async function fetchFredSeries(
 }
 
 export async function fetchGoldSpot(onStatus?: (msg: string) => void): Promise<Observation[]> {
+  // Check cache first
   const { data: cached } = await supabase
     .from('data_cache')
     .select('*')
@@ -85,30 +84,25 @@ export async function fetchGoldSpot(onStatus?: (msg: string) => void): Promise<O
 
   onStatus?.('Fetching Gold Spot Price...');
 
+  // Load from bundled historical data file
   try {
-    const res = await fetch('https://api.freegoldapi.com/v1/daily?start=2005-01-01&end=2026-03-23');
-    const json = await res.json();
-
-    let observations: Observation[] = [];
-    if (Array.isArray(json)) {
-      observations = json.map((d: any) => ({ date: d.date, value: d.price }));
-    } else if (json.data && Array.isArray(json.data)) {
-      observations = json.data.map((d: any) => ({ date: d.date, value: d.price || d.value }));
+    const res = await fetch('/data/gold-historical.json');
+    if (res.ok) {
+      const observations: Observation[] = await res.json();
+      if (observations.length > 0) {
+        await supabase.from('data_cache').upsert({
+          series_id: 'GOLD_SPOT',
+          data_json: observations as any,
+          last_fetched: new Date().toISOString(),
+        });
+      }
+      return observations;
     }
-
-    if (observations.length > 0) {
-      await supabase.from('data_cache').upsert({
-        series_id: 'GOLD_SPOT',
-        data_json: observations as any,
-        last_fetched: new Date().toISOString(),
-      });
-    }
-
-    return observations;
   } catch (e) {
-    console.error('Gold API failed:', e);
-    return [];
+    console.error('Failed to load gold data:', e);
   }
+
+  return [];
 }
 
 export async function fetchCentralBankGold(): Promise<CentralBankEntry[]> {
@@ -125,10 +119,8 @@ export async function fetchAllData(onStatus?: (msg: string) => void) {
   const fredResults: Record<string, Observation[]> = {};
   const errors: string[] = [];
 
-  // Fetch CB data first (no external API)
   const cbPromise = fetchCentralBankGold();
 
-  // Fetch all FRED series in parallel
   const fredPromises = FRED_SERIES.map(async (series) => {
     try {
       const obs = await fetchFredSeries(series.id, onStatus);
@@ -139,7 +131,6 @@ export async function fetchAllData(onStatus?: (msg: string) => void) {
     }
   });
 
-  // Fetch gold spot
   const goldPromise = fetchGoldSpot(onStatus);
 
   const [, goldSpot, centralBank] = await Promise.all([

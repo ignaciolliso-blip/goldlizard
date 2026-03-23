@@ -133,7 +133,7 @@ export function calculateGDI(
 
   // Remove unavailable series and renormalize
   const availableVars = Array.from(aligned.keys()).filter(
-    id => id !== 'GOLDAMGBD228NLBM' && weights[id] !== undefined
+    id => weights[id] !== undefined
   );
 
   if (weightMode === 'rolling' && goldData && goldData.length > 0) {
@@ -252,7 +252,7 @@ function computeRollingWeights(
   }
 
   // Gold weekly returns (use FRED gold if spot unavailable)
-  const goldSeries = aligned.get('GOLDAMGBD228NLBM') || new Map();
+  const goldSeries = new Map<string, number>();
   const goldReturns = weeklyReturns(goldMap.size > 0 ? goldMap as any : goldSeries);
 
   const correlations: Record<string, number> = {};
