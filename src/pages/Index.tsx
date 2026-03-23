@@ -82,7 +82,7 @@ const Index = () => {
     const p = computeScenarioProbabilities(currentGDI);
 
     // Get current gold price (last available from gold futures or spot)
-    const goldFuturesData = rawData?.fredResults?.['GOLDAMGBD228NLBM'] || [];
+    const goldFuturesData = rawData?.fredResults?.['GOLDPMGBD228NLBM'] || [];
     const goldSpotData = rawData?.goldSpot || [];
     const lastGoldPrice =
       goldFuturesData.length > 0
