@@ -12,8 +12,7 @@ serve(async (req) => {
 
   try {
     const { series_id, observation_start } = await req.json();
-    const apiKey = Deno.env.get('FRED_API_KEY');
-    console.log('FRED_API_KEY present:', !!apiKey, 'length:', apiKey?.length);
+    const apiKey = Deno.env.get('FRED_API_KEY')?.trim();
     
     if (!apiKey) {
       return new Response(JSON.stringify({ error: 'FRED_API_KEY not configured' }), {
