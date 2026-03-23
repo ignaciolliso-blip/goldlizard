@@ -1,0 +1,1 @@
+CREATE POLICY "Anyone can update central_bank_gold" ON public.central_bank_gold FOR UPDATE TO public USING (true) WITH CHECK (true);
