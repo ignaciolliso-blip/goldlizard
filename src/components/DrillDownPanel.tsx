@@ -209,6 +209,13 @@ const DrillDownPanel = ({ variable, gdiResult, goldSpot, timeRange, onClose }: D
                 <p className="text-[10px] sm:text-xs text-muted-foreground/80 leading-relaxed">{meta.explanation}</p>
               </div>
             )}
+
+            <VariableExplanation
+              variable={variable}
+              gdiResult={gdiResult}
+              goldSpot={goldSpot}
+              stats={stats}
+            />
           </div>
 
           {/* Column 3: Sources */}
