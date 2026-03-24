@@ -1,3 +1,6 @@
+import { VARIABLE_CONFIG, INVERT_SERIES, type ProjectionRow } from './constants';
+import { getCurrentStats, type GDIResult } from './gdiEngine';
+
 export interface ScenarioConfig {
   last_refreshed: string;
   scenarios: Scenario[];
@@ -34,6 +37,56 @@ export function computeScenarioProbabilities(gdi: number): ScenarioProbabilities
     base: rawBase / total,
     bear: rawBear / total,
   };
+}
+
+// Compute forward GDI at each horizon using projections
+export function computeForwardGDI(
+  projections: ProjectionRow[],
+  gdiResult: GDIResult,
+): Record<string, number> {
+  const horizons = ['3m', '6m', '1y', '3y', '5y'] as const;
+  const invertSet = new Set(INVERT_SERIES);
+  const forwardGDI: Record<string, number> = {};
+
+  for (const h of horizons) {
+    let gdi = 0;
+    let totalWeight = 0;
+
+    for (const proj of projections) {
+      const config = VARIABLE_CONFIG.find(v => v.id === proj.variableId);
+      if (!config) continue;
+
+      const stats = getCurrentStats(gdiResult.alignedData, gdiResult.dates, proj.variableId);
+      const projectedValue = proj[h];
+      let z = (projectedValue - stats.mean) / stats.std;
+
+      if (invertSet.has(proj.variableId)) {
+        z *= -1;
+      }
+
+      gdi += config.weight * z;
+      totalWeight += config.weight;
+    }
+
+    if (totalWeight > 0) {
+      gdi = gdi / totalWeight; // normalize
+    }
+
+    forwardGDI[h] = gdi;
+  }
+
+  return forwardGDI;
+}
+
+// Compute horizon-specific probabilities
+export function computeHorizonProbabilities(
+  forwardGDI: Record<string, number>
+): Record<string, ScenarioProbabilities> {
+  const result: Record<string, ScenarioProbabilities> = {};
+  for (const [h, gdi] of Object.entries(forwardGDI)) {
+    result[h] = computeScenarioProbabilities(gdi);
+  }
+  return result;
 }
 
 export interface ForecastPoint {
@@ -73,6 +126,7 @@ export function buildForecastPoints(
   currentPrice: number,
   scenarios: Scenario[],
   probs: ScenarioProbabilities,
+  horizonProbs?: Record<string, ScenarioProbabilities>,
   today: Date = new Date()
 ): ForecastPoint[] {
   const horizons: { label: string; months: number; key: keyof Scenario['targets'] }[] = [
@@ -95,7 +149,10 @@ export function buildForecastPoints(
     const bullPrice = h.months === 0 ? currentPrice : bull.targets[h.key];
     const basePrice = h.months === 0 ? currentPrice : base.targets[h.key];
     const bearPrice = h.months === 0 ? currentPrice : bear.targets[h.key];
-    const ev = probs.bull * bullPrice + probs.base * basePrice + probs.bear * bearPrice;
+
+    // Use horizon-specific probs if available
+    const hProbs = h.months === 0 ? probs : (horizonProbs?.[h.key] || probs);
+    const ev = hProbs.bull * bullPrice + hProbs.base * basePrice + hProbs.bear * bearPrice;
 
     return {
       date,
