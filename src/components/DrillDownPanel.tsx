@@ -7,6 +7,7 @@ import { ExternalLink, X } from 'lucide-react';
 import type { GDIResult, VariableDetail } from '@/lib/gdiEngine';
 import type { Observation } from '@/lib/dataFetcher';
 import { VARIABLE_METADATA } from '@/lib/variableMetadata';
+import VariableExplanation from './VariableExplanation';
 
 interface DrillDownPanelProps {
   variable: VariableDetail;
