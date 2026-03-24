@@ -32,9 +32,10 @@ function getHeatBg(adjZ: number): string {
 }
 
 function formatVal(v: number, id: string): string {
-  if (['DFII10', 'T10YIE', 'DFF', 'T10Y2Y'].includes(id)) return `${v.toFixed(2)}%`;
+  if (['DFII10', 'T10YIE', 'REAL_FFR', 'WM2NS_DEV', 'GFDEGDQ188S'].includes(id)) return `${v.toFixed(2)}%`;
   if (id === 'DCOILBRENTEU') return `$${v.toFixed(1)}`;
-  if (id === 'central_bank_gold') return `${Math.round(v).toLocaleString()}t`;
+  if (id === 'PHYSICAL_DEMAND') return `${Math.round(v).toLocaleString()}t`;
+  if (id === 'ETF_FLOWS') return `$${v.toFixed(1)}B`;
   return v.toFixed(1);
 }
 

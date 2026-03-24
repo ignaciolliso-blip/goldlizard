@@ -1,5 +1,5 @@
 import type { VariableDetail } from '@/lib/gdiEngine';
-import { FRED_SERIES } from '@/lib/constants';
+import { FRED_SERIES, VARIABLE_CONFIG } from '@/lib/constants';
 
 interface VariableTableProps {
   variables: VariableDetail[];
