@@ -16,18 +16,21 @@ export type Database = {
     Tables: {
       central_bank_gold: {
         Row: {
+          bar_coin_tonnes: number
           created_at: string
           id: number
           quarter: string
           tonnes: number
         }
         Insert: {
+          bar_coin_tonnes?: number
           created_at?: string
           id?: number
           quarter: string
           tonnes: number
         }
         Update: {
+          bar_coin_tonnes?: number
           created_at?: string
           id?: number
           quarter?: string
@@ -50,6 +53,30 @@ export type Database = {
           data_json?: Json
           last_fetched?: string
           series_id?: string
+        }
+        Relationships: []
+      }
+      etf_flows: {
+        Row: {
+          created_at: string
+          flows_usd_bn: number
+          holdings_tonnes: number
+          id: number
+          month: string
+        }
+        Insert: {
+          created_at?: string
+          flows_usd_bn?: number
+          holdings_tonnes?: number
+          id?: number
+          month: string
+        }
+        Update: {
+          created_at?: string
+          flows_usd_bn?: number
+          holdings_tonnes?: number
+          id?: number
+          month?: string
         }
         Relationships: []
       }
