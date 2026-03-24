@@ -1,14 +1,16 @@
 import { GraduationCap } from 'lucide-react';
 import { useGuideMode, GuideTooltip } from './GuideMode';
+import type { TierContribution } from '@/lib/gdiEngine';
 
 interface DashboardHeaderProps {
   currentGDI: number;
   weightMode: 'fixed' | 'rolling';
   onWeightModeChange: (mode: 'fixed' | 'rolling') => void;
   lastUpdated?: string;
+  tierContributions?: TierContribution;
 }
 
-const DashboardHeader = ({ currentGDI, weightMode, onWeightModeChange, lastUpdated }: DashboardHeaderProps) => {
+const DashboardHeader = ({ currentGDI, weightMode, onWeightModeChange, lastUpdated, tierContributions }: DashboardHeaderProps) => {
   const { isGuideMode, toggleGuideMode } = useGuideMode();
 
   const gdiColor = currentGDI > 0.5
@@ -26,6 +28,8 @@ const DashboardHeader = ({ currentGDI, weightMode, onWeightModeChange, lastUpdat
   const signal = currentGDI > 0.5 ? 'BULLISH' : currentGDI < -0.5 ? 'BEARISH' : 'NEUTRAL';
 
   const gdiDirection = currentGDI > 0 ? 'bullish' : currentGDI < 0 ? 'bearish' : 'neutral';
+
+  const tierColor = (v: number) => v > 0.05 ? 'text-bullish' : v < -0.05 ? 'text-bearish' : 'text-muted-foreground';
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-md border-b border-card-border">
@@ -58,7 +62,7 @@ const DashboardHeader = ({ currentGDI, weightMode, onWeightModeChange, lastUpdat
           </button>
 
           {/* Weight toggle */}
-          <GuideTooltip id="weight-toggle" text="Fixed Weights are based on academic regression studies (Chicago Fed, LBMA, World Gold Council). Rolling Weights adapt automatically using the trailing 52-week correlation of each variable with gold — useful when traditional relationships are breaking down, as they did post-2022." position="bottom">
+          <GuideTooltip id="weight-toggle" text="Fixed Weights are based on academic regression studies. Rolling Weights adapt automatically using trailing 52-week correlation with gold." position="bottom">
             <div className="flex rounded-md border border-card-border overflow-hidden">
               <button
                 onClick={() => onWeightModeChange('fixed')}
@@ -83,24 +87,33 @@ const DashboardHeader = ({ currentGDI, weightMode, onWeightModeChange, lastUpdat
             </div>
           </GuideTooltip>
 
-          {/* GDI reading */}
+          {/* GDI reading + tier decomposition */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <GuideTooltip id="gdi-number" text={`This is the Gold Driver Index — a composite of 8 macro variables weighted by empirical evidence. Above +0.5 = bullish macro for gold, below -0.5 = bearish. The further from zero, the stronger the signal. It's currently ${currentGDI > 0 ? '+' : ''}${currentGDI.toFixed(2)}, meaning the macro environment is ${Math.abs(currentGDI).toFixed(1)} standard deviations ${gdiDirection} compared to the past 10 years.`} position="bottom">
+            <GuideTooltip id="gdi-number" text={`GDI = ${currentGDI > 0 ? '+' : ''}${currentGDI.toFixed(2)}. The tier breakdown shows whether bullishness comes from structural forces (more reliable) or cyclical conditions (less reliable).`} position="bottom">
               <div className="text-right">
                 <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase tracking-widest leading-none">GDI</p>
                 <p className={`font-mono text-lg sm:text-2xl font-bold leading-none mt-0.5 ${gdiColor}`}>
                   {currentGDI > 0 ? '+' : ''}{currentGDI.toFixed(2)}
                 </p>
+                {/* Tier decomposition */}
+                {tierContributions && (
+                  <div className="hidden lg:flex items-center gap-1.5 mt-0.5 text-[8px] font-mono">
+                    <span className={tierColor(tierContributions.structural)}>T1:{tierContributions.structural > 0 ? '+' : ''}{tierContributions.structural.toFixed(2)}</span>
+                    <span className="text-muted-foreground/40">|</span>
+                    <span className={tierColor(tierContributions.demand)}>T2:{tierContributions.demand > 0 ? '+' : ''}{tierContributions.demand.toFixed(2)}</span>
+                    <span className="text-muted-foreground/40">|</span>
+                    <span className={tierColor(tierContributions.conditions)}>T3:{tierContributions.conditions > 0 ? '+' : ''}{tierContributions.conditions.toFixed(2)}</span>
+                  </div>
+                )}
               </div>
             </GuideTooltip>
-            <GuideTooltip id="signal-badge" text="Based on the GDI: BULLISH means at least 3 of the 8 macro variables are meaningfully supporting gold prices right now." position="bottom">
+            <GuideTooltip id="signal-badge" text="Based on the GDI composite value." position="bottom">
               <span className={`px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded text-[9px] sm:text-[11px] font-semibold tracking-wider border ${badgeBg}`}>
                 {signal}
               </span>
             </GuideTooltip>
           </div>
 
-          {/* Last updated */}
           {lastUpdated && (
             <p className="text-[10px] text-muted-foreground hidden lg:block">
               Updated {lastUpdated}
