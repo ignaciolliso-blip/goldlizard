@@ -7,6 +7,7 @@ import { ExternalLink, X } from 'lucide-react';
 import type { GDIResult, VariableDetail } from '@/lib/gdiEngine';
 import type { Observation } from '@/lib/dataFetcher';
 import { VARIABLE_METADATA } from '@/lib/variableMetadata';
+import VariableExplanation from './VariableExplanation';
 
 interface DrillDownPanelProps {
   variable: VariableDetail;
@@ -208,6 +209,13 @@ const DrillDownPanel = ({ variable, gdiResult, goldSpot, timeRange, onClose }: D
                 <p className="text-[10px] sm:text-xs text-muted-foreground/80 leading-relaxed">{meta.explanation}</p>
               </div>
             )}
+
+            <VariableExplanation
+              variable={variable}
+              gdiResult={gdiResult}
+              goldSpot={goldSpot}
+              stats={stats}
+            />
           </div>
 
           {/* Column 3: Sources */}

@@ -22,7 +22,9 @@ Structure:
 - Paragraph 3: What changed recently — biggest shifts in the last 30 days and why they matter
 - Paragraph 4: What to watch — 2-3 upcoming catalysts or data points that could shift the picture
 
-Use specific numbers from the data. Reference the z-scores and contributions. If there's a divergence between the GDI and gold price, highlight it prominently. Keep it under 300 words. No bullet points — flowing prose only. Sign off with the one-line takeaway.`;
+Use specific numbers from the data. Reference the z-scores and contributions. If there's a divergence between the GDI and gold price, highlight it prominently. Keep it under 300 words. No bullet points — flowing prose only. Sign off with the one-line takeaway.
+
+When discussing specific variables, explain them the way you would across a desk — not what the variable IS (the user knows), but what it's DOING right now, why the current level matters, what's offsetting or reinforcing it, and what would change it. Use the specific z-scores, percentiles, and contributions from the data. The user is a sophisticated M&A professional who understands finance — don't oversimplify, but don't use jargon without context either.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

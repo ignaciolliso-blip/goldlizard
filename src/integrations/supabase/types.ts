@@ -92,6 +92,27 @@ export type Database = {
         }
         Relationships: []
       }
+      variable_explanations: {
+        Row: {
+          data_hash: string
+          explanation_text: string
+          generated_at: string
+          variable_id: string
+        }
+        Insert: {
+          data_hash?: string
+          explanation_text?: string
+          generated_at?: string
+          variable_id: string
+        }
+        Update: {
+          data_hash?: string
+          explanation_text?: string
+          generated_at?: string
+          variable_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
