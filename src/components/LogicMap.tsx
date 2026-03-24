@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { ChevronRight, ChevronDown, RotateCcw } from 'lucide-react';
 import type { GDIResult, VariableDetail } from '@/lib/gdiEngine';
 import type { ScenarioProbabilities, ScenarioConfig } from '@/lib/scenarioEngine';
-import { INVERT_SERIES } from '@/lib/constants';
+import { INVERT_SERIES, VARIABLE_CONFIG } from '@/lib/constants';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface LogicMapProps {
