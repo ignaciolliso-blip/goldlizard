@@ -42,7 +42,7 @@ function buildPromptData(
   const gold30dAgo = goldSpot.length > 30 ? goldSpot[goldSpot.length - 31].value : lastGold;
   const ret30d = gold30dAgo > 0 ? ((lastGold - gold30dAgo) / gold30dAgo * 100) : 0;
 
-  const gdi = gdiResult.compositeGDI;
+  const gdi = gdiResult.gdiValues.length > 0 ? gdiResult.gdiValues[gdiResult.gdiValues.length - 1] : 0;
   const signal = gdi > 0.5 ? 'BULLISH' : gdi < -0.5 ? 'BEARISH' : 'NEUTRAL';
 
   const unit = variable.id === 'central_bank_gold' ? 't/qtr' :
