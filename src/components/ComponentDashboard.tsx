@@ -3,6 +3,7 @@ import { LineChart, Line, ResponsiveContainer } from 'recharts';
 import { ChevronRight } from 'lucide-react';
 import type { GDIResult, VariableDetail } from '@/lib/gdiEngine';
 import type { Observation } from '@/lib/dataFetcher';
+import { VARIABLE_CONFIG, TIER_LABELS, type TierName } from '@/lib/constants';
 import DrillDownPanel from './DrillDownPanel';
 import { GuideTooltip } from './GuideMode';
 
@@ -15,12 +16,14 @@ interface ComponentDashboardProps {
 const UNIT_MAP: Record<string, string> = {
   DFII10: '%',
   DTWEXBGS: '',
-  central_bank_gold: 't',
-  T10Y2Y: '%',
+  PHYSICAL_DEMAND: 't',
+  ETF_FLOWS: '$B',
   VIXCLS: '',
   DCOILBRENTEU: '$/bbl',
   T10YIE: '%',
-  DFF: '%',
+  WM2NS_DEV: '%',
+  GFDEGDQ188S: '%',
+  REAL_FFR: '%',
 };
 
 function getHeatmapBg(adjZ: number): string {
@@ -66,20 +69,47 @@ function formatCardValue(val: number, unit: string): string {
   if (unit === '%') return `${val.toFixed(2)}%`;
   if (unit === '$/bbl') return `$${val.toFixed(1)}`;
   if (unit === 't') return `${Math.round(val).toLocaleString()}t`;
+  if (unit === '$B') return `$${val.toFixed(1)}B`;
   return val.toFixed(2);
 }
 
 const ComponentDashboard = ({ gdiResult, goldSpot, timeRange }: ComponentDashboardProps) => {
   const [selectedVar, setSelectedVar] = useState<string | null>(null);
 
-  const { variables, sparklines, changes } = useMemo(() => {
+  // Filter to showCard=true variables only
+  const showCardIds = new Set(VARIABLE_CONFIG.filter(v => v.showCard).map(v => v.id));
+
+  const { cardVariables, sparklines, changes, tierGroups } = useMemo(() => {
     const sparklines: Record<string, { v: number }[]> = {};
     const changes: Record<string, number | null> = {};
+
+    // All variables for sparklines/changes
     for (const v of gdiResult.variableDetails) {
       sparklines[v.id] = getSparklineData(gdiResult.alignedData, v.id, gdiResult.dates, 90);
       changes[v.id] = get30dChange(gdiResult.alignedData, v.id, gdiResult.dates);
     }
-    return { variables: gdiResult.variableDetails, sparklines, changes };
+
+    // Only card-worthy variables
+    const cardVariables = gdiResult.variableDetails.filter(v => showCardIds.has(v.id));
+
+    // Group by tier
+    const tierGroups: { tier: TierName; label: string; variables: VariableDetail[] }[] = [
+      { tier: 'structural', label: TIER_LABELS.structural, variables: [] },
+      { tier: 'demand', label: TIER_LABELS.demand, variables: [] },
+      { tier: 'conditions', label: TIER_LABELS.conditions, variables: [] },
+    ];
+
+    for (const v of cardVariables) {
+      const group = tierGroups.find(g => g.tier === v.tier);
+      if (group) group.variables.push(v);
+    }
+
+    // Sort within each tier by absolute contribution
+    for (const g of tierGroups) {
+      g.variables.sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution));
+    }
+
+    return { cardVariables, sparklines, changes, tierGroups };
   }, [gdiResult]);
 
   const handleCardClick = (varId: string) => {
@@ -88,26 +118,35 @@ const ComponentDashboard = ({ gdiResult, goldSpot, timeRange }: ComponentDashboa
 
   return (
     <div className="space-y-4">
-      <GuideTooltip id="card-bg-color" text="Green = this variable is currently supporting gold prices. Red = it's a headwind. The deeper the color, the more extreme the reading relative to the past 10 years." position="right">
+      <GuideTooltip id="card-bg-color" text="Green = gold-supportive. Red = headwind. Cards are grouped by tier: Structural (why), Demand (how), Conditions (when)." position="right">
         <h2 className="font-display text-base sm:text-lg text-foreground px-1">Component Indicators</h2>
       </GuideTooltip>
-      {/* 2 cols mobile, 3 cols tablet, 4 cols desktop */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
-        {variables.map((v) => (
-          <IndicatorCard
-            key={v.id}
-            variable={v}
-            sparklineData={sparklines[v.id] || []}
-            change30d={changes[v.id] ?? null}
-            unit={UNIT_MAP[v.id] || ''}
-            isSelected={selectedVar === v.id}
-            onClick={() => handleCardClick(v.id)}
-          />
-        ))}
-      </div>
+
+      {tierGroups.map(group => (
+        group.variables.length > 0 && (
+          <div key={group.tier} className="space-y-2">
+            <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase tracking-widest font-semibold px-1">
+              {group.label}
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+              {group.variables.map((v) => (
+                <IndicatorCard
+                  key={v.id}
+                  variable={v}
+                  sparklineData={sparklines[v.id] || []}
+                  change30d={changes[v.id] ?? null}
+                  unit={UNIT_MAP[v.id] || ''}
+                  isSelected={selectedVar === v.id}
+                  onClick={() => handleCardClick(v.id)}
+                />
+              ))}
+            </div>
+          </div>
+        )
+      ))}
 
       {selectedVar && (() => {
-        const selVariable = variables.find(v => v.id === selectedVar);
+        const selVariable = gdiResult.variableDetails.find(v => v.id === selectedVar);
         if (!selVariable) return null;
         return (
           <DrillDownPanel
@@ -162,14 +201,11 @@ const IndicatorCard = ({
         <span className="text-base sm:text-lg font-mono font-semibold text-foreground">
           {formatCardValue(variable.currentValue, unit)}
         </span>
-        <GuideTooltip id={`zscore-${variable.id}`} text="The z-score tells you how unusual this reading is. A z-score of +2.0 means this variable is 2 standard deviations above its 10-year average — very unusual. After directional adjustment, positive always means gold-supportive." position="top">
-          <span className={`text-[10px] sm:text-xs font-mono ${zColor}`}>
-            {zArrow} {variable.adjustedZScore > 0 ? '+' : ''}{variable.adjustedZScore.toFixed(1)}
-          </span>
-        </GuideTooltip>
+        <span className={`text-[10px] sm:text-xs font-mono ${zColor}`}>
+          {zArrow} {variable.adjustedZScore > 0 ? '+' : ''}{variable.adjustedZScore.toFixed(1)}
+        </span>
       </div>
 
-      {/* Sparkline - no labels, no axes, just shape */}
       <div className="h-7 sm:h-8 w-full mb-1">
         {sparklineData.length > 2 && (
           <ResponsiveContainer width="100%" height="100%">

@@ -1,11 +1,12 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
-import { fetchAllData, type Observation, type CentralBankEntry } from '@/lib/dataFetcher';
+import { fetchAllData, type Observation, type CentralBankEntry, type EtfFlowEntry } from '@/lib/dataFetcher';
 import { calculateGDI, type GDIResult } from '@/lib/gdiEngine';
 import { fetchScenarioTargets } from '@/lib/scenarioFetcher';
 import {
-  computeScenarioProbabilities, buildForecastPoints,
+  computeScenarioProbabilities, buildForecastPoints, computeForwardGDI, computeHorizonProbabilities,
   type ScenarioConfig, type ForecastPoint, type ScenarioProbabilities,
 } from '@/lib/scenarioEngine';
+import { DEFAULT_PROJECTIONS, type ProjectionRow } from '@/lib/constants';
 import DashboardHeader from '@/components/DashboardHeader';
 import LoadingProgress from '@/components/LoadingProgress';
 import VariableTable from '@/components/VariableTable';
@@ -13,9 +14,10 @@ import ComponentDashboard from '@/components/ComponentDashboard';
 import HeroChart from '@/components/HeroChart';
 import AnalysisPanel from '@/components/AnalysisPanel';
 import KeyInsightsStrip from '@/components/KeyInsightsStrip';
-import CentralBankManager from '@/components/CentralBankManager';
+import DemandDataManager from '@/components/CentralBankManager';
 import NarratorPanel from '@/components/NarratorPanel';
 import LogicMap from '@/components/LogicMap';
+import ProjectionAssumptions from '@/components/ProjectionAssumptions';
 import { GuideModeProvider } from '@/components/GuideMode';
 
 const Index = () => {
@@ -27,7 +29,8 @@ const Index = () => {
   const [rawData, setRawData] = useState<{
     fredResults: Record<string, Observation[]>;
     goldSpot: Observation[];
-    centralBank: CentralBankEntry[];
+    physicalDemand: CentralBankEntry[];
+    etfFlows: EtfFlowEntry[];
     errors: string[];
   } | null>(null);
   const [scenarioConfig, setScenarioConfig] = useState<ScenarioConfig | null>(null);
@@ -35,6 +38,7 @@ const Index = () => {
   const [showBankConsensus, setShowBankConsensus] = useState(false);
   const [timeRange, setTimeRange] = useState('5Y');
   const [lastUpdated, setLastUpdated] = useState<string>('');
+  const [projections, setProjections] = useState<ProjectionRow[]>([]);
 
   const heroChartRef = useRef<HTMLDivElement>(null);
   const scenarioRef = useRef<HTMLDivElement>(null);
@@ -45,6 +49,7 @@ const Index = () => {
   const handleLogicMapVarClick = useCallback((varId: string) => {
     componentRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
+
   useEffect(() => {
     async function load() {
       try {
@@ -56,9 +61,17 @@ const Index = () => {
         setScenarioConfig(scenarios);
         setStatusMsg('Computing GDI...');
         const result = calculateGDI(
-          data.fredResults, data.centralBank, data.errors, 'fixed', data.goldSpot
+          data.fredResults, data.physicalDemand, data.etfFlows, data.errors, 'fixed', data.goldSpot
         );
         setGdiResult(result);
+
+        // Initialize projections with current values
+        const initialProjections: ProjectionRow[] = DEFAULT_PROJECTIONS.map(dp => {
+          const detail = result.variableDetails.find(v => v.id === dp.variableId);
+          return { ...dp, current: detail?.currentValue ?? 0 };
+        });
+        setProjections(initialProjections);
+
         setLastUpdated(new Date().toLocaleString('en-US', {
           month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
         }));
@@ -75,23 +88,33 @@ const Index = () => {
   useEffect(() => {
     if (!rawData) return;
     const result = calculateGDI(
-      rawData.fredResults, rawData.centralBank, rawData.errors, weightMode, rawData.goldSpot
+      rawData.fredResults, rawData.physicalDemand, rawData.etfFlows, rawData.errors, weightMode, rawData.goldSpot
     );
     setGdiResult(result);
   }, [weightMode, rawData]);
 
   const currentGDI = gdiResult ? gdiResult.gdiValues[gdiResult.gdiValues.length - 1] : 0;
 
-  const { probs, forecastPoints } = useMemo(() => {
+  const { probs, forecastPoints, forwardGDI, horizonProbs } = useMemo(() => {
     if (!gdiResult || !scenarioConfig) {
-      return { probs: { bull: 0.33, base: 0.34, bear: 0.33 } as ScenarioProbabilities, forecastPoints: [] as ForecastPoint[] };
+      return {
+        probs: { bull: 0.33, base: 0.34, bear: 0.33 } as ScenarioProbabilities,
+        forecastPoints: [] as ForecastPoint[],
+        forwardGDI: {} as Record<string, number>,
+        horizonProbs: {} as Record<string, ScenarioProbabilities>,
+      };
     }
     const p = computeScenarioProbabilities(currentGDI);
     const goldData = rawData?.goldSpot || [];
     const lastGoldPrice = goldData.length > 0 ? goldData[goldData.length - 1].value : 3000;
-    const fp = buildForecastPoints(lastGoldPrice, scenarioConfig.scenarios, p);
-    return { probs: p, forecastPoints: fp };
-  }, [currentGDI, scenarioConfig, rawData]);
+
+    // Compute forward GDI and horizon-specific probabilities
+    const fGDI = projections.length > 0 ? computeForwardGDI(projections, gdiResult) : {};
+    const hProbs = Object.keys(fGDI).length > 0 ? computeHorizonProbabilities(fGDI) : {};
+
+    const fp = buildForecastPoints(lastGoldPrice, scenarioConfig.scenarios, p, hProbs);
+    return { probs: p, forecastPoints: fp, forwardGDI: fGDI, horizonProbs: hProbs };
+  }, [currentGDI, scenarioConfig, rawData, projections, gdiResult]);
 
   if (loading) return <LoadingProgress message={statusMsg} />;
 
@@ -113,7 +136,6 @@ const Index = () => {
   const goldSpot = rawData?.goldSpot?.length ? rawData.goldSpot : goldFutures;
   const currentGoldPrice = goldSpot.length > 0 ? goldSpot[goldSpot.length - 1].value : 3000;
 
-
   return (
     <GuideModeProvider>
       <div className="min-h-screen">
@@ -122,6 +144,7 @@ const Index = () => {
           weightMode={weightMode}
           onWeightModeChange={setWeightMode}
           lastUpdated={lastUpdated}
+          tierContributions={gdiResult?.tierContributions}
         />
 
         <div className="pt-16 sm:pt-20 pb-8 px-3 sm:px-6 max-w-[1600px] mx-auto space-y-4 sm:space-y-6">
@@ -169,7 +192,7 @@ const Index = () => {
             )}
           </div>
 
-          {/* Logic Map — between hero chart and component cards */}
+          {/* Logic Map */}
           {gdiResult && scenarioConfig && (
             <LogicMap
               gdiResult={gdiResult}
@@ -203,6 +226,16 @@ const Index = () => {
             )}
           </div>
 
+          {/* Projection Assumptions */}
+          {gdiResult && (
+            <ProjectionAssumptions
+              projections={projections}
+              onProjectionsChange={setProjections}
+              forwardGDI={forwardGDI}
+              horizonProbs={horizonProbs}
+            />
+          )}
+
           {gdiResult && (
             <KeyInsightsStrip gdiResult={gdiResult} goldSpot={goldSpot} currentGDI={currentGDI} />
           )}
@@ -211,11 +244,17 @@ const Index = () => {
             <VariableTable variables={gdiResult.variableDetails} errors={rawData?.errors || []} />
           )}
 
-          <CentralBankManager
-            initialData={rawData?.centralBank || []}
-            onDataChange={(newCbData) => {
+          <DemandDataManager
+            initialData={rawData?.physicalDemand || []}
+            initialEtfFlows={rawData?.etfFlows || []}
+            onDataChange={(newData) => {
               if (rawData) {
-                setRawData({ ...rawData, centralBank: newCbData });
+                setRawData({ ...rawData, physicalDemand: newData });
+              }
+            }}
+            onEtfFlowsChange={(newFlows) => {
+              if (rawData) {
+                setRawData({ ...rawData, etfFlows: newFlows });
               }
             }}
           />

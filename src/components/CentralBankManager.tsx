@@ -1,245 +1,329 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ChevronDown, ChevronUp, Pencil, Check, X, Plus, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import type { CentralBankEntry } from '@/lib/dataFetcher';
 import { toast } from 'sonner';
+import type { CentralBankEntry, EtfFlowEntry } from '@/lib/gdiEngine';
 
 interface CentralBankManagerProps {
   initialData: CentralBankEntry[];
+  initialEtfFlows: EtfFlowEntry[];
   onDataChange: (data: CentralBankEntry[]) => void;
+  onEtfFlowsChange: (data: EtfFlowEntry[]) => void;
 }
 
 function generateQuarterOptions(existing: string[]): string[] {
-  const options: string[] = [];
-  const now = new Date();
-  const currentYear = now.getFullYear();
+  const set = new Set(existing);
+  const opts: string[] = [];
+  const currentYear = new Date().getFullYear();
   for (let y = currentYear + 1; y >= 2010; y--) {
     for (let q = 4; q >= 1; q--) {
-      const quarter = `${y}-Q${q}`;
-      if (!existing.includes(quarter)) options.push(quarter);
+      const key = `${y}-Q${q}`;
+      if (!set.has(key)) opts.push(key);
     }
   }
-  return options;
+  return opts;
 }
 
-const CentralBankManager = ({ initialData, onDataChange }: CentralBankManagerProps) => {
+function generateMonthOptions(existing: string[]): string[] {
+  const set = new Set(existing);
+  const opts: string[] = [];
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  for (let y = currentYear; y >= 2020; y--) {
+    const maxMonth = y === currentYear ? currentMonth : 12;
+    for (let m = maxMonth; m >= 1; m--) {
+      const key = `${y}-${String(m).padStart(2, '0')}`;
+      if (!set.has(key)) opts.push(key);
+    }
+  }
+  return opts;
+}
+
+const CentralBankManager = ({ initialData, initialEtfFlows, onDataChange, onEtfFlowsChange }: CentralBankManagerProps) => {
   const [expanded, setExpanded] = useState(false);
-  const [data, setData] = useState<(CentralBankEntry & { created_at?: string })[]>([]);
-  const [editingQuarter, setEditingQuarter] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState('');
-  const [newQuarter, setNewQuarter] = useState('');
-  const [newTonnes, setNewTonnes] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<'physical' | 'etf' | 'structural'>('physical');
 
-  useEffect(() => {
-    if (expanded && data.length === 0) {
-      loadData();
+  // Physical demand state
+  const [data, setData] = useState<CentralBankEntry[]>(initialData);
+  const [editingQ, setEditingQ] = useState<string | null>(null);
+  const [editTonnes, setEditTonnes] = useState(0);
+  const [editBarCoin, setEditBarCoin] = useState(0);
+  const [newQ, setNewQ] = useState('');
+  const [newTonnes, setNewTonnes] = useState(0);
+  const [newBarCoin, setNewBarCoin] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  // ETF flows state
+  const [etfData, setEtfData] = useState<EtfFlowEntry[]>(initialEtfFlows);
+  const [editingMonth, setEditingMonth] = useState<string | null>(null);
+  const [editFlows, setEditFlows] = useState(0);
+  const [editHoldings, setEditHoldings] = useState(0);
+  const [newMonth, setNewMonth] = useState('');
+  const [newFlows, setNewFlows] = useState(0);
+  const [newHoldings, setNewHoldings] = useState(0);
+
+  const sortedData = [...data].sort((a, b) => b.quarter.localeCompare(a.quarter));
+  const sortedEtf = [...etfData].sort((a, b) => b.month.localeCompare(a.month));
+
+  const quarterOpts = generateQuarterOptions(data.map(d => d.quarter));
+  const monthOpts = generateMonthOptions(etfData.map(d => d.month));
+
+  const handleAddPhysical = async () => {
+    if (!newQ) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('central_bank_gold').insert({
+        quarter: newQ,
+        tonnes: newTonnes,
+        bar_coin_tonnes: newBarCoin,
+      } as any);
+      if (error) throw error;
+      const newEntry: CentralBankEntry = { quarter: newQ, tonnes: newTonnes, bar_coin_tonnes: newBarCoin };
+      const updated = [...data, newEntry];
+      setData(updated);
+      onDataChange(updated);
+      setNewQ('');
+      setNewTonnes(0);
+      setNewBarCoin(0);
+      toast.success('Physical demand data added');
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to add');
+    } finally {
+      setLoading(false);
     }
-  }, [expanded]);
+  };
 
-  const loadData = async () => {
-    const { data: rows, error } = await supabase
-      .from('central_bank_gold')
-      .select('quarter, tonnes, created_at')
-      .order('quarter', { ascending: false });
-    if (error) {
-      toast.error('Failed to load data');
-      return;
+  const savePhysicalEdit = async (quarter: string) => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('central_bank_gold')
+        .update({ tonnes: editTonnes, bar_coin_tonnes: editBarCoin } as any)
+        .eq('quarter', quarter);
+      if (error) throw error;
+      const updated = data.map(d => d.quarter === quarter ? { ...d, tonnes: editTonnes, bar_coin_tonnes: editBarCoin } : d);
+      setData(updated);
+      onDataChange(updated);
+      setEditingQ(null);
+      toast.success('Updated');
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to update');
+    } finally {
+      setLoading(false);
     }
-    setData(rows || []);
   };
 
-  const handleAdd = async () => {
-    if (!newQuarter || !newTonnes) return;
-    setSaving(true);
-    const { error } = await supabase
-      .from('central_bank_gold')
-      .insert({ quarter: newQuarter, tonnes: parseInt(newTonnes) });
-    if (error) {
-      toast.error('Failed to add: ' + error.message);
-    } else {
-      toast.success(`Added ${newQuarter}`);
-      setNewQuarter('');
-      setNewTonnes('');
-      await loadData();
-      // Notify parent to recalculate
-      const { data: all } = await supabase
-        .from('central_bank_gold')
-        .select('quarter, tonnes')
-        .order('quarter', { ascending: true });
-      if (all) onDataChange(all);
+  const handleAddEtf = async () => {
+    if (!newMonth) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('etf_flows').insert({
+        month: newMonth,
+        flows_usd_bn: newFlows,
+        holdings_tonnes: newHoldings,
+      });
+      if (error) throw error;
+      const newEntry: EtfFlowEntry = { month: newMonth, flows_usd_bn: newFlows, holdings_tonnes: newHoldings };
+      const updated = [...etfData, newEntry];
+      setEtfData(updated);
+      onEtfFlowsChange(updated);
+      setNewMonth('');
+      setNewFlows(0);
+      setNewHoldings(0);
+      toast.success('ETF flow data added');
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to add');
+    } finally {
+      setLoading(false);
     }
-    setSaving(false);
   };
 
-  const startEdit = (quarter: string, tonnes: number) => {
-    setEditingQuarter(quarter);
-    setEditValue(String(tonnes));
-  };
-
-  const cancelEdit = () => {
-    setEditingQuarter(null);
-    setEditValue('');
-  };
-
-  const saveEdit = async (quarter: string) => {
-    setSaving(true);
-    // Use RPC or direct update - we need update policy
-    const { error } = await supabase
-      .from('central_bank_gold')
-      .update({ tonnes: parseInt(editValue) })
-      .eq('quarter', quarter);
-    if (error) {
-      toast.error('Failed to update: ' + error.message);
-    } else {
-      toast.success(`Updated ${quarter}`);
-      setEditingQuarter(null);
-      await loadData();
-      const { data: all } = await supabase
-        .from('central_bank_gold')
-        .select('quarter, tonnes')
-        .order('quarter', { ascending: true });
-      if (all) onDataChange(all);
+  const saveEtfEdit = async (month: string) => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('etf_flows')
+        .update({ flows_usd_bn: editFlows, holdings_tonnes: editHoldings })
+        .eq('month', month);
+      if (error) throw error;
+      const updated = etfData.map(d => d.month === month ? { ...d, flows_usd_bn: editFlows, holdings_tonnes: editHoldings } : d);
+      setEtfData(updated);
+      onEtfFlowsChange(updated);
+      setEditingMonth(null);
+      toast.success('Updated');
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to update');
+    } finally {
+      setLoading(false);
     }
-    setSaving(false);
   };
-
-  const existingQuarters = data.map(d => d.quarter);
-  const quarterOptions = generateQuarterOptions(existingQuarters);
 
   return (
-    <div className="rounded-lg border border-card-border bg-card overflow-hidden">
-      {/* Header */}
+    <div className="rounded-lg border border-card-border overflow-hidden bg-card">
       <button
-        onClick={() => setExpanded(v => !v)}
-        className={`w-full flex items-center justify-between px-5 py-3 text-left transition-colors ${
-          expanded ? 'border-b border-gold/30 bg-gold/5' : 'hover:bg-secondary/20'
-        }`}
+        onClick={() => setExpanded(!expanded)}
+        className={`w-full flex items-center justify-between px-4 py-3 hover:bg-secondary/10 transition-colors ${expanded ? 'border-b border-card-border bg-gold/5' : ''}`}
       >
-        <span className={`text-sm font-semibold ${expanded ? 'text-gold' : 'text-foreground'}`}>
-          Central Bank Purchase Data
-        </span>
-        {expanded ? (
-          <ChevronUp className="w-4 h-4 text-gold" />
-        ) : (
-          <ChevronDown className="w-4 h-4 text-muted-foreground" />
-        )}
+        <h3 className="text-sm font-semibold text-foreground">Demand Data Manager</h3>
+        {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
       </button>
 
       {expanded && (
-        <div className="animate-fade-in">
-          {/* Table */}
-          <div className="max-h-[400px] overflow-y-auto">
-            <table className="w-full text-xs">
-              <thead className="sticky top-0 z-10">
-                <tr className="border-b border-card-border bg-card text-muted-foreground">
-                  <th className="text-left px-4 py-2 font-medium">Quarter</th>
-                  <th className="text-right px-4 py-2 font-medium">Tonnes</th>
-                  <th className="text-right px-4 py-2 font-medium">Date Entered</th>
-                  <th className="w-16 px-4 py-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.map((row, i) => {
-                  const isEditing = editingQuarter === row.quarter;
-                  return (
-                    <tr
-                      key={row.quarter}
-                      className={`border-b border-card-border/30 ${i % 2 === 0 ? 'bg-[#151820]' : 'bg-[#1A1E28]'}`}
-                    >
-                      <td className="px-4 py-2 font-mono text-foreground">{row.quarter}</td>
-                      <td className="px-4 py-2 text-right font-mono">
-                        {isEditing ? (
-                          <input
-                            type="number"
-                            value={editValue}
-                            onChange={e => setEditValue(e.target.value)}
-                            className="w-20 bg-secondary/50 border border-card-border rounded px-2 py-0.5 text-xs font-mono text-foreground text-right focus:border-gold/50 focus:outline-none"
-                            autoFocus
-                          />
-                        ) : (
-                          <span className="text-foreground">{row.tonnes}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2 text-right text-muted-foreground">
-                        {row.created_at ? new Date(row.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
-                      </td>
-                      <td className="px-4 py-2 text-right">
-                        {isEditing ? (
-                          <div className="flex items-center justify-end gap-1">
-                            <button
-                              onClick={() => saveEdit(row.quarter)}
-                              disabled={saving}
-                              className="p-1 text-bullish hover:text-bullish/80 transition-colors disabled:opacity-50"
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={cancelEdit}
-                              className="p-1 text-bearish hover:text-bearish/80 transition-colors"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => startEdit(row.quarter, row.tonnes)}
-                            className="p-1 text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            <Pencil className="w-3 h-3" />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Add form */}
-          <div className="flex items-center gap-3 px-4 py-3 border-t border-card-border bg-[#151820]">
-            <select
-              value={newQuarter}
-              onChange={e => setNewQuarter(e.target.value)}
-              className="bg-secondary/30 border border-card-border rounded px-2 py-1.5 text-xs font-mono text-foreground focus:border-gold/50 focus:outline-none"
-            >
-              <option value="">Select quarter...</option>
-              {quarterOptions.slice(0, 12).map(q => (
-                <option key={q} value={q}>{q}</option>
-              ))}
-            </select>
-            <input
-              type="number"
-              placeholder="Tonnes"
-              value={newTonnes}
-              onChange={e => setNewTonnes(e.target.value)}
-              className="w-24 bg-secondary/30 border border-card-border rounded px-2 py-1.5 text-xs font-mono text-foreground focus:border-gold/50 focus:outline-none"
-            />
-            <button
-              onClick={handleAdd}
-              disabled={!newQuarter || !newTonnes || saving}
-              className="flex items-center gap-1 px-3 py-1.5 bg-gold/10 text-gold text-xs font-medium rounded hover:bg-gold/20 disabled:opacity-40 transition-colors"
-            >
-              <Plus className="w-3 h-3" />
-              Add
-            </button>
-          </div>
-
-          {/* Source note */}
-          <div className="px-4 py-3 border-t border-card-border">
-            <p className="text-[10px] text-muted-foreground/60">
-              Source: World Gold Council Quarterly Gold Demand Trends reports. Update quarterly after each WGC publication.{' '}
-              <a
-                href="https://www.gold.org/goldhub/research/gold-demand-trends"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-0.5 text-index-blue hover:text-index-blue/80 transition-colors"
+        <div className="p-4">
+          <div className="flex gap-1 mb-4 border-b border-card-border">
+            {(['physical', 'etf', 'structural'] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-3 py-2 text-xs font-medium transition-colors border-b-2 -mb-px ${
+                  activeTab === tab ? 'border-gold text-gold' : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
               >
-                View reports <ExternalLink className="w-2.5 h-2.5" />
-              </a>
-            </p>
+                {tab === 'physical' ? 'Physical Demand' : tab === 'etf' ? 'ETF Flows' : 'Structural Data'}
+              </button>
+            ))}
           </div>
+
+          {activeTab === 'physical' && (
+            <div className="space-y-3">
+              <div className="max-h-64 overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-card">
+                    <tr className="border-b border-card-border text-muted-foreground">
+                      <th className="text-left px-2 py-1.5">Quarter</th>
+                      <th className="text-right px-2 py-1.5">CB Tonnes</th>
+                      <th className="text-right px-2 py-1.5">Bar/Coin</th>
+                      <th className="text-right px-2 py-1.5">Total</th>
+                      <th className="text-right px-2 py-1.5 w-16"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedData.map((row, i) => (
+                      <tr key={row.quarter} className={`border-b border-card-border/30 ${i % 2 === 0 ? '' : 'bg-secondary/5'}`}>
+                        <td className="px-2 py-1.5 font-mono text-foreground">{row.quarter}</td>
+                        {editingQ === row.quarter ? (
+                          <>
+                            <td className="px-2 py-1.5"><input type="number" value={editTonnes} onChange={e => setEditTonnes(Number(e.target.value))} className="w-16 bg-secondary/30 border border-card-border rounded px-1 py-0.5 text-xs font-mono text-foreground text-right" /></td>
+                            <td className="px-2 py-1.5"><input type="number" value={editBarCoin} onChange={e => setEditBarCoin(Number(e.target.value))} className="w-16 bg-secondary/30 border border-card-border rounded px-1 py-0.5 text-xs font-mono text-foreground text-right" /></td>
+                            <td className="px-2 py-1.5 text-right font-mono text-foreground">{editTonnes + editBarCoin}</td>
+                            <td className="px-2 py-1.5 text-right">
+                              <button onClick={() => savePhysicalEdit(row.quarter)} className="text-bullish mr-1"><Check className="w-3 h-3 inline" /></button>
+                              <button onClick={() => setEditingQ(null)} className="text-bearish"><X className="w-3 h-3 inline" /></button>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="px-2 py-1.5 text-right font-mono text-foreground">{row.tonnes}</td>
+                            <td className="px-2 py-1.5 text-right font-mono text-foreground">{row.bar_coin_tonnes || 0}</td>
+                            <td className="px-2 py-1.5 text-right font-mono text-foreground font-semibold">{row.tonnes + (row.bar_coin_tonnes || 0)}</td>
+                            <td className="px-2 py-1.5 text-right">
+                              <button onClick={() => { setEditingQ(row.quarter); setEditTonnes(row.tonnes); setEditBarCoin(row.bar_coin_tonnes || 0); }} className="text-muted-foreground hover:text-foreground"><Pencil className="w-3 h-3 inline" /></button>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex flex-wrap items-end gap-2 pt-2 border-t border-card-border">
+                <div>
+                  <label className="text-[9px] text-muted-foreground">Quarter</label>
+                  <select value={newQ} onChange={e => setNewQ(e.target.value)} className="block bg-secondary/30 border border-card-border rounded px-2 py-1 text-xs text-foreground">
+                    <option value="">Select</option>
+                    {quarterOpts.slice(0, 12).map(q => <option key={q} value={q}>{q}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[9px] text-muted-foreground">CB Tonnes</label>
+                  <input type="number" value={newTonnes} onChange={e => setNewTonnes(Number(e.target.value))} className="block w-20 bg-secondary/30 border border-card-border rounded px-2 py-1 text-xs font-mono text-foreground" />
+                </div>
+                <div>
+                  <label className="text-[9px] text-muted-foreground">Bar/Coin</label>
+                  <input type="number" value={newBarCoin} onChange={e => setNewBarCoin(Number(e.target.value))} className="block w-20 bg-secondary/30 border border-card-border rounded px-2 py-1 text-xs font-mono text-foreground" />
+                </div>
+                <button onClick={handleAddPhysical} disabled={!newQ || loading} className="flex items-center gap-1 px-3 py-1 bg-gold/20 text-gold rounded text-xs font-medium hover:bg-gold/30 disabled:opacity-50">
+                  <Plus className="w-3 h-3" /> Add
+                </button>
+              </div>
+              <p className="text-[9px] text-muted-foreground">
+                Source: <a href="https://www.gold.org/goldhub/research/gold-demand-trends" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline inline-flex items-center gap-0.5">World Gold Council <ExternalLink className="w-2.5 h-2.5" /></a>
+              </p>
+            </div>
+          )}
+
+          {activeTab === 'etf' && (
+            <div className="space-y-3">
+              <div className="max-h-64 overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-card">
+                    <tr className="border-b border-card-border text-muted-foreground">
+                      <th className="text-left px-2 py-1.5">Month</th>
+                      <th className="text-right px-2 py-1.5">Flows ($B)</th>
+                      <th className="text-right px-2 py-1.5">Holdings (t)</th>
+                      <th className="text-right px-2 py-1.5 w-16"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedEtf.map((row, i) => (
+                      <tr key={row.month} className={`border-b border-card-border/30 ${i % 2 === 0 ? '' : 'bg-secondary/5'}`}>
+                        <td className="px-2 py-1.5 font-mono text-foreground">{row.month}</td>
+                        {editingMonth === row.month ? (
+                          <>
+                            <td className="px-2 py-1.5"><input type="number" step="0.1" value={editFlows} onChange={e => setEditFlows(Number(e.target.value))} className="w-20 bg-secondary/30 border border-card-border rounded px-1 py-0.5 text-xs font-mono text-foreground text-right" /></td>
+                            <td className="px-2 py-1.5"><input type="number" value={editHoldings} onChange={e => setEditHoldings(Number(e.target.value))} className="w-20 bg-secondary/30 border border-card-border rounded px-1 py-0.5 text-xs font-mono text-foreground text-right" /></td>
+                            <td className="px-2 py-1.5 text-right">
+                              <button onClick={() => saveEtfEdit(row.month)} className="text-bullish mr-1"><Check className="w-3 h-3 inline" /></button>
+                              <button onClick={() => setEditingMonth(null)} className="text-bearish"><X className="w-3 h-3 inline" /></button>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className={`px-2 py-1.5 text-right font-mono ${row.flows_usd_bn > 0 ? 'text-bullish' : row.flows_usd_bn < 0 ? 'text-bearish' : 'text-foreground'}`}>
+                              {row.flows_usd_bn > 0 ? '+' : ''}{row.flows_usd_bn.toFixed(1)}
+                            </td>
+                            <td className="px-2 py-1.5 text-right font-mono text-foreground">{Math.round(row.holdings_tonnes).toLocaleString()}</td>
+                            <td className="px-2 py-1.5 text-right">
+                              <button onClick={() => { setEditingMonth(row.month); setEditFlows(row.flows_usd_bn); setEditHoldings(row.holdings_tonnes); }} className="text-muted-foreground hover:text-foreground"><Pencil className="w-3 h-3 inline" /></button>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex flex-wrap items-end gap-2 pt-2 border-t border-card-border">
+                <div>
+                  <label className="text-[9px] text-muted-foreground">Month</label>
+                  <select value={newMonth} onChange={e => setNewMonth(e.target.value)} className="block bg-secondary/30 border border-card-border rounded px-2 py-1 text-xs text-foreground">
+                    <option value="">Select</option>
+                    {monthOpts.slice(0, 12).map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[9px] text-muted-foreground">Flows ($B)</label>
+                  <input type="number" step="0.1" value={newFlows} onChange={e => setNewFlows(Number(e.target.value))} className="block w-20 bg-secondary/30 border border-card-border rounded px-2 py-1 text-xs font-mono text-foreground" />
+                </div>
+                <div>
+                  <label className="text-[9px] text-muted-foreground">Holdings (t)</label>
+                  <input type="number" value={newHoldings} onChange={e => setNewHoldings(Number(e.target.value))} className="block w-20 bg-secondary/30 border border-card-border rounded px-2 py-1 text-xs font-mono text-foreground" />
+                </div>
+                <button onClick={handleAddEtf} disabled={!newMonth || loading} className="flex items-center gap-1 px-3 py-1 bg-gold/20 text-gold rounded text-xs font-medium hover:bg-gold/30 disabled:opacity-50">
+                  <Plus className="w-3 h-3" /> Add
+                </button>
+              </div>
+              <p className="text-[9px] text-muted-foreground">
+                Source: <a href="https://www.gold.org/goldhub/data/global-gold-backed-etf-holdings-and-flows" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline inline-flex items-center gap-0.5">WGC ETF Data <ExternalLink className="w-2.5 h-2.5" /></a>
+              </p>
+            </div>
+          )}
+
+          {activeTab === 'structural' && (
+            <div className="p-6 text-center text-muted-foreground text-sm">
+              <p>All Tier 1 structural data currently sourced from FRED automatically.</p>
+              <p className="text-xs mt-2">Reserved for future manual structural data inputs.</p>
+            </div>
+          )}
         </div>
       )}
     </div>

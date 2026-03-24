@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { ChevronRight, ChevronDown, RotateCcw } from 'lucide-react';
 import type { GDIResult, VariableDetail } from '@/lib/gdiEngine';
 import type { ScenarioProbabilities, ScenarioConfig } from '@/lib/scenarioEngine';
-import { INVERT_SERIES } from '@/lib/constants';
+import { INVERT_SERIES, VARIABLE_CONFIG } from '@/lib/constants';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface LogicMapProps {
@@ -32,9 +32,10 @@ function getHeatBg(adjZ: number): string {
 }
 
 function formatVal(v: number, id: string): string {
-  if (['DFII10', 'T10YIE', 'DFF', 'T10Y2Y'].includes(id)) return `${v.toFixed(2)}%`;
+  if (['DFII10', 'T10YIE', 'REAL_FFR', 'WM2NS_DEV', 'GFDEGDQ188S'].includes(id)) return `${v.toFixed(2)}%`;
   if (id === 'DCOILBRENTEU') return `$${v.toFixed(1)}`;
-  if (id === 'central_bank_gold') return `${Math.round(v).toLocaleString()}t`;
+  if (id === 'PHYSICAL_DEMAND') return `${Math.round(v).toLocaleString()}t`;
+  if (id === 'ETF_FLOWS') return `$${v.toFixed(1)}B`;
   return v.toFixed(1);
 }
 

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Save } from 'lucide-react';
 import type { GDIResult } from '@/lib/gdiEngine';
 import type { ScenarioConfig, ScenarioProbabilities } from '@/lib/scenarioEngine';
-import { FIXED_WEIGHTS } from '@/lib/constants';
+import { FIXED_WEIGHTS, VARIABLE_CONFIG } from '@/lib/constants';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { GuideTooltip } from './GuideMode';

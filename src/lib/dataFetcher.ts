@@ -1,19 +1,17 @@
 import { supabase } from '@/integrations/supabase/client';
 import { FRED_SERIES, CACHE_TTL_HOURS } from './constants';
+import type { CentralBankEntry, EtfFlowEntry } from './gdiEngine';
 
 export interface Observation {
   date: string;
   value: number;
 }
 
+export type { CentralBankEntry, EtfFlowEntry };
+
 export interface SeriesData {
   seriesId: string;
   observations: Observation[];
-}
-
-export interface CentralBankEntry {
-  quarter: string;
-  tonnes: number;
 }
 
 function isCacheFresh(lastFetched: string): boolean {
@@ -71,7 +69,6 @@ export async function fetchFredSeries(
 }
 
 export async function fetchGoldSpot(onStatus?: (msg: string) => void): Promise<Observation[]> {
-  // Check cache first
   const { data: cached } = await supabase
     .from('data_cache')
     .select('*')
@@ -84,7 +81,6 @@ export async function fetchGoldSpot(onStatus?: (msg: string) => void): Promise<O
 
   onStatus?.('Fetching Gold Spot Price...');
 
-  // Load from bundled historical data file
   try {
     const res = await fetch('/data/gold-historical.json');
     if (res.ok) {
@@ -105,21 +101,40 @@ export async function fetchGoldSpot(onStatus?: (msg: string) => void): Promise<O
   return [];
 }
 
-export async function fetchCentralBankGold(): Promise<CentralBankEntry[]> {
+export async function fetchPhysicalDemand(): Promise<CentralBankEntry[]> {
   const { data, error } = await supabase
     .from('central_bank_gold')
-    .select('quarter, tonnes')
+    .select('quarter, tonnes, bar_coin_tonnes')
     .order('quarter', { ascending: true });
 
   if (error) throw error;
-  return data || [];
+  return (data || []).map(d => ({
+    quarter: d.quarter,
+    tonnes: d.tonnes,
+    bar_coin_tonnes: (d as any).bar_coin_tonnes || 0,
+  }));
+}
+
+export async function fetchEtfFlows(): Promise<EtfFlowEntry[]> {
+  const { data, error } = await supabase
+    .from('etf_flows')
+    .select('month, flows_usd_bn, holdings_tonnes')
+    .order('month', { ascending: true });
+
+  if (error) throw error;
+  return (data || []).map(d => ({
+    month: d.month,
+    flows_usd_bn: Number(d.flows_usd_bn),
+    holdings_tonnes: Number(d.holdings_tonnes),
+  }));
 }
 
 export async function fetchAllData(onStatus?: (msg: string) => void) {
   const fredResults: Record<string, Observation[]> = {};
   const errors: string[] = [];
 
-  const cbPromise = fetchCentralBankGold();
+  const physicalPromise = fetchPhysicalDemand();
+  const etfPromise = fetchEtfFlows();
 
   const fredPromises = FRED_SERIES.map(async (series) => {
     try {
@@ -133,11 +148,12 @@ export async function fetchAllData(onStatus?: (msg: string) => void) {
 
   const goldPromise = fetchGoldSpot(onStatus);
 
-  const [, goldSpot, centralBank] = await Promise.all([
+  const [, goldSpot, physicalDemand, etfFlows] = await Promise.all([
     Promise.all(fredPromises),
     goldPromise,
-    cbPromise,
+    physicalPromise,
+    etfPromise,
   ]);
 
-  return { fredResults, goldSpot, centralBank, errors };
+  return { fredResults, goldSpot, physicalDemand, etfFlows, errors };
 }
