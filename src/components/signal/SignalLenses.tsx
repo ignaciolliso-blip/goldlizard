@@ -84,7 +84,7 @@ function ForcesCard({ gdiResult, currentGDI }: { gdiResult: GDIResult | null; cu
 
   const tc = gdiResult.tierContributions;
   const tiers = [
-    { label: 'Structural', value: tc.Structural },
+    { label: 'Structural', value: (tc as any).structural ?? (tc as any).Structural ?? 0 },
     { label: 'Demand', value: tc.demand },
     { label: 'Conditions', value: tc.conditions },
   ];
