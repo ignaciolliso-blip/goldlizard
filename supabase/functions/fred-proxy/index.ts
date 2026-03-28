@@ -47,7 +47,8 @@ serve(async (req) => {
       });
     }
 
-    const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${series_id}&api_key=${apiKey}&file_type=json&observation_start=${observation_start || '2015-01-01'}&frequency=d`;
+    // Don't force frequency — let FRED return native frequency for each series
+    const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${series_id}&api_key=${apiKey}&file_type=json&observation_start=${observation_start || '2015-01-01'}`;
 
     const response = await fetch(url);
     const data = await response.json();

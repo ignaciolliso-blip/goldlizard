@@ -1,34 +1,27 @@
-import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { fetchAllData, type Observation, type CentralBankEntry, type EtfFlowEntry, type MinerPrice } from '@/lib/dataFetcher';
 import { calculateGDI, type GDIResult } from '@/lib/gdiEngine';
 import { fetchScenarioTargets } from '@/lib/scenarioFetcher';
 import {
-  computeScenarioProbabilities, buildForecastPoints, computeForwardGDI, computeHorizonProbabilities,
-  type ScenarioConfig, type ForecastPoint, type ScenarioProbabilities,
+  computeScenarioProbabilities, type ScenarioConfig, type ScenarioProbabilities,
 } from '@/lib/scenarioEngine';
 import { computeAnchor, type AnchorResult } from '@/lib/anchorEngine';
-import { computeLeverage, type LeverageResult } from '@/lib/leverageEngine';
-import { DEFAULT_PROJECTIONS, type ProjectionRow } from '@/lib/constants';
-import DashboardHeader from '@/components/DashboardHeader';
+import { computeLeverage, type LeverageResult, projectGDXGoldRatio } from '@/lib/leverageEngine';
 import LoadingProgress from '@/components/LoadingProgress';
-import VariableTable from '@/components/VariableTable';
-import ComponentDashboard from '@/components/ComponentDashboard';
-import HeroChart from '@/components/HeroChart';
-import AnalysisPanel from '@/components/AnalysisPanel';
-import KeyInsightsStrip from '@/components/KeyInsightsStrip';
-import DemandDataManager from '@/components/CentralBankManager';
-import NarratorPanel from '@/components/NarratorPanel';
-import LogicMap from '@/components/LogicMap';
-import ProjectionAssumptions from '@/components/ProjectionAssumptions';
-import DebugTable from '@/components/DebugTable';
-import { GuideModeProvider } from '@/components/GuideMode';
+import SignalLenses from '@/components/signal/SignalLenses';
+import SignalProjectionTable from '@/components/signal/SignalProjectionTable';
+import SignalPositioning from '@/components/signal/SignalPositioning';
+import { Link } from 'react-router-dom';
+import { ArrowRight } from 'lucide-react';
 
 const Index = () => {
   const [loading, setLoading] = useState(true);
   const [statusMsg, setStatusMsg] = useState('Initializing...');
-  const [gdiResult, setGdiResult] = useState<GDIResult | null>(null);
-  const [weightMode, setWeightMode] = useState<'fixed' | 'rolling'>('fixed');
   const [error, setError] = useState<string | null>(null);
+  const [gdiResult, setGdiResult] = useState<GDIResult | null>(null);
+  const [anchorResult, setAnchorResult] = useState<AnchorResult | null>(null);
+  const [leverageResult, setLeverageResult] = useState<LeverageResult | null>(null);
+  const [scenarioConfig, setScenarioConfig] = useState<ScenarioConfig | null>(null);
   const [rawData, setRawData] = useState<{
     fredResults: Record<string, Observation[]>;
     goldSpot: Observation[];
@@ -37,24 +30,6 @@ const Index = () => {
     minerPrices: MinerPrice[];
     errors: string[];
   } | null>(null);
-  const [scenarioConfig, setScenarioConfig] = useState<ScenarioConfig | null>(null);
-  const [showFutures, setShowFutures] = useState(true);
-  const [showBankConsensus, setShowBankConsensus] = useState(false);
-  const [timeRange, setTimeRange] = useState('5Y');
-  const [lastUpdated, setLastUpdated] = useState<string>('');
-  const [projections, setProjections] = useState<ProjectionRow[]>([]);
-  const [anchorResult, setAnchorResult] = useState<AnchorResult | null>(null);
-  const [leverageResult, setLeverageResult] = useState<LeverageResult | null>(null);
-
-  const heroChartRef = useRef<HTMLDivElement>(null);
-  const scenarioRef = useRef<HTMLDivElement>(null);
-  const componentRef = useRef<HTMLDivElement>(null);
-
-  const scrollToChart = useCallback(() => heroChartRef.current?.scrollIntoView({ behavior: 'smooth' }), []);
-  const scrollToScenarios = useCallback(() => scenarioRef.current?.scrollIntoView({ behavior: 'smooth' }), []);
-  const handleLogicMapVarClick = useCallback((varId: string) => {
-    componentRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
 
   useEffect(() => {
     async function load() {
@@ -65,32 +40,20 @@ const Index = () => {
         ]);
         setRawData(data);
         setScenarioConfig(scenarios);
+
         setStatusMsg('Computing GDI...');
         const result = calculateGDI(
           data.fredResults, data.physicalDemand, data.etfFlows, data.errors, 'fixed', data.goldSpot
         );
         setGdiResult(result);
 
-        // Compute Anchor (Lens 1)
         const cpiData = data.fredResults['CPIAUCSL'] || [];
         const m2Data = data.fredResults['WM2NS'] || [];
         const anchor = computeAnchor(data.goldSpot, cpiData, m2Data, '2000');
         setAnchorResult(anchor);
 
-        // Compute Leverage (Lens 3)
         const leverage = computeLeverage(data.goldSpot, data.minerPrices);
         setLeverageResult(leverage);
-
-        // Initialize projections with current values
-        const initialProjections: ProjectionRow[] = DEFAULT_PROJECTIONS.map(dp => {
-          const detail = result.variableDetails.find(v => v.id === dp.variableId);
-          return { ...dp, current: detail?.currentValue ?? 0 };
-        });
-        setProjections(initialProjections);
-
-        setLastUpdated(new Date().toLocaleString('en-US', {
-          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-        }));
       } catch (e: any) {
         setError(e.message || 'Failed to load data');
       } finally {
@@ -100,36 +63,19 @@ const Index = () => {
     load();
   }, []);
 
-  // Recalculate when weight mode changes
-  useEffect(() => {
-    if (!rawData) return;
-    const result = calculateGDI(
-      rawData.fredResults, rawData.physicalDemand, rawData.etfFlows, rawData.errors, weightMode, rawData.goldSpot
-    );
-    setGdiResult(result);
-  }, [weightMode, rawData]);
-
   const currentGDI = gdiResult ? gdiResult.gdiValues[gdiResult.gdiValues.length - 1] : 0;
+  const goldSpot = rawData?.goldSpot || [];
+  const currentGoldPrice = goldSpot.length > 0 ? goldSpot[goldSpot.length - 1].value : 3000;
 
-  const { probs, forecastPoints, forwardGDI, horizonProbs } = useMemo(() => {
-    if (!gdiResult || !scenarioConfig) {
-      return {
-        probs: { bull: 0.33, base: 0.34, bear: 0.33 } as ScenarioProbabilities,
-        forecastPoints: [] as ForecastPoint[],
-        forwardGDI: {} as Record<string, number>,
-        horizonProbs: {} as Record<string, ScenarioProbabilities>,
-      };
-    }
-    const p = computeScenarioProbabilities(currentGDI);
-    const goldData = rawData?.goldSpot || [];
-    const lastGoldPrice = goldData.length > 0 ? goldData[goldData.length - 1].value : 3000;
+  const probs = useMemo(() => {
+    return computeScenarioProbabilities(currentGDI);
+  }, [currentGDI]);
 
-    const fGDI = projections.length > 0 ? computeForwardGDI(projections, gdiResult) : {};
-    const hProbs = Object.keys(fGDI).length > 0 ? computeHorizonProbabilities(fGDI) : {};
-
-    const fp = buildForecastPoints(lastGoldPrice, scenarioConfig.scenarios, p, hProbs);
-    return { probs: p, forecastPoints: fp, forwardGDI: fGDI, horizonProbs: hProbs };
-  }, [currentGDI, scenarioConfig, rawData, projections, gdiResult]);
+  const currentGDXPrice = useMemo(() => {
+    if (!rawData?.minerPrices.length) return 83;
+    const sorted = [...rawData.minerPrices].sort((a, b) => a.date.localeCompare(b.date));
+    return sorted[sorted.length - 1].close_price;
+  }, [rawData]);
 
   if (loading) return <LoadingProgress message={statusMsg} />;
 
@@ -139,7 +85,7 @@ const Index = () => {
         <div className="text-center">
           <h1 className="font-display text-xl sm:text-2xl text-bearish mb-2">Error</h1>
           <p className="text-muted-foreground text-sm mb-4">{error}</p>
-          <button onClick={() => window.location.reload()} className="px-4 py-2 bg-gold/20 text-gold rounded text-sm font-medium hover:bg-gold/30 transition-colors">
+          <button onClick={() => window.location.reload()} className="px-4 py-2 bg-primary/20 text-primary rounded text-sm font-medium hover:bg-primary/30 transition-colors">
             Retry
           </button>
         </div>
@@ -147,144 +93,75 @@ const Index = () => {
     );
   }
 
-  const goldFutures = rawData?.goldSpot || [];
-  const goldSpot = rawData?.goldSpot?.length ? rawData.goldSpot : goldFutures;
-  const currentGoldPrice = goldSpot.length > 0 ? goldSpot[goldSpot.length - 1].value : 3000;
-
   return (
-    <GuideModeProvider>
-      <div className="min-h-screen">
-        <DashboardHeader
+    <div className="min-h-screen bg-background">
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 pt-8 pb-16 space-y-12">
+        {/* Band 1: Three Lenses */}
+        <SignalLenses
+          anchorResult={anchorResult}
+          gdiResult={gdiResult}
+          leverageResult={leverageResult}
           currentGDI={currentGDI}
-          weightMode={weightMode}
-          onWeightModeChange={setWeightMode}
-          lastUpdated={lastUpdated}
-          tierContributions={gdiResult?.tierContributions}
+          currentGDXPrice={currentGDXPrice}
         />
 
-        <div className="pt-28 sm:pt-32 pb-8 px-3 sm:px-6 max-w-[1600px] mx-auto space-y-4 sm:space-y-6">
-          {/* Debug Table — Pipeline Validation */}
-          <DebugTable
-            rawData={rawData}
-            gdiResult={gdiResult}
-            anchorResult={anchorResult}
-            leverageResult={leverageResult}
-            currentGDI={currentGDI}
-          />
+        {/* Band 2: Projection Table */}
+        <SignalProjectionTable
+          anchorResult={anchorResult}
+          leverageResult={leverageResult}
+          scenarioConfig={scenarioConfig}
+          currentGoldPrice={currentGoldPrice}
+          currentGDXPrice={currentGDXPrice}
+          currentGDI={currentGDI}
+          probs={probs}
+        />
 
-          {/* Scenario probability bar */}
-          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] sm:text-xs">
-            <span className="text-muted-foreground">Scenario Probabilities:</span>
-            <span className="text-bullish font-mono">Bull {(probs.bull * 100).toFixed(0)}%</span>
-            <span className="text-gold font-mono">Base {(probs.base * 100).toFixed(0)}%</span>
-            <span className="text-bearish font-mono">Bear {(probs.bear * 100).toFixed(0)}%</span>
-            <div className="flex-1 min-w-[100px] h-1.5 rounded-full overflow-hidden flex bg-card border border-card-border">
-              <div className="bg-bullish transition-all" style={{ width: `${probs.bull * 100}%` }} />
-              <div className="bg-gold transition-all" style={{ width: `${probs.base * 100}%` }} />
-              <div className="bg-bearish transition-all" style={{ width: `${probs.bear * 100}%` }} />
-            </div>
-          </div>
+        {/* Band 3: Positioning & Narrative */}
+        <SignalPositioning
+          anchorResult={anchorResult}
+          gdiResult={gdiResult}
+          leverageResult={leverageResult}
+          currentGDI={currentGDI}
+          currentGoldPrice={currentGoldPrice}
+          currentGDXPrice={currentGDXPrice}
+          probs={probs}
+          scenarioConfig={scenarioConfig}
+        />
 
-          {/* AI Narrator Panel */}
-          {gdiResult && (
-            <NarratorPanel
-              gdiResult={gdiResult}
-              goldSpot={goldSpot}
-              currentGDI={currentGDI}
-              probs={probs}
-              scenarioConfig={scenarioConfig}
-              currentGoldPrice={currentGoldPrice}
-              weightMode={weightMode}
-            />
-          )}
-
-          <div ref={heroChartRef}>
-            {gdiResult && (
-              <HeroChart
-                gdiResult={gdiResult}
-                goldSpot={goldSpot}
-                goldFutures={goldFutures}
-                forecastPoints={forecastPoints}
-                probs={probs}
-                showFutures={showFutures}
-                onToggleFutures={() => setShowFutures(v => !v)}
-                showBankConsensus={showBankConsensus}
-                onToggleBankConsensus={() => setShowBankConsensus(v => !v)}
-                timeRange={timeRange}
-                onTimeRangeChange={setTimeRange}
-              />
-            )}
-          </div>
-
-          {/* Logic Map */}
-          {gdiResult && scenarioConfig && (
-            <LogicMap
-              gdiResult={gdiResult}
-              currentGDI={currentGDI}
-              probs={probs}
-              scenarioConfig={scenarioConfig}
-              currentGoldPrice={currentGoldPrice}
-              onVariableClick={handleLogicMapVarClick}
-              onScrollToChart={scrollToChart}
-              onScrollToScenarios={scrollToScenarios}
-            />
-          )}
-
-          <div ref={componentRef}>
-            {gdiResult && (
-              <ComponentDashboard gdiResult={gdiResult} goldSpot={goldSpot} timeRange={timeRange} />
-            )}
-          </div>
-
-          <div ref={scenarioRef}>
-            {gdiResult && scenarioConfig && (
-              <AnalysisPanel
-                gdiResult={gdiResult}
-                weightMode={weightMode}
-                probs={probs}
-                scenarioConfig={scenarioConfig}
-                currentGDI={currentGDI}
-                currentGoldPrice={currentGoldPrice}
-                onScenarioUpdate={setScenarioConfig}
-              />
-            )}
-          </div>
-
-          {/* Projection Assumptions */}
-          {gdiResult && (
-            <ProjectionAssumptions
-              projections={projections}
-              onProjectionsChange={setProjections}
-              forwardGDI={forwardGDI}
-              horizonProbs={horizonProbs}
-            />
-          )}
-
-          {gdiResult && (
-            <KeyInsightsStrip gdiResult={gdiResult} goldSpot={goldSpot} currentGDI={currentGDI} />
-          )}
-
-          {gdiResult && (
-            <VariableTable variables={gdiResult.variableDetails} errors={rawData?.errors || []} />
-          )}
-
-          <DemandDataManager
-            initialData={rawData?.physicalDemand || []}
-            initialEtfFlows={rawData?.etfFlows || []}
-            onDataChange={(newData) => {
-              if (rawData) {
-                setRawData({ ...rawData, physicalDemand: newData });
-              }
-            }}
-            onEtfFlowsChange={(newFlows) => {
-              if (rawData) {
-                setRawData({ ...rawData, etfFlows: newFlows });
-              }
-            }}
-          />
+        {/* Footer */}
+        <div className="text-center space-y-4">
+          <p className="text-muted-foreground text-xs font-mono">
+            5-Year Gold Expected CAGR: {(() => {
+              if (!scenarioConfig?.scenarios?.length) return '—';
+              const bull = scenarioConfig.scenarios.find(s => s.name === 'Bull');
+              const base = scenarioConfig.scenarios.find(s => s.name === 'Base');
+              const bear = scenarioConfig.scenarios.find(s => s.name === 'Bear');
+              if (!bull || !base || !bear) return '—';
+              const ev5y = probs.bull * bull.targets['5y'] + probs.base * base.targets['5y'] + probs.bear * bear.targets['5y'];
+              const cagr = (Math.pow(ev5y / currentGoldPrice, 1 / 5) - 1) * 100;
+              return `${cagr.toFixed(1)}% (vs. long-run avg 7.9%)`;
+            })()}
+            {leverageResult && (() => {
+              const bull = scenarioConfig?.scenarios?.find(s => s.name === 'Bull');
+              const base = scenarioConfig?.scenarios?.find(s => s.name === 'Base');
+              const bear = scenarioConfig?.scenarios?.find(s => s.name === 'Bear');
+              if (!bull || !base || !bear) return '';
+              const ev5y = probs.bull * bull.targets['5y'] + probs.base * base.targets['5y'] + probs.bear * bear.targets['5y'];
+              const projRatio = projectGDXGoldRatio(leverageResult.currentGDXGoldRatio, leverageResult.medianRatio, 5);
+              const gdx5y = ev5y * projRatio;
+              const gdxCagr = (Math.pow(gdx5y / currentGDXPrice, 1 / 5) - 1) * 100;
+              return ` | 5-Year GDX Expected CAGR: ${gdxCagr.toFixed(1)}%`;
+            })()}
+          </p>
+          <Link
+            to="/analysis"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-card border border-border text-foreground font-medium hover:border-primary/50 transition-colors"
+          >
+            Explore Analysis <ArrowRight size={16} />
+          </Link>
         </div>
       </div>
-    </GuideModeProvider>
+    </div>
   );
 };
 
