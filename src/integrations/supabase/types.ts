@@ -80,6 +80,30 @@ export type Database = {
         }
         Relationships: []
       }
+      miner_prices: {
+        Row: {
+          close_price: number
+          created_at: string
+          date: string
+          id: number
+          ticker: string
+        }
+        Insert: {
+          close_price: number
+          created_at?: string
+          date: string
+          id?: never
+          ticker?: string
+        }
+        Update: {
+          close_price?: number
+          created_at?: string
+          date?: string
+          id?: never
+          ticker?: string
+        }
+        Relationships: []
+      }
       narrator_cache: {
         Row: {
           briefing_text: string

@@ -1,13 +1,14 @@
 import { supabase } from '@/integrations/supabase/client';
 import { FRED_SERIES, CACHE_TTL_HOURS } from './constants';
 import type { CentralBankEntry, EtfFlowEntry } from './gdiEngine';
+import type { MinerPrice } from './leverageEngine';
 
 export interface Observation {
   date: string;
   value: number;
 }
 
-export type { CentralBankEntry, EtfFlowEntry };
+export type { CentralBankEntry, EtfFlowEntry, MinerPrice };
 
 export interface SeriesData {
   seriesId: string;
@@ -129,12 +130,28 @@ export async function fetchEtfFlows(): Promise<EtfFlowEntry[]> {
   }));
 }
 
+export async function fetchMinerPrices(): Promise<MinerPrice[]> {
+  const { data, error } = await supabase
+    .from('miner_prices')
+    .select('date, ticker, close_price')
+    .eq('ticker', 'GDX')
+    .order('date', { ascending: true });
+
+  if (error) throw error;
+  return (data || []).map(d => ({
+    date: String(d.date),
+    ticker: d.ticker,
+    close_price: Number(d.close_price),
+  }));
+}
+
 export async function fetchAllData(onStatus?: (msg: string) => void) {
   const fredResults: Record<string, Observation[]> = {};
   const errors: string[] = [];
 
   const physicalPromise = fetchPhysicalDemand();
   const etfPromise = fetchEtfFlows();
+  const minerPromise = fetchMinerPrices();
 
   const fredPromises = FRED_SERIES.map(async (series) => {
     try {
@@ -148,12 +165,13 @@ export async function fetchAllData(onStatus?: (msg: string) => void) {
 
   const goldPromise = fetchGoldSpot(onStatus);
 
-  const [, goldSpot, physicalDemand, etfFlows] = await Promise.all([
+  const [, goldSpot, physicalDemand, etfFlows, minerPrices] = await Promise.all([
     Promise.all(fredPromises),
     goldPromise,
     physicalPromise,
     etfPromise,
+    minerPromise,
   ]);
 
-  return { fredResults, goldSpot, physicalDemand, etfFlows, errors };
+  return { fredResults, goldSpot, physicalDemand, etfFlows, minerPrices, errors };
 }

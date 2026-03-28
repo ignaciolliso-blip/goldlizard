@@ -62,6 +62,10 @@ export default {
         "index-blue": "hsl(var(--index-blue))",
         "futures-purple": "hsl(var(--futures-purple))",
         "card-border": "hsl(var(--card-border))",
+        "anchor-cpi": "hsl(var(--anchor-cpi))",
+        "anchor-m2": "hsl(var(--anchor-m2))",
+        "forces-gdi": "hsl(var(--forces-gdi))",
+        "leverage-miner": "hsl(var(--leverage-miner))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

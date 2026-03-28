@@ -1,11 +1,13 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
-import { fetchAllData, type Observation, type CentralBankEntry, type EtfFlowEntry } from '@/lib/dataFetcher';
+import { fetchAllData, type Observation, type CentralBankEntry, type EtfFlowEntry, type MinerPrice } from '@/lib/dataFetcher';
 import { calculateGDI, type GDIResult } from '@/lib/gdiEngine';
 import { fetchScenarioTargets } from '@/lib/scenarioFetcher';
 import {
   computeScenarioProbabilities, buildForecastPoints, computeForwardGDI, computeHorizonProbabilities,
   type ScenarioConfig, type ForecastPoint, type ScenarioProbabilities,
 } from '@/lib/scenarioEngine';
+import { computeAnchor, type AnchorResult } from '@/lib/anchorEngine';
+import { computeLeverage, type LeverageResult } from '@/lib/leverageEngine';
 import { DEFAULT_PROJECTIONS, type ProjectionRow } from '@/lib/constants';
 import DashboardHeader from '@/components/DashboardHeader';
 import LoadingProgress from '@/components/LoadingProgress';
@@ -18,6 +20,7 @@ import DemandDataManager from '@/components/CentralBankManager';
 import NarratorPanel from '@/components/NarratorPanel';
 import LogicMap from '@/components/LogicMap';
 import ProjectionAssumptions from '@/components/ProjectionAssumptions';
+import DebugTable from '@/components/DebugTable';
 import { GuideModeProvider } from '@/components/GuideMode';
 
 const Index = () => {
@@ -31,6 +34,7 @@ const Index = () => {
     goldSpot: Observation[];
     physicalDemand: CentralBankEntry[];
     etfFlows: EtfFlowEntry[];
+    minerPrices: MinerPrice[];
     errors: string[];
   } | null>(null);
   const [scenarioConfig, setScenarioConfig] = useState<ScenarioConfig | null>(null);
@@ -39,6 +43,8 @@ const Index = () => {
   const [timeRange, setTimeRange] = useState('5Y');
   const [lastUpdated, setLastUpdated] = useState<string>('');
   const [projections, setProjections] = useState<ProjectionRow[]>([]);
+  const [anchorResult, setAnchorResult] = useState<AnchorResult | null>(null);
+  const [leverageResult, setLeverageResult] = useState<LeverageResult | null>(null);
 
   const heroChartRef = useRef<HTMLDivElement>(null);
   const scenarioRef = useRef<HTMLDivElement>(null);
@@ -64,6 +70,16 @@ const Index = () => {
           data.fredResults, data.physicalDemand, data.etfFlows, data.errors, 'fixed', data.goldSpot
         );
         setGdiResult(result);
+
+        // Compute Anchor (Lens 1)
+        const cpiData = data.fredResults['CPIAUCSL'] || [];
+        const m2Data = data.fredResults['WM2NS'] || [];
+        const anchor = computeAnchor(data.goldSpot, cpiData, m2Data, '2000');
+        setAnchorResult(anchor);
+
+        // Compute Leverage (Lens 3)
+        const leverage = computeLeverage(data.goldSpot, data.minerPrices);
+        setLeverageResult(leverage);
 
         // Initialize projections with current values
         const initialProjections: ProjectionRow[] = DEFAULT_PROJECTIONS.map(dp => {
@@ -108,7 +124,6 @@ const Index = () => {
     const goldData = rawData?.goldSpot || [];
     const lastGoldPrice = goldData.length > 0 ? goldData[goldData.length - 1].value : 3000;
 
-    // Compute forward GDI and horizon-specific probabilities
     const fGDI = projections.length > 0 ? computeForwardGDI(projections, gdiResult) : {};
     const hProbs = Object.keys(fGDI).length > 0 ? computeHorizonProbabilities(fGDI) : {};
 
@@ -147,7 +162,16 @@ const Index = () => {
           tierContributions={gdiResult?.tierContributions}
         />
 
-        <div className="pt-16 sm:pt-20 pb-8 px-3 sm:px-6 max-w-[1600px] mx-auto space-y-4 sm:space-y-6">
+        <div className="pt-28 sm:pt-32 pb-8 px-3 sm:px-6 max-w-[1600px] mx-auto space-y-4 sm:space-y-6">
+          {/* Debug Table — Pipeline Validation */}
+          <DebugTable
+            rawData={rawData}
+            gdiResult={gdiResult}
+            anchorResult={anchorResult}
+            leverageResult={leverageResult}
+            currentGDI={currentGDI}
+          />
+
           {/* Scenario probability bar */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] sm:text-xs">
             <span className="text-muted-foreground">Scenario Probabilities:</span>
