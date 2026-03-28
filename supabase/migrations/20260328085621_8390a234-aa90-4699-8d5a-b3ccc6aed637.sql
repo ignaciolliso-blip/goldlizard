@@ -1,0 +1,1 @@
+DELETE FROM data_cache WHERE series_id IN ('WM2NS', 'GFDEGDQ188S', 'CPIAUCSL');
