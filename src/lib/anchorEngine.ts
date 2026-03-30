@@ -10,6 +10,10 @@ export const M2_GROWTH = 0.06;
 export const GOLD_SUPPLY_GROWTH = 0.015;
 export const NET_PARITY_GROWTH = M2_GROWTH - GOLD_SUPPLY_GROWTH; // ~4.5%
 
+// Historical benchmarks for % of investable parity
+export const HISTORICAL_MEDIAN_PCT = 22; // median since 1971
+export const HISTORICAL_MEAN_PCT = 28; // mean since 1971
+
 export interface AnchorResult {
   currentGoldPrice: number;
   currentM2: number; // in billions
@@ -21,6 +25,9 @@ export interface AnchorResult {
   zoneLabel: string;
   paritySeries: Observation[]; // historical % of investable parity
   m2GoldRatio: number; // kept for backward compat
+  // Historical series for the dual-line chart
+  goldSeries: Observation[];
+  impliedPriceSeries: Observation[];
 }
 
 export type AnchorZone = 'above_parity' | 'elevated' | 'transition' | 'undervalued' | 'extreme_undervaluation';
@@ -37,29 +44,29 @@ export interface AnchorZoneInfo {
 
 export const ANCHOR_ZONES: AnchorZoneInfo[] = [
   {
-    zone: 'extreme_undervaluation', label: 'Extreme Undervaluation', range: [0, 10], color: 'bullish',
-    description: 'Gold capturing almost none of the money printing. Best entry in 50 years.',
-    lastSeen: '1999-2001', context: 'Dot-com mania, budget surpluses, CBs selling gold. Best entry in 50 years.',
+    zone: 'extreme_undervaluation', label: 'Undervalued', range: [0, 20], color: 'bullish',
+    description: 'Gold extremely cheap relative to money supply. Generational buying opportunity.',
+    lastSeen: '1999-2004', context: 'Dot-com mania, budget surpluses, CBs selling gold. Best entry in 50 years — gold rallied 7x.',
   },
   {
-    zone: 'undervalued', label: 'Undervalued — Opportunity', range: [10, 30], color: 'bullish',
-    description: 'Gold cheap relative to money supply. BUYING OPPORTUNITY with hindsight.',
-    lastSeen: '2015-2019', context: 'Low inflation, stock boom, peace, nobody wants gold. BUYING OPPORTUNITY.',
+    zone: 'undervalued', label: 'Transition', range: [20, 50], color: 'bullish',
+    description: 'Gold rallying but still well below parity. Typically the sweet spot for entry.',
+    lastSeen: '2005-2010, 2013-2024', context: 'Gold rallying but still well below parity. Typically the sweet spot for entry.',
   },
   {
-    zone: 'transition', label: 'Transition — Partially Priced', range: [30, 60], color: 'neutral',
-    description: 'Gold has partially repriced. Direction depends on whether fear or complacency wins.',
-    lastSeen: 'TODAY (57%), also 2008', context: 'Gold has partially repriced. Direction depends on whether fear or complacency wins.',
+    zone: 'transition', label: 'Approaching Parity', range: [50, 100], color: 'neutral',
+    description: 'Gold has repriced significantly. Above historical average but below parity.',
+    lastSeen: 'TODAY (57%), 2011', context: 'Post-crisis QE, CB buying, de-dollarisation. Strong returns but above historical average of ~35%.',
   },
   {
-    zone: 'elevated', label: 'Elevated — Approaching Parity', range: [60, 100], color: 'bearish',
-    description: 'Gold approaching investable parity. Strong returns but correction risk rising.',
-    lastSeen: '2011', context: 'Post-GFC QE, debt crises, CB buying. Strong returns but risk of correction rising.',
+    zone: 'elevated', label: 'Above Parity', range: [100, 200], color: 'bearish',
+    description: 'Gold exceeds investable parity. Only happened 1975-1980. Followed by 20yr bear market.',
+    lastSeen: '1975-1980', context: 'Oil shocks, Cold War, 15% inflation. ONLY time gold exceeded its M2 implied price. Followed by 20yr bear market.',
   },
   {
-    zone: 'above_parity', label: 'Above Parity — Overvalued', range: [100, 200], color: 'bearish',
-    description: 'Gold above investable parity. Historically followed by multi-year corrections.',
-    lastSeen: '1980', context: 'Oil shocks, Cold War, inflation 15%. Gold mania. Followed by 20yr bear market.',
+    zone: 'above_parity', label: 'Extreme Overshoot', range: [200, 500], color: 'bearish',
+    description: 'Gold far above parity. Mania territory.',
+    lastSeen: 'Never sustained', context: 'Theoretical extreme.',
   },
 ];
 
@@ -93,19 +100,45 @@ export const HISTORICAL_ANNOTATIONS: HistoricalAnnotation[] = [
 ];
 
 export function getZone(pctOfInvParity: number): AnchorZoneInfo {
-  if (pctOfInvParity >= 100) return ANCHOR_ZONES[4];
-  if (pctOfInvParity >= 60) return ANCHOR_ZONES[3];
-  if (pctOfInvParity >= 30) return ANCHOR_ZONES[2];
-  if (pctOfInvParity >= 10) return ANCHOR_ZONES[1];
-  return ANCHOR_ZONES[0];
+  if (pctOfInvParity >= 100) return ANCHOR_ZONES[3]; // above parity
+  if (pctOfInvParity >= 50) return ANCHOR_ZONES[2]; // approaching parity
+  if (pctOfInvParity >= 20) return ANCHOR_ZONES[1]; // transition
+  return ANCHOR_ZONES[0]; // undervalued
 }
 
-export function getZoneConclusion(pctOfInvParity: number): string {
-  if (pctOfInvParity >= 100) return 'GOLD ABOVE PARITY — Historically followed by multi-year corrections.';
-  if (pctOfInvParity >= 60) return 'GOLD ELEVATED — Approaching investable parity. Strong returns but correction risk rising.';
-  if (pctOfInvParity >= 30) return 'TRANSITION ZONE — Gold has partially repriced. Direction depends on whether fear or complacency wins.';
-  if (pctOfInvParity >= 10) return 'GOLD UNDERVALUED — Significant debasement remains unpriced. Historically a buying opportunity.';
-  return 'EXTREME UNDERVALUATION — Gold dirt cheap relative to money supply. Best entry point in 50 years.';
+export function getZoneConclusion(pctOfInvParity: number): { text: string; detail: string; color: string } {
+  const vsMedian = pctOfInvParity / HISTORICAL_MEDIAN_PCT;
+
+  if (pctOfInvParity > 55) {
+    return {
+      text: `NEAR HISTORICAL PEAK — ${vsMedian.toFixed(1)}× historical median`,
+      detail: 'Gold has captured more of the money supply than at any time except the 1980 mania. Hold positions but add selectively.',
+      color: 'text-primary',
+    };
+  } else if (pctOfInvParity > 35) {
+    return {
+      text: 'ELEVATED — Above historical average',
+      detail: 'Gold has repriced significantly above its historical norm. Returns depend on whether structural forces continue.',
+      color: 'text-primary',
+    };
+  } else if (pctOfInvParity > 20) {
+    return {
+      text: 'FAIR VALUE RANGE — Near historical average',
+      detail: 'Gold is near its long-term average. Neutral starting point — direction depends on the Forces.',
+      color: 'text-neutral',
+    };
+  } else if (pctOfInvParity > 10) {
+    return {
+      text: 'UNDERVALUED — Below historical average',
+      detail: 'Gold has not kept pace with money supply growth. Historically preceded strong bull runs.',
+      color: 'text-bullish',
+    };
+  }
+  return {
+    text: 'EXTREME UNDERVALUATION — Generational buying opportunity',
+    detail: 'Near the lowest levels vs money supply in 50 years. Last seen: 1999-2001. What followed: 7x rally.',
+    color: 'text-bullish',
+  };
 }
 
 export function projectParity(currentParity: number, yearsForward: number): number {
@@ -129,8 +162,10 @@ export function computeAnchor(
     goldMonthMap.set(o.date.substring(0, 7), o.value);
   }
 
-  // Build % of investable parity series
+  // Build % of investable parity series + dual-line series
   const paritySeries: Observation[] = [];
+  const goldSeries: Observation[] = [];
+  const impliedPriceSeries: Observation[] = [];
   let lastM2: number | null = null;
 
   const allMonths = new Set<string>();
@@ -144,7 +179,10 @@ export function computeAnchor(
       const m2Dollars = lastM2 * 1e9;
       const invParity = m2Dollars / INVESTABLE_OZ;
       const pctOfInvParity = (goldPrice / invParity) * 100;
-      paritySeries.push({ date: `${month}-01`, value: pctOfInvParity });
+      const dateStr = `${month}-01`;
+      paritySeries.push({ date: dateStr, value: pctOfInvParity });
+      goldSeries.push({ date: dateStr, value: goldPrice });
+      impliedPriceSeries.push({ date: dateStr, value: invParity });
     }
   }
 
@@ -174,5 +212,7 @@ export function computeAnchor(
     zoneLabel: zone.label,
     paritySeries,
     m2GoldRatio,
+    goldSeries,
+    impliedPriceSeries,
   };
 }

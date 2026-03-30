@@ -25,35 +25,35 @@ interface Props {
   projections: ProjectionRow[];
 }
 
-function derivePositioning(anchorZone: string, gdiSignal: string, minerPercentile: number) {
+function derivePositioning(pctParity: number, gdiSignal: string, minerPercentile: number) {
   const minersUndervalued = minerPercentile < 25;
   const minersFairValue = minerPercentile >= 25 && minerPercentile <= 75;
 
-  if ((anchorZone === 'undervalued' || anchorZone === 'extreme_undervaluation') && gdiSignal === 'bullish' && minersUndervalued)
+  if (pctParity < 30 && gdiSignal === 'bullish' && minersUndervalued)
     return { text: 'STRONG BUY MINERS', color: 'bullish' };
-  if ((anchorZone === 'undervalued' || anchorZone === 'extreme_undervaluation') && gdiSignal === 'bearish')
+  if (pctParity < 30 && gdiSignal === 'bearish')
     return { text: 'ACCUMULATE ON WEAKNESS', color: 'neutral' };
-  if (anchorZone === 'transition' && gdiSignal === 'bullish' && minersUndervalued)
+  if (pctParity >= 30 && pctParity < 60 && gdiSignal === 'bullish' && minersUndervalued)
     return { text: 'ACCUMULATE MINERS', color: 'bullish' };
-  if (anchorZone === 'transition' && gdiSignal === 'bullish' && minersFairValue)
+  if (pctParity >= 30 && pctParity < 60 && gdiSignal === 'bullish' && minersFairValue)
     return { text: 'HOLD / ADD GOLD', color: 'primary' };
-  if (anchorZone === 'transition' && gdiSignal === 'bearish')
+  if (pctParity >= 30 && pctParity < 60 && gdiSignal === 'bearish')
     return { text: 'HOLD', color: 'neutral' };
-  if (anchorZone === 'elevated' && gdiSignal === 'bullish' && minersUndervalued)
+  if (pctParity >= 60 && pctParity < 100 && gdiSignal === 'bullish' && minersUndervalued)
     return { text: 'HOLD / ADD SELECTIVELY', color: 'primary' };
-  if (anchorZone === 'elevated' && gdiSignal === 'bearish')
+  if (pctParity >= 60 && pctParity < 100 && gdiSignal === 'bearish')
     return { text: 'TAKE PROFITS', color: 'destructive' };
-  if (anchorZone === 'above_parity')
+  if (pctParity >= 100)
     return { text: 'REDUCE', color: 'destructive' };
   return { text: 'HOLD', color: 'neutral' };
 }
 
 const MATRIX_ROWS = [
-  { anchor: 'above_parity', label: 'Above Parity (>100%)' },
-  { anchor: 'elevated', label: 'Elevated (60-100%)' },
-  { anchor: 'transition', label: 'Transition (30-60%)' },
-  { anchor: 'undervalued', label: 'Undervalued (10-30%)' },
-  { anchor: 'extreme_undervaluation', label: 'Extreme (<10%)' },
+  { pctMin: 100, pctMax: 999, label: 'Above Parity (>100%)' },
+  { pctMin: 60, pctMax: 100, label: 'Elevated (60-100%)' },
+  { pctMin: 30, pctMax: 60, label: 'Transition (30-60%)' },
+  { pctMin: 10, pctMax: 30, label: 'Undervalued (10-30%)' },
+  { pctMin: 0, pctMax: 10, label: 'Extreme (<10%)' },
 ];
 const MATRIX_COLS = ['bullish', 'neutral', 'bearish'];
 const MINER_STATES = [
@@ -67,11 +67,10 @@ export default function ConvergenceAnalysis({
   scenarioConfig, probs, forwardGDI, horizonProbs,
 }: Props) {
   const pctParity = anchorResult?.pctOfInvestableParity ?? 50;
-  const anchorStatus = anchorResult ? getZone(pctParity).zone : 'transition';
 
   const gdiSignal = currentGDI > 0.5 ? 'bullish' : currentGDI < -0.5 ? 'bearish' : 'neutral';
   const minerPctile = leverageResult?.currentPercentile ?? 50;
-  const currentPositioning = derivePositioning(anchorStatus, gdiSignal, minerPctile);
+  const currentPositioning = derivePositioning(pctParity, gdiSignal, minerPctile);
 
   const ratioChartData = useMemo(() => {
     if (!leverageResult) return [];
@@ -165,15 +164,19 @@ export default function ConvergenceAnalysis({
               </tr>
             </thead>
             <tbody>
-              {MATRIX_ROWS.map(row => (
-                <tr key={row.anchor} className="border-b border-border/30">
+              {MATRIX_ROWS.map(row => {
+                // Use midpoint of the row's range for positioning lookup
+                const rowPct = (row.pctMin + Math.min(row.pctMax, 150)) / 2;
+                const isCurrentRow = pctParity >= row.pctMin && pctParity < row.pctMax;
+                return (
+                <tr key={row.label} className="border-b border-border/30">
                   <td className="px-2 py-2 text-muted-foreground font-medium">{row.label}</td>
                   {MATRIX_COLS.map(col => MINER_STATES.map(ms => {
-                    const pos = derivePositioning(row.anchor, col, ms.pctile);
-                    const isCurrent = row.anchor === anchorStatus && col === gdiSignal &&
+                    const pos = derivePositioning(rowPct, col, ms.pctile);
+                    const isCurrent = isCurrentRow && col === gdiSignal &&
                       ((minerPctile < 25 && ms.pctile < 25) || (minerPctile >= 25 && minerPctile <= 75 && ms.pctile === 50) || (minerPctile > 75 && ms.pctile > 75));
                     return (
-                      <td key={`${row.anchor}-${col}-${ms.pctile}`} className="px-1 py-2 text-center">
+                      <td key={`${row.label}-${col}-${ms.pctile}`} className="px-1 py-2 text-center">
                         <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-semibold ${
                           isCurrent ? `${colorMap[pos.color]} ring-1 ring-offset-1 ring-offset-card` : 'text-muted-foreground/60'
                         }`}>
@@ -184,7 +187,8 @@ export default function ConvergenceAnalysis({
                     );
                   }))}
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
