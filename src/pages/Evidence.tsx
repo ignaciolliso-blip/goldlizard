@@ -58,7 +58,7 @@ const Evidence = () => {
 
         const cpiData = data.fredResults['CPIAUCSL'] || [];
         const m2Data = data.fredResults['WM2NS'] || [];
-        setAnchorResult(computeAnchor(data.goldSpot, cpiData, m2Data, '2000'));
+        setAnchorResult(computeAnchor(data.goldSpot, m2Data));
         setLeverageResult(computeLeverage(data.goldSpot, data.minerPrices));
 
         // Init projections with current values

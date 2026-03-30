@@ -31,19 +31,23 @@ function pctFmt(n: number): string {
   return n.toFixed(1) + '%';
 }
 
+const M2_GROWTH = 0.06;
+
 export default function SignalProjectionTable({ anchorResult, leverageResult, scenarioConfig, currentGoldPrice, currentGDXPrice, probs }: Props) {
-  const annualCPIGrowth = 0.027;
-  const annualM2Growth = 0.06;
+  const currentM2 = anchorResult?.currentM2 ?? 0;
+  const currentRatio = anchorResult?.m2GoldRatio ?? 5;
 
-  // Build rows
-  const cpiFVRow = HORIZONS.map(h => {
-    if (!anchorResult) return 0;
-    return anchorResult.historicalAvgGoldCPIRatio * anchorResult.currentCPI * Math.pow(1 + annualCPIGrowth, h.years);
-  });
+  // "Gold stays flat" row — gold price unchanged
+  const flatRow = HORIZONS.map(() => currentGoldPrice);
 
-  const m2FVRow = HORIZONS.map(h => {
-    if (!anchorResult) return 0;
-    return anchorResult.historicalAvgGoldM2Ratio * anchorResult.currentM2 * Math.pow(1 + annualM2Growth, h.years);
+  // "Tracks M2" row — gold grows at M2 rate
+  const tracksM2Row = HORIZONS.map(h => currentGoldPrice * Math.pow(1 + M2_GROWTH, h.years));
+
+  // "Reprices to 2011" row — ratio moves toward 3.5
+  const reprice2011Row = HORIZONS.map(h => {
+    const projectedRatio = currentRatio + (3.5 - currentRatio) * Math.min(1, h.years / 5);
+    const projectedM2 = currentM2 * Math.pow(1 + M2_GROWTH, h.years);
+    return projectedM2 / projectedRatio;
   });
 
   // GDI-Weighted EV
@@ -98,8 +102,9 @@ export default function SignalProjectionTable({ anchorResult, leverageResult, sc
           </thead>
           <tbody>
             {/* Gold section */}
-            <Row label="CPI Fair Value" values={cpiFVRow.map(fmt)} colorClass="text-anchor-cpi" />
-            <Row label="M2 Fair Value" values={m2FVRow.map(fmt)} colorClass="text-anchor-m2" />
+            <Row label="If gold stays flat" values={flatRow.map(fmt)} colorClass="text-bearish" />
+            <Row label="If tracks M2 (ratio ~5)" values={tracksM2Row.map(fmt)} colorClass="text-neutral" />
+            <Row label="If reprices to 2011 (3.5)" values={reprice2011Row.map(fmt)} colorClass="text-bullish" />
             <Row label="GDI-Weighted EV" values={evRow.map(fmt)} colorClass="text-primary" bold />
             <tr className="border-b border-border">
               <td className="px-4 py-2 text-xs text-muted-foreground">Bank Consensus</td>
@@ -161,6 +166,7 @@ export default function SignalProjectionTable({ anchorResult, leverageResult, sc
         <p className="text-[11px] text-muted-foreground font-mono text-center">
           Current gold: {fmt(currentGoldPrice)} | Current GDX: ${currentGDXPrice.toFixed(2)}
           {leverageResult && ` | GDX/Gold: ${leverageResult.currentGDXGoldRatio.toFixed(4)}`}
+          {anchorResult && ` | M2/Gold: ${anchorResult.m2GoldRatio.toFixed(1)}`}
           {bankMin > 0 && ` | Bank consensus YE2026: ${fmt(bankMin)}–${fmt(bankMax)}`}
         </p>
       </div>

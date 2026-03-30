@@ -83,9 +83,8 @@ const Index = () => {
         );
         setGdiResult(result);
 
-        const cpiData = data.fredResults['CPIAUCSL'] || [];
         const m2Data = data.fredResults['WM2NS'] || [];
-        const anchor = computeAnchor(data.goldSpot, cpiData, m2Data, '2000');
+        const anchor = computeAnchor(data.goldSpot, m2Data);
         setAnchorResult(anchor);
 
         const leverage = computeLeverage(data.goldSpot, data.minerPrices);

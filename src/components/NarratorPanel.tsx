@@ -63,7 +63,7 @@ function buildDashboardDataString(props: NarratorPanelProps): string {
 
   // Anchor data
   const anchorStr = anchorResult
-    ? `\nAnchor:\n- CPI Fair Value: $${Math.round(anchorResult.cpiFairValue).toLocaleString()}\n- M2 Fair Value: $${Math.round(anchorResult.m2FairValue).toLocaleString()}\n- Anchor status: ${currentGoldPrice < anchorResult.cpiFairValue ? 'Below both' : currentGoldPrice > anchorResult.m2FairValue ? 'Above both' : 'Between corridors'}`
+    ? `\nAnchor:\n- M2/Gold Ratio: ${anchorResult.m2GoldRatio.toFixed(1)}\n- Zone: ${anchorResult.zoneLabel}\n- M2: $${(anchorResult.currentM2 / 1000).toFixed(1)}T\n- Gold: $${Math.round(anchorResult.currentGoldPrice).toLocaleString()}`
     : '';
 
   // Leverage data
