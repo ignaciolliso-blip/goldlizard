@@ -14,6 +14,7 @@ import VariableDrillDowns from '@/components/evidence/VariableDrillDowns';
 import ProjectionAssumptionsTab from '@/components/evidence/ProjectionAssumptionsTab';
 import ConvergenceAnalysis from '@/components/evidence/ConvergenceAnalysis';
 import DataManagement from '@/components/evidence/DataManagement';
+import Footer from '@/components/Footer';
 
 const Evidence = () => {
   const [searchParams] = useSearchParams();
@@ -120,7 +121,7 @@ const Evidence = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 pt-4 pb-16">
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 pt-4 pb-8">
         {/* Breadcrumb */}
         <div className="flex items-center justify-between mb-4">
           <Link to="/analysis" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
@@ -209,6 +210,8 @@ const Evidence = () => {
             )}
           </TabsContent>
         </Tabs>
+
+        <Footer />
       </div>
     </div>
   );
