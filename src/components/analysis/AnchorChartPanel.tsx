@@ -1,256 +1,266 @@
 import { useMemo, useState } from 'react';
 import {
-  ComposedChart, Line, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  ReferenceLine, CartesianGrid,
+  ComposedChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  ReferenceLine, CartesianGrid, ReferenceArea,
 } from 'recharts';
 import type { AnchorResult } from '@/lib/anchorEngine';
+import { HISTORICAL_ANNOTATIONS, ANCHOR_ZONES, getZone } from '@/lib/anchorEngine';
 import type { Observation } from '@/lib/dataFetcher';
+import { GuideTooltip } from '@/components/GuideMode';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Props {
   anchorResult: AnchorResult;
   goldSpot: Observation[];
-  cpiData: Observation[];
   m2Data: Observation[];
-  gdiWeightedEVs: Record<string, number>; // '3m','6m','1y','3y','5y' → price
-  onBaselineChange: (b: '1971' | '2000') => void;
-  baseline: '1971' | '2000';
 }
 
 interface ChartPoint {
   date: string;
   ts: number;
-  gold?: number;
-  cpiFV?: number;
-  m2FV?: number;
-  ev?: number;
+  ratio?: number;
+  flat?: number;
+  tracksM2?: number;
+  reprice2011?: number;
   isForecast?: boolean;
 }
 
-const TIME_RANGES = ['5Y', '10Y', 'Max'] as const;
+const TIME_RANGES = ['10Y', '20Y', 'Max'] as const;
 type TimeRange = typeof TIME_RANGES[number];
 
-function percentileRank(value: number, arr: number[]): number {
-  const sorted = [...arr].sort((a, b) => a - b);
-  return Math.round((sorted.filter(v => v < value).length / sorted.length) * 100);
-}
+export default function AnchorChartPanel({ anchorResult, goldSpot, m2Data }: Props) {
+  const [timeRange, setTimeRange] = useState<TimeRange>('Max');
+  const [showAllEvents, setShowAllEvents] = useState(false);
+  const isMobile = useIsMobile();
 
-export default function AnchorChartPanel({
-  anchorResult, goldSpot, cpiData, m2Data, gdiWeightedEVs, onBaselineChange, baseline,
-}: Props) {
-  const [timeRange, setTimeRange] = useState<TimeRange>('10Y');
+  const { m2GoldRatio, currentM2, currentGoldPrice } = anchorResult;
+  const M2_GROWTH = 0.06;
 
   const chartData = useMemo(() => {
-    const {
-      historicalAvgGoldCPIRatio, historicalAvgGoldM2Ratio,
-      currentCPI, currentM2,
-    } = anchorResult;
-
-    // Build maps for CPI and M2
-    const cpiMap = new Map<string, number>();
-    cpiData.forEach(o => cpiMap.set(o.date.substring(0, 7), o.value));
-
-    const m2MonthMap = new Map<string, number>();
-    m2Data.forEach(o => m2MonthMap.set(o.date.substring(0, 7), o.value));
-
-    // Determine start date
     const now = new Date();
-    let startDate = '2000-01-01';
-    if (timeRange === '5Y') {
-      const d = new Date(now);
-      d.setFullYear(d.getFullYear() - 5);
+    let startDate = '1971-01-01';
+    if (timeRange === '10Y') {
+      const d = new Date(now); d.setFullYear(d.getFullYear() - 10);
       startDate = d.toISOString().split('T')[0];
-    } else if (timeRange === '10Y') {
-      const d = new Date(now);
-      d.setFullYear(d.getFullYear() - 10);
+    } else if (timeRange === '20Y') {
+      const d = new Date(now); d.setFullYear(d.getFullYear() - 20);
       startDate = d.toISOString().split('T')[0];
     }
 
-    // Historical points (monthly granularity for performance)
-    const points: ChartPoint[] = [];
-    const monthSet = new Set<string>();
+    // Filter historical ratio series
+    const points: ChartPoint[] = anchorResult.ratioSeries
+      .filter(o => o.date >= startDate)
+      .map(o => ({
+        date: o.date,
+        ts: new Date(o.date).getTime(),
+        ratio: o.value,
+      }));
 
-    for (const obs of goldSpot) {
-      if (obs.date < startDate) continue;
-      const month = obs.date.substring(0, 7);
-      if (monthSet.has(month)) continue;
-      monthSet.add(month);
-
-      let lastCpi: number | undefined;
-      let lastM2: number | undefined;
-
-      // forward-fill CPI and M2
-      for (const [m, v] of cpiMap) {
-        if (m <= month) lastCpi = v;
-      }
-      for (const [m, v] of m2MonthMap) {
-        if (m <= month) lastM2 = v;
-      }
-
-      const cpiFV = lastCpi ? historicalAvgGoldCPIRatio * lastCpi : undefined;
-      const m2FV = lastM2 ? historicalAvgGoldM2Ratio * lastM2 : undefined;
-
-      points.push({
-        date: obs.date,
-        ts: new Date(obs.date).getTime(),
-        gold: obs.value,
-        cpiFV,
-        m2FV,
-      });
-    }
-
-    // Today's date string
-    const todayStr = now.toISOString().split('T')[0];
-
-    // Forecast points
-    const horizons: { key: string; years: number }[] = [
-      { key: '3m', years: 0.25 },
-      { key: '6m', years: 0.5 },
-      { key: '1y', years: 1 },
-      { key: '3y', years: 3 },
-      { key: '5y', years: 5 },
-    ];
-
-    for (const h of horizons) {
+    // Add forward projection (5 years)
+    const todayTs = now.getTime();
+    const horizons = [0, 0.25, 0.5, 1, 2, 3, 4, 5];
+    for (const y of horizons) {
+      if (y === 0) continue;
       const futureDate = new Date(now);
-      futureDate.setMonth(futureDate.getMonth() + Math.round(h.years * 12));
-      const dateStr = futureDate.toISOString().split('T')[0];
+      futureDate.setMonth(futureDate.getMonth() + Math.round(y * 12));
+      const projM2 = currentM2 * Math.pow(1 + M2_GROWTH, y);
 
-      const projCPI = currentCPI * Math.pow(1.027, h.years);
-      const projM2 = currentM2 * Math.pow(1.06, h.years);
+      // Flat: gold stays at current price
+      const flatRatio = projM2 / currentGoldPrice;
+      // Tracks M2: gold grows at M2 rate
+      const tracksM2Ratio = projM2 / (currentGoldPrice * Math.pow(1 + M2_GROWTH, y));
+      // Reprice to 2011: ratio moves toward 3.5
+      const currentRatio = m2GoldRatio;
+      const targetRatio = 3.5;
+      const projectedRatio = currentRatio + (targetRatio - currentRatio) * Math.min(1, y / 5);
 
       points.push({
-        date: dateStr,
+        date: futureDate.toISOString().split('T')[0],
         ts: futureDate.getTime(),
-        cpiFV: historicalAvgGoldCPIRatio * projCPI,
-        m2FV: historicalAvgGoldM2Ratio * projM2,
-        ev: gdiWeightedEVs[h.key],
+        flat: flatRatio,
+        tracksM2: tracksM2Ratio,
+        reprice2011: projectedRatio,
         isForecast: true,
       });
     }
 
-    return { points, todayStr };
-  }, [anchorResult, goldSpot, cpiData, m2Data, gdiWeightedEVs, timeRange]);
+    return { points, todayTs };
+  }, [anchorResult, timeRange, currentM2, currentGoldPrice, m2GoldRatio]);
 
-  const { goldCPIRatio, goldM2Ratio, goldCPIRatioSeries, goldM2RatioSeries, historicalAvgGoldCPIRatio, historicalAvgGoldM2Ratio } = anchorResult;
+  // Filter annotations by time range and mobile
+  const visibleAnnotations = useMemo(() => {
+    const startDate = timeRange === '10Y'
+      ? new Date(new Date().setFullYear(new Date().getFullYear() - 10)).toISOString().split('T')[0]
+      : timeRange === '20Y'
+      ? new Date(new Date().setFullYear(new Date().getFullYear() - 20)).toISOString().split('T')[0]
+      : '1971-01-01';
 
-  const cpiPctile = useMemo(() => percentileRank(goldCPIRatio, goldCPIRatioSeries.map(s => s.value)), [goldCPIRatio, goldCPIRatioSeries]);
-  const m2Pctile = useMemo(() => percentileRank(goldM2Ratio, goldM2RatioSeries.map(s => s.value)), [goldM2Ratio, goldM2RatioSeries]);
+    let filtered = HISTORICAL_ANNOTATIONS.filter(a => a.date >= startDate);
+    if (isMobile && !showAllEvents) {
+      filtered = filtered.filter(a => a.key);
+    }
+    return filtered;
+  }, [timeRange, isMobile, showAllEvents]);
 
-  const todayTs = new Date().getTime();
+  // Projection prices at 5Y
+  const proj5y = useMemo(() => {
+    const projM2_5y = currentM2 * Math.pow(1 + M2_GROWTH, 5);
+    return {
+      flat: currentGoldPrice,
+      flatRatio: (projM2_5y / currentGoldPrice).toFixed(1),
+      tracksM2: currentGoldPrice * Math.pow(1 + M2_GROWTH, 5),
+      tracksM2Ratio: m2GoldRatio.toFixed(1),
+      reprice2011: projM2_5y / 3.5,
+    };
+  }, [currentM2, currentGoldPrice, m2GoldRatio]);
 
-  const formatPrice = (v: number) => `$${v.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+  const fmt = (n: number) => '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="font-display text-lg text-foreground">The Anchor</h2>
+        <GuideTooltip id="anchor-chart" text="This chart shows the M2/Gold ratio over 55 years. Peaks (gold cheap) and troughs (gold expensive) correspond to major geopolitical and economic events. The pattern repeats: crisis pushes gold up, stability lets it drift, next crisis pushes it up again. Click any event marker for context.">
+          <h2 className="font-display text-lg text-foreground">The Anchor — M2/Gold Ratio</h2>
+        </GuideTooltip>
         <div className="flex gap-1">
           {TIME_RANGES.map(r => (
-            <button
-              key={r}
-              onClick={() => setTimeRange(r)}
+            <button key={r} onClick={() => setTimeRange(r)}
               className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
-                timeRange === r
-                  ? 'bg-primary/15 text-primary border border-primary/30'
-                  : 'text-muted-foreground hover:text-foreground'
+                timeRange === r ? 'bg-primary/15 text-primary border border-primary/30' : 'text-muted-foreground hover:text-foreground'
               }`}
-            >
-              {r}
-            </button>
+            >{r}</button>
           ))}
         </div>
       </div>
 
       <div className="bg-card border border-border rounded-xl p-4">
-        <ResponsiveContainer width="100%" height={450}>
-          <ComposedChart data={chartData.points} margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+        <ResponsiveContainer width="100%" height={isMobile ? 300 : 500}>
+          <ComposedChart data={chartData.points} margin={{ top: 20, right: 10, bottom: 10, left: 10 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+
+            {/* Zone shading */}
+            <ReferenceArea y1={15} y2={25} fill="hsl(var(--bullish))" fillOpacity={0.06} />
+            <ReferenceArea y1={10} y2={15} fill="hsl(var(--bullish))" fillOpacity={0.04} />
+            <ReferenceArea y1={5} y2={10} fill="hsl(var(--primary))" fillOpacity={0.04} />
+            <ReferenceArea y1={3} y2={5} fill="hsl(var(--bearish))" fillOpacity={0.04} />
+            <ReferenceArea y1={0} y2={3} fill="hsl(var(--bearish))" fillOpacity={0.08} />
+
             <XAxis
-              dataKey="ts"
-              type="number"
-              domain={['dataMin', 'dataMax']}
+              dataKey="ts" type="number" domain={['dataMin', 'dataMax']}
               tickFormatter={(ts) => new Date(ts).getFullYear().toString()}
-              stroke="hsl(var(--muted-foreground))"
-              fontSize={11}
-              tickLine={false}
+              stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false}
             />
             <YAxis
-              tickFormatter={(v) => `$${(v / 1000).toFixed(1)}k`}
-              stroke="hsl(var(--muted-foreground))"
-              fontSize={11}
-              tickLine={false}
-              axisLine={false}
+              domain={[0, 22]}
+              stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false}
             />
+
+            {/* Zone labels on right */}
+            <ReferenceLine y={20} stroke="none" label={{ value: 'GOLD CHEAP', fill: 'hsl(var(--bullish))', fontSize: 8, position: 'right' }} />
+            <ReferenceLine y={12} stroke="none" label={{ value: 'UNDERVALUED', fill: 'hsl(var(--bullish))', fontSize: 8, position: 'right' }} />
+            <ReferenceLine y={7.5} stroke="none" label={{ value: 'TRANSITION', fill: 'hsl(var(--primary))', fontSize: 8, position: 'right' }} />
+            <ReferenceLine y={4} stroke="none" label={{ value: 'ELEVATED', fill: 'hsl(var(--bearish))', fontSize: 8, position: 'right' }} />
+            <ReferenceLine y={1.5} stroke="none" label={{ value: 'EXPENSIVE', fill: 'hsl(var(--bearish))', fontSize: 8, position: 'right' }} />
+
+            {/* Today reference line */}
+            <ReferenceLine x={chartData.todayTs} stroke="hsl(var(--muted-foreground))" strokeDasharray="4 4" opacity={0.5} />
+
+            {/* Annotation reference lines */}
+            {visibleAnnotations.map(a => (
+              <ReferenceLine
+                key={a.date}
+                x={new Date(a.date).getTime()}
+                stroke="hsl(var(--muted-foreground))"
+                strokeDasharray="2 4"
+                opacity={0.2}
+              />
+            ))}
+
             <Tooltip
               content={({ active, payload }) => {
                 if (!active || !payload?.length) return null;
                 const d = payload[0]?.payload as ChartPoint;
+                const annotation = HISTORICAL_ANNOTATIONS.find(a =>
+                  Math.abs(new Date(a.date).getTime() - d.ts) < 60 * 24 * 60 * 60 * 1000
+                );
                 return (
-                  <div className="bg-card border border-border rounded-lg p-3 text-xs shadow-lg">
+                  <div className="bg-card border border-border rounded-lg p-3 text-xs shadow-lg max-w-xs">
                     <p className="font-medium text-foreground mb-1">{d.date}{d.isForecast ? ' (projected)' : ''}</p>
-                    {d.gold != null && <p className="text-primary">Gold: {formatPrice(d.gold)}</p>}
-                    {d.cpiFV != null && <p className="text-bullish">CPI FV: {formatPrice(d.cpiFV)}</p>}
-                    {d.m2FV != null && <p className="text-blue-400">M2 FV: {formatPrice(d.m2FV)}</p>}
-                    {d.ev != null && <p className="text-primary">GDI-EV: {formatPrice(d.ev)}</p>}
-                    {d.gold != null && d.cpiFV != null && d.m2FV != null && (
-                      <p className="text-muted-foreground mt-1">
-                        {((d.gold / d.cpiFV - 1) * 100).toFixed(0)}% vs CPI FV · {((d.gold / d.m2FV - 1) * 100).toFixed(0)}% vs M2 FV
-                      </p>
+                    {d.ratio != null && <p className="text-primary font-mono">M2/Gold: {d.ratio.toFixed(1)} — {getZone(d.ratio).label}</p>}
+                    {d.flat != null && <p className="text-bearish font-mono">Gold flat: ratio → {d.flat.toFixed(1)}</p>}
+                    {d.tracksM2 != null && <p className="text-neutral font-mono">Tracks M2: ratio → {d.tracksM2.toFixed(1)}</p>}
+                    {d.reprice2011 != null && <p className="text-bullish font-mono">Reprice to 2011: ratio → {d.reprice2011.toFixed(1)}</p>}
+                    {annotation && (
+                      <div className="mt-2 pt-2 border-t border-border">
+                        <p className="font-semibold text-foreground">{annotation.label}</p>
+                        <p className="text-muted-foreground mt-0.5">{annotation.detail}</p>
+                      </div>
                     )}
                   </div>
                 );
               }}
             />
-            <ReferenceLine x={todayTs} stroke="hsl(var(--muted-foreground))" strokeDasharray="4 4" opacity={0.5} />
 
-            {/* Shaded corridor between CPI and M2 FV */}
-            <Area dataKey="m2FV" stroke="none" fill="hsl(var(--accent))" fillOpacity={0.06} />
-            <Area dataKey="cpiFV" stroke="none" fill="hsl(var(--background))" fillOpacity={1} />
+            {/* Main ratio line */}
+            <Line dataKey="ratio" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={false} connectNulls />
 
-            {/* Lines */}
-            <Line dataKey="cpiFV" stroke="hsl(var(--bullish))" strokeWidth={1.5} strokeDasharray="6 3" dot={false} connectNulls />
-            <Line dataKey="m2FV" stroke="#5C9CE6" strokeWidth={1.5} strokeDasharray="6 3" dot={false} connectNulls />
-            <Line
-              dataKey="gold"
-              stroke="hsl(var(--primary))"
-              strokeWidth={2.5}
-              dot={false}
-              connectNulls
-            />
-            <Line
-              dataKey="ev"
-              stroke="hsl(var(--primary))"
-              strokeWidth={2}
-              strokeDasharray="4 4"
-              dot={{ r: 4, fill: 'hsl(var(--primary))', stroke: 'hsl(var(--background))', strokeWidth: 2 }}
-              connectNulls
-            />
+            {/* Projection lines */}
+            <Line dataKey="flat" stroke="hsl(var(--bearish))" strokeWidth={1.5} strokeDasharray="6 3" dot={false} connectNulls />
+            <Line dataKey="tracksM2" stroke="hsl(var(--neutral))" strokeWidth={1.5} strokeDasharray="6 3" dot={false} connectNulls />
+            <Line dataKey="reprice2011" stroke="hsl(var(--bullish))" strokeWidth={1.5} strokeDasharray="6 3" dot={false} connectNulls />
           </ComposedChart>
         </ResponsiveContainer>
-      </div>
 
-      {/* Stats */}
-      <div className="flex flex-col sm:flex-row gap-2 sm:gap-6 text-xs font-mono text-muted-foreground">
-        <span>Gold/CPI: {goldCPIRatio.toFixed(2)} ({cpiPctile}th pctile vs {baseline}+ avg of {historicalAvgGoldCPIRatio.toFixed(2)})</span>
-        <span>Gold/M2: {goldM2Ratio.toFixed(4)} ({m2Pctile}th pctile vs {baseline}+ avg of {historicalAvgGoldM2Ratio.toFixed(4)})</span>
-      </div>
+        {/* Legend for projections */}
+        <GuideTooltip id="proj-lines" text="The three forward lines show what happens to the ratio depending on whether gold stays flat (red — ratio rises, gold gets cheaper), keeps pace with money printing (amber — ratio flat), or reprices toward crisis levels (green — ratio falls). The GDI-Weighted Expected Value tells you which path is most likely given current forces.">
+          <div className="flex flex-wrap gap-4 mt-2 text-[10px] text-muted-foreground justify-center">
+            <span className="flex items-center gap-1"><span className="w-4 h-px bg-bearish inline-block" /> Gold flat: {fmt(proj5y.flat)} → ratio {proj5y.flatRatio}</span>
+            <span className="flex items-center gap-1"><span className="w-4 h-px bg-neutral inline-block" /> Tracks M2: ~{fmt(proj5y.tracksM2)} → ratio ~{proj5y.tracksM2Ratio}</span>
+            <span className="flex items-center gap-1"><span className="w-4 h-px bg-bullish inline-block" /> Reprice to 2011: ~{fmt(proj5y.reprice2011)} → ratio 3.5</span>
+          </div>
+        </GuideTooltip>
 
-      {/* Baseline toggle */}
-      <div className="flex items-center gap-2 text-xs">
-        <span className="text-muted-foreground">Baseline:</span>
-        {(['2000', '1971'] as const).map(b => (
+        {/* Show all events toggle */}
+        {isMobile && (
           <button
-            key={b}
-            onClick={() => onBaselineChange(b)}
-            className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-              baseline === b
-                ? 'bg-primary/15 text-primary border border-primary/30'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
+            onClick={() => setShowAllEvents(p => !p)}
+            className="text-[10px] text-primary mt-2 hover:underline"
           >
-            {b}+
+            {showAllEvents ? 'Show key events only' : 'Show all events'}
           </button>
-        ))}
+        )}
+      </div>
+
+      {/* Five Zones Reference Table */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <table className="w-full text-[10px] sm:text-xs">
+          <thead>
+            <tr className="border-b border-border">
+              <th className="text-left px-3 py-2 text-muted-foreground font-medium">Zone</th>
+              <th className="text-center px-2 py-2 text-muted-foreground font-medium">Ratio</th>
+              <th className="text-left px-2 py-2 text-muted-foreground font-medium hidden sm:table-cell">Last Seen</th>
+              <th className="text-left px-3 py-2 text-muted-foreground font-medium">What Was Happening</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ANCHOR_ZONES.slice().reverse().map(z => {
+              const currentZone = getZone(m2GoldRatio);
+              const isCurrent = z.zone === currentZone.zone;
+              return (
+                <tr key={z.zone} className={`border-b border-border/50 ${isCurrent ? 'bg-primary/5 border-l-2 border-l-primary' : ''}`}>
+                  <td className="px-3 py-2 font-medium text-foreground">
+                    {z.label} {isCurrent && <span className="text-primary">●</span>}
+                  </td>
+                  <td className="text-center px-2 py-2 font-mono text-muted-foreground">
+                    {z.range[0] === 0 ? `< ${z.range[1]}` : z.range[1] === 25 ? `> ${z.range[0]}` : `${z.range[0]}-${z.range[1]}`}
+                  </td>
+                  <td className="px-2 py-2 text-muted-foreground hidden sm:table-cell">{z.lastSeen}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{z.context}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );
