@@ -164,15 +164,19 @@ export default function ConvergenceAnalysis({
               </tr>
             </thead>
             <tbody>
-              {MATRIX_ROWS.map(row => (
-                <tr key={row.anchor} className="border-b border-border/30">
+              {MATRIX_ROWS.map(row => {
+                // Use midpoint of the row's range for positioning lookup
+                const rowPct = (row.pctMin + Math.min(row.pctMax, 150)) / 2;
+                const isCurrentRow = pctParity >= row.pctMin && pctParity < row.pctMax;
+                return (
+                <tr key={row.label} className="border-b border-border/30">
                   <td className="px-2 py-2 text-muted-foreground font-medium">{row.label}</td>
                   {MATRIX_COLS.map(col => MINER_STATES.map(ms => {
-                    const pos = derivePositioning(row.anchor, col, ms.pctile);
-                    const isCurrent = row.anchor === anchorStatus && col === gdiSignal &&
+                    const pos = derivePositioning(rowPct, col, ms.pctile);
+                    const isCurrent = isCurrentRow && col === gdiSignal &&
                       ((minerPctile < 25 && ms.pctile < 25) || (minerPctile >= 25 && minerPctile <= 75 && ms.pctile === 50) || (minerPctile > 75 && ms.pctile > 75));
                     return (
-                      <td key={`${row.anchor}-${col}-${ms.pctile}`} className="px-1 py-2 text-center">
+                      <td key={`${row.label}-${col}-${ms.pctile}`} className="px-1 py-2 text-center">
                         <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-semibold ${
                           isCurrent ? `${colorMap[pos.color]} ring-1 ring-offset-1 ring-offset-card` : 'text-muted-foreground/60'
                         }`}>
@@ -183,7 +187,8 @@ export default function ConvergenceAnalysis({
                     );
                   }))}
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
