@@ -78,8 +78,8 @@ export default function VariableDrillDowns({ gdiResult, goldSpot, anchorResult, 
     }
     if (varId === 'GOLD_M2_RATIO' && anchorResult) {
       return {
-        id: 'GOLD_M2_RATIO', name: 'M2 / Gold Ratio', tier: 'structural',
-        currentValue: anchorResult.m2GoldRatio, zScore: 0, adjustedZScore: 0, weight: 0, contribution: 0,
+        id: 'GOLD_M2_RATIO', name: '% of Investable Parity', tier: 'structural',
+        currentValue: anchorResult.pctOfInvestableParity, zScore: 0, adjustedZScore: 0, weight: 0, contribution: 0,
       };
     }
     if (varId === 'GDX_GOLD_RATIO' && leverageResult) {
@@ -96,14 +96,14 @@ export default function VariableDrillDowns({ gdiResult, goldSpot, anchorResult, 
     if (varId === 'GOLD_CPI_RATIO' && anchorResult) {
       const alignedData = new Map(gdiResult.alignedData);
       const seriesMap = new Map<string, number>();
-      anchorResult.ratioSeries.forEach(o => seriesMap.set(o.date, o.value));
+      anchorResult.paritySeries.forEach(o => seriesMap.set(o.date, o.value));
       alignedData.set('GOLD_CPI_RATIO', seriesMap);
       return { ...gdiResult, alignedData };
     }
     if (varId === 'GOLD_M2_RATIO' && anchorResult) {
       const alignedData = new Map(gdiResult.alignedData);
       const seriesMap = new Map<string, number>();
-      anchorResult.ratioSeries.forEach(o => seriesMap.set(o.date, o.value));
+      anchorResult.paritySeries.forEach(o => seriesMap.set(o.date, o.value));
       alignedData.set('GOLD_M2_RATIO', seriesMap);
       return { ...gdiResult, alignedData };
     }
