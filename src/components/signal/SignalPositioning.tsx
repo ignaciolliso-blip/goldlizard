@@ -1,5 +1,5 @@
 import type { AnchorResult } from '@/lib/anchorEngine';
-import { getZone } from '@/lib/anchorEngine';
+import { getZone, getZoneConclusion } from '@/lib/anchorEngine';
 import type { GDIResult } from '@/lib/gdiEngine';
 import type { LeverageResult } from '@/lib/leverageEngine';
 import { projectGDXGoldRatio } from '@/lib/leverageEngine';
@@ -17,26 +17,25 @@ interface Props {
   scenarioConfig: ScenarioConfig | null;
 }
 
-function derivePositioning(anchorZone: string, gdiSignal: string, minerPercentile: number) {
+function derivePositioning(pctParity: number, gdiSignal: string, minerPercentile: number) {
   const minersUndervalued = minerPercentile < 25;
   const minersFairValue = minerPercentile >= 25 && minerPercentile <= 75;
 
-  // % of investable parity based positioning
-  if ((anchorZone === 'undervalued' || anchorZone === 'extreme_undervaluation') && gdiSignal === 'bullish' && minersUndervalued)
+  if (pctParity < 30 && gdiSignal === 'bullish' && minersUndervalued)
     return { text: 'STRONG BUY MINERS', color: 'bullish', detail: 'Gold cheap relative to M2, forces turning, miners doubly discounted' };
-  if ((anchorZone === 'undervalued' || anchorZone === 'extreme_undervaluation') && gdiSignal === 'bearish')
+  if (pctParity < 30 && gdiSignal === 'bearish')
     return { text: 'ACCUMULATE ON WEAKNESS', color: 'neutral', detail: 'Gold cheap but headwinds present — be patient' };
-  if (anchorZone === 'transition' && gdiSignal === 'bullish' && minersUndervalued)
+  if (pctParity >= 30 && pctParity < 60 && gdiSignal === 'bullish' && minersUndervalued)
     return { text: 'ACCUMULATE MINERS', color: 'bullish', detail: 'Gold fairly priced with bullish forces and miner discount' };
-  if (anchorZone === 'transition' && gdiSignal === 'bullish' && minersFairValue)
+  if (pctParity >= 30 && pctParity < 60 && gdiSignal === 'bullish' && minersFairValue)
     return { text: 'HOLD / ADD GOLD', color: 'primary', detail: 'Forces positive but miner premium already captured' };
-  if (anchorZone === 'transition' && gdiSignal === 'bearish')
+  if (pctParity >= 30 && pctParity < 60 && gdiSignal === 'bearish')
     return { text: 'HOLD', color: 'neutral', detail: 'Mixed signals — maintain current allocation' };
-  if (anchorZone === 'elevated' && gdiSignal === 'bullish' && minersUndervalued)
+  if (pctParity >= 60 && pctParity < 100 && gdiSignal === 'bullish' && minersUndervalued)
     return { text: 'HOLD / ADD SELECTIVELY', color: 'primary', detail: 'Gold elevated but momentum strong and miners still cheap' };
-  if (anchorZone === 'elevated' && gdiSignal === 'bearish')
+  if (pctParity >= 60 && pctParity < 100 && gdiSignal === 'bearish')
     return { text: 'TAKE PROFITS', color: 'bearish', detail: 'Gold expensive and forces turning — trim positions' };
-  if (anchorZone === 'above_parity')
+  if (pctParity >= 100)
     return { text: 'REDUCE', color: 'bearish', detail: 'Gold above investable parity. Historically followed by multi-year corrections.' };
   return { text: 'HOLD', color: 'neutral', detail: 'Mixed signals — maintain current allocation' };
 }
@@ -49,12 +48,10 @@ export default function SignalPositioning({
   anchorResult, gdiResult, leverageResult, currentGDI, currentGoldPrice, currentGDXPrice, probs, scenarioConfig
 }: Props) {
   const pctParity = anchorResult?.pctOfInvestableParity ?? 50;
-  const anchorZone = anchorResult ? getZone(pctParity).zone : 'transition';
-
   const gdiSignal = currentGDI > 0.5 ? 'bullish' : currentGDI < -0.5 ? 'bearish' : 'neutral';
   const minerPercentile = leverageResult?.currentPercentile ?? 50;
 
-  const positioning = derivePositioning(anchorZone, gdiSignal, minerPercentile);
+  const positioning = derivePositioning(pctParity, gdiSignal, minerPercentile);
 
   const borderColorMap: Record<string, string> = {
     bullish: 'border-l-bullish',
@@ -74,6 +71,7 @@ export default function SignalPositioning({
   );
 
   const percentileDesc = minerPercentile < 25 ? 'undervalued' : minerPercentile > 75 ? 'overvalued' : 'fairly valued';
+  const zoneInfo = anchorResult ? getZone(pctParity) : null;
 
   let goldCagr5y = '—';
   let gdxCagr5y = '—';
@@ -92,9 +90,7 @@ export default function SignalPositioning({
     }
   }
 
-  const zoneStr = anchorResult ? getZone(pctParity).label : '—';
-
-  const narrative = `Gold at ${pctParity.toFixed(0)}% of investable parity (${zoneStr}). The GDI reads ${currentGDI >= 0 ? '+' : ''}${currentGDI.toFixed(1)} / ${gdiSignal.toUpperCase()}, driven primarily by ${keyDriver?.name || 'multiple factors'}. Miners (GDX) at the ${minerPercentile.toFixed(0)}th percentile — ${percentileDesc}. 5-year expected CAGR: ${goldCagr5y} gold, ${gdxCagr5y} GDX.`;
+  const narrative = `Gold at ${pctParity.toFixed(0)}% of investable parity (${zoneInfo?.label || '—'}). The GDI reads ${currentGDI >= 0 ? '+' : ''}${currentGDI.toFixed(1)} / ${gdiSignal.toUpperCase()}, driven primarily by ${keyDriver?.name || 'multiple factors'}. Miners (GDX) at the ${minerPercentile.toFixed(0)}th percentile — ${percentileDesc}. 5-year expected CAGR: ${goldCagr5y} gold, ${gdxCagr5y} GDX.`;
 
   return (
     <div className={`bg-card border border-border ${borderColorMap[positioning.color]} border-l-4 rounded-xl p-6 space-y-4`}>
