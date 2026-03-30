@@ -3,6 +3,7 @@ import type { LeverageResult } from '@/lib/leverageEngine';
 import { projectGDXGoldRatio } from '@/lib/leverageEngine';
 import type { ScenarioConfig, ScenarioProbabilities } from '@/lib/scenarioEngine';
 import { BANK_CONSENSUS } from '@/lib/scenarioEngine';
+import { GuideTooltip } from '@/components/GuideMode';
 
 interface Props {
   anchorResult: AnchorResult | null;
@@ -109,7 +110,11 @@ export default function SignalProjectionTable({ anchorResult, leverageResult, sc
               ))}
             </tr>
             <tr className="border-b border-border">
-              <td className="px-4 py-2 text-xs text-muted-foreground">Gold Impl. CAGR</td>
+              <td className="px-4 py-2 text-xs text-muted-foreground">
+                <GuideTooltip id="proj-gold-cagr" text="This is the compound annual growth rate — what your investment would earn per year if gold reaches the expected value. Bold values exceed gold's long-run average of 7.9%.">
+                  Gold Impl. CAGR
+                </GuideTooltip>
+              </td>
               {goldCagrRow.map((v, i) => (
                 <td key={i} className={`text-right px-4 py-2 font-mono text-xs ${v !== null && v > 7.9 ? 'text-primary font-bold' : 'text-foreground'}`}>
                   {v !== null ? pctFmt(v) : '—'}
@@ -136,7 +141,11 @@ export default function SignalProjectionTable({ anchorResult, leverageResult, sc
               ))}
             </tr>
             <tr>
-              <td className="px-4 py-2 text-xs text-muted-foreground">vs. Gold CAGR</td>
+              <td className="px-4 py-2 text-xs text-muted-foreground">
+                <GuideTooltip id="proj-vs-gold" text="This shows how much extra return miners are expected to deliver over holding gold directly. The premium comes from two sources: gold price appreciation plus miner re-rating toward historical valuation norms.">
+                  vs. Gold CAGR
+                </GuideTooltip>
+              </td>
               {vsGoldCagrRow.map((v, i) => (
                 <td key={i} className={`text-right px-4 py-2 font-mono text-xs font-semibold ${v !== null ? (v >= 0 ? 'text-bullish' : 'text-bearish') : 'text-muted-foreground'}`}>
                   {v !== null ? `${v >= 0 ? '+' : ''}${v.toFixed(0)}pp` : '—'}
