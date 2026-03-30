@@ -139,6 +139,9 @@ const Index = () => {
             scenarioConfig={scenarioConfig}
             currentGoldPrice={currentGoldPrice}
             weightMode="fixed"
+            anchorResult={anchorResult}
+            leverageResult={leverageResult}
+            currentGDXPrice={currentGDXPrice}
           />
         )}
 
