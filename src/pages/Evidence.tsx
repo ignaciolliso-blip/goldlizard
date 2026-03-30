@@ -14,6 +14,7 @@ import VariableDrillDowns from '@/components/evidence/VariableDrillDowns';
 import ProjectionAssumptionsTab from '@/components/evidence/ProjectionAssumptionsTab';
 import ConvergenceAnalysis from '@/components/evidence/ConvergenceAnalysis';
 import DataManagement from '@/components/evidence/DataManagement';
+import Footer from '@/components/Footer';
 
 const Evidence = () => {
   const [searchParams] = useSearchParams();
