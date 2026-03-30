@@ -1,6 +1,6 @@
 import { Compass, Wind, Pickaxe } from 'lucide-react';
 import type { AnchorResult } from '@/lib/anchorEngine';
-import { ANCHOR_ZONES, getZone, getZoneConclusion } from '@/lib/anchorEngine';
+import { getZone, getZoneConclusion } from '@/lib/anchorEngine';
 import type { GDIResult } from '@/lib/gdiEngine';
 import type { LeverageResult } from '@/lib/leverageEngine';
 import { GuideTooltip } from '@/components/GuideMode';
@@ -20,71 +20,97 @@ function fmt(n: number): string {
 function AnchorCard({ anchor }: { anchor: AnchorResult | null }) {
   if (!anchor) return <CardShell title="THE ANCHOR" icon={<Compass size={14} />}><p className="text-muted-foreground text-sm">Loading...</p></CardShell>;
 
-  const { m2GoldRatio, currentM2, currentGoldPrice } = anchor;
-  const zone = getZone(m2GoldRatio);
-  const conclusion = getZoneConclusion(m2GoldRatio);
+  const { totalParity, investableParity, currentGoldPrice, pctOfInvestableParity, pctOfTotalParity, currentM2 } = anchor;
+  const zone = getZone(pctOfInvestableParity);
+  const conclusion = getZoneConclusion(pctOfInvestableParity);
 
-  const gaugeMin = 1.5;
-  const gaugeMax = 22;
-  const pct = (v: number) => Math.max(0, Math.min(100, ((v - gaugeMin) / (gaugeMax - gaugeMin)) * 100));
-  const currentPct = pct(m2GoldRatio);
+  // Thermometer: position gold spot between 0 and investable parity (with overflow for above parity)
+  const gaugeMax = investableParity * 1.3; // allow headroom
+  const totalPct = Math.max(0, Math.min(100, (totalParity / gaugeMax) * 100));
+  const spotPct = Math.max(0, Math.min(100, (currentGoldPrice / gaugeMax) * 100));
+  const invPct = Math.max(0, Math.min(100, (investableParity / gaugeMax) * 100));
 
-  const markers = [
-    { label: '1980', ratio: 2 },
-    { label: '2011', ratio: 3.5 },
-    { label: '2015', ratio: 13 },
-    { label: '2000', ratio: 20 },
-  ];
-
-  const priceAt2011 = currentM2 / 3.5;
-  const priceAt2015 = currentM2 / 13;
-  const priceAt1980 = currentM2 / 2;
-  const pctFrom = (target: number) => ((target / currentGoldPrice - 1) * 100);
-
-  const conclusionColor = zone.zone === 'extreme_fear' || zone.zone === 'elevated_fear'
-    ? 'text-bearish' : zone.zone === 'complacency' || zone.zone === 'extreme_complacency'
+  const conclusionColor = zone.zone === 'above_parity' || zone.zone === 'elevated'
+    ? 'text-bearish' : zone.zone === 'undervalued' || zone.zone === 'extreme_undervaluation'
     ? 'text-bullish' : 'text-primary';
 
   return (
-    <CardShell title="THE ANCHOR" icon={<Compass size={14} />} guideId="lens-anchor" guideText={`This gauge shows how many M2 dollars exist per ounce of gold. When the ratio is high, gold is relatively cheap. When low, gold has absorbed the money printing. We're at ${m2GoldRatio.toFixed(1)}, in the ${zone.label}.`}>
+    <CardShell title="THE ANCHOR" icon={<Compass size={14} />} guideId="lens-anchor" guideText={`This gauge shows how much of the 'investable parity' gold has captured. At 100%, gold has fully repriced to absorb the money supply — that only happened once, in the 1980 gold mania. At 10%, gold is being ignored. We're at ${pctOfInvestableParity.toFixed(0)}%.`}>
       <div className="space-y-3">
-        {/* Horizontal gauge */}
-        <div className="relative mt-1">
-          <div className="flex h-2.5 rounded-full overflow-hidden">
-            {ANCHOR_ZONES.map((z, i) => {
-              const width = ((z.range[1] - z.range[0]) / (gaugeMax - gaugeMin)) * 100;
-              const colors = ['bg-bearish/70', 'bg-bearish/40', 'bg-primary/40', 'bg-bullish/30', 'bg-bullish/60'];
-              return <div key={i} className={colors[i]} style={{ width: `${width}%` }} />;
-            })}
+        <p className="text-[9px] text-muted-foreground text-center uppercase tracking-wider">M2 Per Ounce of Gold</p>
+
+        {/* Vertical thermometer gauge */}
+        <div className="flex items-center gap-4">
+          <div className="relative w-6 flex-shrink-0" style={{ height: '140px' }}>
+            {/* Track */}
+            <div className="absolute inset-x-0 inset-y-0 rounded-full bg-muted/30 border border-border" />
+            {/* Filled portion up to spot */}
+            <div
+              className="absolute inset-x-0 bottom-0 rounded-full bg-gradient-to-t from-primary/30 to-primary/10"
+              style={{ height: `${spotPct}%` }}
+            />
+            {/* Total parity marker */}
+            <div className="absolute left-0 right-0 flex items-center" style={{ bottom: `${totalPct}%`, transform: 'translateY(50%)' }}>
+              <div className="w-full h-0.5 bg-bullish" />
+            </div>
+            {/* Spot price marker */}
+            <div className="absolute left-0 right-0 flex items-center" style={{ bottom: `${spotPct}%`, transform: 'translateY(50%)' }}>
+              <div className="w-full h-1 bg-primary rounded-full shadow-[0_0_6px_hsl(var(--primary)/0.5)]" />
+            </div>
+            {/* Investable parity marker */}
+            <div className="absolute left-0 right-0 flex items-center" style={{ bottom: `${invPct}%`, transform: 'translateY(50%)' }}>
+              <div className="w-full h-0.5 bg-blue-400" />
+            </div>
           </div>
-          <div className="absolute -top-0.5 w-3.5 h-3.5 rounded-full bg-foreground border-2 border-background shadow-lg transform -translate-x-1/2" style={{ left: `${currentPct}%` }} />
-          <div className="relative h-6 mt-0.5">
-            {markers.map(m => (
-              <div key={m.label} className="absolute text-center transform -translate-x-1/2" style={{ left: `${pct(m.ratio)}%` }}>
-                <div className="w-px h-1.5 bg-muted-foreground/30 mx-auto" />
-                <span className="text-[7px] text-muted-foreground/50 block">{m.label}</span>
-              </div>
-            ))}
+
+          {/* Labels */}
+          <div className="flex-1 relative" style={{ height: '140px' }}>
+            {/* Investable parity label */}
+            <div className="absolute text-[10px] font-mono" style={{ bottom: `${invPct}%`, transform: 'translateY(50%)' }}>
+              <span className="text-blue-400">{fmt(investableParity)}</span>
+              <span className="text-muted-foreground/60 ml-1">Investable</span>
+            </div>
+            {/* Spot label */}
+            <div className="absolute text-[10px] font-mono font-semibold" style={{ bottom: `${spotPct}%`, transform: 'translateY(50%)' }}>
+              <span className="text-primary">{fmt(currentGoldPrice)}</span>
+              <span className="text-muted-foreground/60 ml-1">Spot</span>
+            </div>
+            {/* Total parity label */}
+            <div className="absolute text-[10px] font-mono" style={{ bottom: `${totalPct}%`, transform: 'translateY(50%)' }}>
+              <span className="text-bullish">{fmt(totalParity)}</span>
+              <span className="text-muted-foreground/60 ml-1">Total</span>
+            </div>
           </div>
         </div>
 
-        <div className="space-y-1 text-xs font-mono">
-          <div className="flex justify-between text-foreground">
-            <span>M2/Gold</span>
-            <span className="font-semibold">{m2GoldRatio.toFixed(1)} — {zone.label}</span>
+        {/* Key stat */}
+        <p className="text-[10px] text-center text-muted-foreground">
+          Gold has captured <span className="text-foreground font-semibold">{pctOfInvestableParity.toFixed(0)}%</span> of investable parity.{' '}
+          <span className="text-primary">{(100 - pctOfInvestableParity).toFixed(0)}%</span> of money printing remains unpriced.
+        </p>
+
+        {/* Three numbers */}
+        <div className="space-y-0.5 text-[10px] font-mono">
+          <div className="flex justify-between">
+            <span className="text-bullish">{fmt(totalParity)}</span>
+            <span className="text-muted-foreground">Total parity (M2 ÷ all gold)</span>
           </div>
-          <div className="flex justify-between text-muted-foreground text-[10px]">
-            <span>At 2011 (3.5):</span>
-            <span className={pctFrom(priceAt2011) > 0 ? 'text-bullish' : 'text-bearish'}>{fmt(priceAt2011)} ({pctFrom(priceAt2011) > 0 ? '+' : ''}{pctFrom(priceAt2011).toFixed(0)}%)</span>
+          <div className="flex justify-between">
+            <span className="text-primary">{fmt(currentGoldPrice)}</span>
+            <span className="text-muted-foreground">Gold spot today</span>
           </div>
-          <div className="flex justify-between text-muted-foreground text-[10px]">
-            <span>At 2015 (13):</span>
-            <span className={pctFrom(priceAt2015) > 0 ? 'text-bullish' : 'text-bearish'}>{fmt(priceAt2015)} ({pctFrom(priceAt2015).toFixed(0)}%)</span>
+          <div className="flex justify-between">
+            <span className="text-blue-400">{fmt(investableParity)}</span>
+            <span className="text-muted-foreground">Investable parity (M2 ÷ inv. gold)</span>
           </div>
         </div>
 
         <p className={`text-[10px] font-semibold text-center ${conclusionColor}`}>
           {conclusion}
+        </p>
+
+        <p className="text-[8px] text-muted-foreground/50 text-center">
+          Both parities rise ~4.5%/yr as M2 grows 6% and gold supply grows only 1.5%.
         </p>
       </div>
     </CardShell>
@@ -176,7 +202,6 @@ function LeverageCard({ leverage, currentGDXPrice }: { leverage: LeverageResult 
           </p>
         </div>
 
-        {/* Percentile bar */}
         <div className="relative h-2 bg-muted rounded-full">
           <div
             className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-leverage-miner border-2 border-background z-10"
