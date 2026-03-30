@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
 
 interface GuideModeContextType {
   isGuideMode: boolean;
@@ -61,46 +61,72 @@ interface GuideTooltipProps {
 export function GuideTooltip({ id, text, children, position = 'bottom' }: GuideTooltipProps) {
   const { isGuideMode, openTooltips, toggleTooltip } = useGuideMode();
   const isOpen = openTooltips.has(id);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLSpanElement>(null);
+
+  // Reposition tooltip to stay within viewport
+  useEffect(() => {
+    if (!isOpen || !tooltipRef.current) return;
+    const el = tooltipRef.current;
+    const rect = el.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // Reset any prior adjustments
+    el.style.left = '';
+    el.style.right = '';
+    el.style.top = '';
+    el.style.bottom = '';
+    el.style.transform = '';
+
+    const updated = el.getBoundingClientRect();
+
+    if (updated.right > vw - 16) {
+      el.style.left = 'auto';
+      el.style.right = '0';
+      el.style.transform = 'none';
+    }
+    if (updated.left < 16) {
+      el.style.left = '0';
+      el.style.right = 'auto';
+      el.style.transform = 'none';
+    }
+    if (updated.bottom > vh - 16) {
+      el.style.top = 'auto';
+      el.style.bottom = '100%';
+      el.style.marginBottom = '8px';
+      el.style.marginTop = '0';
+    }
+  }, [isOpen]);
 
   if (!isGuideMode) return <>{children}</>;
 
-  const positionClasses: Record<string, string> = {
-    top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
-    bottom: 'top-full left-1/2 -translate-x-1/2 mt-2',
-    left: 'right-full top-1/2 -translate-y-1/2 mr-2',
-    right: 'left-full top-1/2 -translate-y-1/2 ml-2',
-  };
-
-  const arrowClasses: Record<string, string> = {
-    top: 'top-full left-1/2 -translate-x-1/2 border-l-transparent border-r-transparent border-b-transparent border-t-[#C9A84C]',
-    bottom: 'bottom-full left-1/2 -translate-x-1/2 border-l-transparent border-r-transparent border-t-transparent border-b-[#C9A84C]',
-    left: 'left-full top-1/2 -translate-y-1/2 border-t-transparent border-b-transparent border-r-transparent border-l-[#C9A84C]',
-    right: 'right-full top-1/2 -translate-y-1/2 border-t-transparent border-b-transparent border-l-transparent border-r-[#C9A84C]',
-  };
-
   return (
-    <span className="relative inline-flex items-center gap-1">
+    <span ref={triggerRef} className="relative inline-flex items-center gap-1.5">
       {children}
       <button
         onClick={(e) => { e.stopPropagation(); toggleTooltip(id); }}
-        className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gold/20 text-gold text-[9px] font-bold hover:bg-gold/30 transition-colors flex-shrink-0 cursor-pointer"
+        className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary/20 text-primary text-[11px] font-bold hover:bg-primary/30 transition-colors flex-shrink-0 cursor-pointer"
         aria-label="Show guide tooltip"
       >
         ?
       </button>
       {isOpen && (
-        <div className={`absolute z-[100] ${positionClasses[position]}`} style={{ width: 'max(250px, 20vw)', maxWidth: '350px' }}>
+        <div
+          ref={tooltipRef}
+          className="absolute z-[9999] top-full left-1/2 -translate-x-1/2 mt-2"
+          style={{ width: 'min(380px, 90vw)' }}
+        >
           <div
-            className="rounded-md p-3 text-[12px] sm:text-[13px] leading-relaxed shadow-lg"
+            className="rounded-xl p-4 text-sm leading-relaxed shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
             style={{
-              backgroundColor: '#2A2E3A',
-              border: '1px solid #C9A84C',
-              color: '#E8E6E1',
+              backgroundColor: 'hsl(222 18% 14%)',
+              border: '1px solid hsl(var(--primary))',
+              color: 'hsl(var(--foreground))',
             }}
           >
             {text}
           </div>
-          <div className={`absolute w-0 h-0 border-[5px] ${arrowClasses[position]}`} />
         </div>
       )}
     </span>

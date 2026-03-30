@@ -19,56 +19,38 @@ function GDITimeSeriesChart({ gdiResult, goldSpot }: { gdiResult: GDIResult; gol
     const goldMap = new Map<string, number>();
     goldSpot.forEach(o => goldMap.set(o.date, o.value));
 
-    // Sample every 5th date for performance
     const sampled: { date: string; gold?: number; gdi: number }[] = [];
     for (let i = 0; i < gdiResult.dates.length; i += 5) {
       const d = gdiResult.dates[i];
-      sampled.push({
-        date: d,
-        gold: goldMap.get(d),
-        gdi: gdiResult.gdiValues[i],
-      });
+      sampled.push({ date: d, gold: goldMap.get(d), gdi: gdiResult.gdiValues[i] });
     }
-    // Always include last
     const lastIdx = gdiResult.dates.length - 1;
     if (lastIdx % 5 !== 0) {
-      sampled.push({
-        date: gdiResult.dates[lastIdx],
-        gold: goldMap.get(gdiResult.dates[lastIdx]),
-        gdi: gdiResult.gdiValues[lastIdx],
-      });
+      sampled.push({ date: gdiResult.dates[lastIdx], gold: goldMap.get(gdiResult.dates[lastIdx]), gdi: gdiResult.gdiValues[lastIdx] });
     }
     return sampled;
   }, [gdiResult, goldSpot]);
 
   return (
-    <ResponsiveContainer width="100%" height={200}>
-      <ComposedChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+    <ResponsiveContainer width="100%" height={220}>
+      <ComposedChart data={chartData} margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
         <XAxis
           dataKey="date"
           tickFormatter={(d) => new Date(d).getFullYear().toString()}
           stroke="hsl(var(--muted-foreground))"
-          fontSize={10}
+          fontSize={11}
           tickLine={false}
           interval="preserveStartEnd"
         />
         <YAxis
-          yAxisId="gold"
-          orientation="left"
+          yAxisId="gold" orientation="left"
           tickFormatter={(v) => `$${(v / 1000).toFixed(1)}k`}
-          stroke="hsl(var(--muted-foreground))"
-          fontSize={10}
-          tickLine={false}
-          axisLine={false}
+          stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false}
         />
         <YAxis
-          yAxisId="gdi"
-          orientation="right"
-          stroke="hsl(var(--muted-foreground))"
-          fontSize={10}
-          tickLine={false}
-          axisLine={false}
+          yAxisId="gdi" orientation="right"
+          stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false}
           domain={[-2, 2]}
         />
         <Tooltip
@@ -76,10 +58,10 @@ function GDITimeSeriesChart({ gdiResult, goldSpot }: { gdiResult: GDIResult; gol
             if (!active || !payload?.length) return null;
             const d = payload[0]?.payload;
             return (
-              <div className="bg-card border border-border rounded-lg p-2 text-xs shadow-lg">
+              <div className="bg-card border border-border rounded-xl p-3 text-sm shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
                 <p className="text-muted-foreground">{d.date}</p>
-                {d.gold && <p className="text-primary">Gold: ${d.gold.toLocaleString()}</p>}
-                <p className="text-gold">GDI: {d.gdi.toFixed(3)}</p>
+                {d.gold && <p className="text-primary font-mono">Gold: ${d.gold.toLocaleString()}</p>}
+                <p className="font-mono" style={{ color: 'hsl(var(--gold))' }}>GDI: {d.gdi.toFixed(3)}</p>
               </div>
             );
           }}
@@ -103,21 +85,15 @@ function TierBars({ tierContributions }: { tierContributions: TierContribution }
   const maxAbs = Math.max(0.01, ...tiers.map(t => Math.abs(tierContributions[t.key])));
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {tiers.map(t => {
         const val = tierContributions[t.key];
         const pct = Math.min(100, (Math.abs(val) / maxAbs) * 100);
         const positive = val >= 0;
         return (
-          <button
-            key={t.key}
-            onClick={() => navigate('/evidence')}
-            className="w-full text-left group"
-          >
-            <div className="flex items-center justify-between text-xs mb-0.5">
-              <span className="text-muted-foreground group-hover:text-foreground transition-colors">
-                {t.label}
-              </span>
+          <button key={t.key} onClick={() => navigate('/evidence')} className="w-full text-left group">
+            <div className="flex items-center justify-between text-sm mb-1">
+              <span className="text-muted-foreground group-hover:text-foreground transition-colors">{t.label}</span>
               <span className={`font-mono font-medium ${positive ? 'text-bullish' : 'text-bearish'}`}>
                 {positive ? '+' : ''}{val.toFixed(2)}
               </span>
@@ -131,7 +107,7 @@ function TierBars({ tierContributions }: { tierContributions: TierContribution }
           </button>
         );
       })}
-      <div className="border-t border-border pt-1 flex justify-between text-xs font-mono">
+      <div className="border-t border-border pt-2 flex justify-between text-sm font-mono">
         <span className="text-muted-foreground">GDI Total</span>
         <span className={`font-medium ${
           tierContributions.structural + tierContributions.demand + tierContributions.conditions >= 0
@@ -168,24 +144,22 @@ function ComponentCards({ variables }: { variables: VariableDetail[] }) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {tierOrder.map(tier => (
         <div key={tier}>
-          <p className="text-[10px] text-muted-foreground tracking-widest mb-1">
-            {TIER_LABELS[tier]}
-          </p>
-          <div className="flex gap-1.5 flex-wrap">
+          <p className="text-xs text-muted-foreground tracking-widest mb-1.5">{TIER_LABELS[tier]}</p>
+          <div className="flex gap-2 flex-wrap">
             {grouped[tier].map(v => (
               <button
                 key={v.id}
                 onClick={() => navigate('/evidence')}
-                className={`flex-1 min-w-[80px] max-w-[120px] p-2 rounded-lg border text-left transition-colors hover:border-primary/30 ${heatBg(v.adjustedZScore)}`}
+                className={`flex-1 min-w-[90px] max-w-[130px] p-2.5 rounded-lg border text-left transition-colors hover:border-primary/30 ${heatBg(v.adjustedZScore)}`}
               >
-                <p className="text-[10px] text-muted-foreground truncate">{v.name}</p>
-                <p className="text-xs font-mono font-medium text-foreground">
+                <p className="text-xs text-muted-foreground truncate">{v.name}</p>
+                <p className="text-sm font-mono font-medium text-foreground">
                   {v.currentValue.toFixed(v.currentValue >= 100 ? 0 : 2)}
                 </p>
-                <p className={`text-[10px] font-mono ${v.adjustedZScore >= 0 ? 'text-bullish' : 'text-bearish'}`}>
+                <p className={`text-xs font-mono ${v.adjustedZScore >= 0 ? 'text-bullish' : 'text-bearish'}`}>
                   {v.adjustedZScore >= 0 ? '↑' : '↓'}{v.adjustedZScore.toFixed(2)}
                 </p>
               </button>
@@ -199,28 +173,23 @@ function ComponentCards({ variables }: { variables: VariableDetail[] }) {
 
 export default function ForcesPanel({ gdiResult, goldSpot, currentGDI }: Props) {
   const signal = currentGDI > 0.5 ? 'BULLISH' : currentGDI < -0.5 ? 'BEARISH' : 'NEUTRAL';
-  const signalColor = currentGDI > 0.5 ? 'text-bullish' : currentGDI < -0.5 ? 'text-bearish' : 'text-amber-400';
+  const signalColor = currentGDI > 0.5 ? 'text-bullish' : currentGDI < -0.5 ? 'text-bearish' : 'text-neutral';
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="font-display text-lg text-foreground">The Forces</h2>
+        <h2 className="font-display text-xl text-foreground">The Forces</h2>
         <div className="flex items-center gap-2">
-          <span className="font-mono text-lg font-semibold text-primary">
+          <span className="font-mono text-xl font-semibold text-primary">
             {currentGDI >= 0 ? '+' : ''}{currentGDI.toFixed(2)}
           </span>
-          <span className={`text-xs font-semibold ${signalColor}`}>{signal}</span>
+          <span className={`text-sm font-semibold ${signalColor}`}>{signal}</span>
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-xl p-3 space-y-4">
-        {/* GDI Time Series */}
+      <div className="bg-card border border-border rounded-xl p-4 sm:p-5 space-y-5">
         <GDITimeSeriesChart gdiResult={gdiResult} goldSpot={goldSpot} />
-
-        {/* Tier Decomposition */}
         <TierBars tierContributions={gdiResult.tierContributions} />
-
-        {/* Component Cards */}
         <ComponentCards variables={gdiResult.variableDetails} />
       </div>
     </div>

@@ -11,13 +11,13 @@ import LoadingProgress from '@/components/LoadingProgress';
 import AnchorChartPanel from '@/components/analysis/AnchorChartPanel';
 import ForcesPanel from '@/components/analysis/ForcesPanel';
 import LeveragePanel from '@/components/analysis/LeveragePanel';
+import PageIntro from '@/components/PageIntro';
 import Footer from '@/components/Footer';
 
 const Analysis = () => {
   const [loading, setLoading] = useState(true);
   const [statusMsg, setStatusMsg] = useState('Initializing...');
   const [error, setError] = useState<string | null>(null);
-  // baseline removed — M2/Gold ratio doesn't need it
 
   const [rawData, setRawData] = useState<{
     fredResults: Record<string, Observation[]>;
@@ -64,8 +64,6 @@ const Analysis = () => {
     load();
   }, []);
 
-  // No baseline recompute needed for M2/Gold ratio
-
   const currentGDI = gdiResult ? gdiResult.gdiValues[gdiResult.gdiValues.length - 1] : 0;
   const goldSpot = rawData?.goldSpot || [];
   const currentGoldPrice = goldSpot.length > 0 ? goldSpot[goldSpot.length - 1].value : 3000;
@@ -78,17 +76,15 @@ const Analysis = () => {
     return sorted[sorted.length - 1].close_price;
   }, [rawData]);
 
-  // gdiWeightedEVs removed — anchor chart no longer needs them
-
   if (loading) return <LoadingProgress message={statusMsg} />;
 
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center">
-          <h1 className="font-display text-xl text-destructive mb-2">Error</h1>
-          <p className="text-muted-foreground text-sm mb-4">{error}</p>
-          <button onClick={() => window.location.reload()} className="px-4 py-2 bg-primary/20 text-primary rounded text-sm font-medium hover:bg-primary/30 transition-colors">
+          <h1 className="font-display text-2xl text-destructive mb-3">Error</h1>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <button onClick={() => window.location.reload()} className="px-5 py-2.5 bg-primary/20 text-primary rounded-lg font-medium hover:bg-primary/30 transition-colors">
             Retry
           </button>
         </div>
@@ -98,20 +94,38 @@ const Analysis = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 pt-4 pb-8">
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 pt-4 pb-8 space-y-6">
         {/* Breadcrumb */}
-        <div className="flex items-center justify-between mb-4">
-          <Link to="/" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+        <div className="flex items-center justify-between">
+          <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft size={14} /> The Signal
           </Link>
-          <Link to="/evidence" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+          <Link to="/evidence" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
             Explore Evidence <ArrowRight size={14} />
           </Link>
         </div>
 
-        {/* Three-panel layout: Desktop 40-30-30, Tablet anchor full + 50-50, Mobile stacked */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-[2fr_1.5fr_1.5fr] gap-4">
-          {/* Left: Anchor - full width on tablet */}
+        {/* Page intro */}
+        <PageIntro storageKey="analysis_intro_dismissed">
+          <h3 className="font-display text-foreground mb-3">The Analysis — Why gold is where it is</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+            <div className="bg-secondary/30 rounded-lg p-3">
+              <span className="text-primary font-semibold">LEFT — The Anchor</span>
+              <p className="text-muted-foreground mt-1">Gold's price vs its M2 "implied price." The gap = debasement not yet priced in.</p>
+            </div>
+            <div className="bg-secondary/30 rounded-lg p-3">
+              <span className="text-primary font-semibold">CENTRE — The Forces</span>
+              <p className="text-muted-foreground mt-1">What's pushing gold toward or away from implied price — structural, demand, and conditions.</p>
+            </div>
+            <div className="bg-secondary/30 rounded-lg p-3">
+              <span className="text-primary font-semibold">RIGHT — The Leverage</span>
+              <p className="text-muted-foreground mt-1">Whether miners (GDX) are cheap or expensive relative to gold. Cheap miners = amplified returns.</p>
+            </div>
+          </div>
+        </PageIntro>
+
+        {/* Three-panel layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-[2fr_1.5fr_1.5fr] gap-6">
           {anchorResult && rawData && (
             <div className="lg:col-span-2 xl:col-span-1">
               <AnchorChartPanel
@@ -122,7 +136,6 @@ const Analysis = () => {
             </div>
           )}
 
-          {/* Centre: Forces */}
           {gdiResult && (
             <ForcesPanel
               gdiResult={gdiResult}
@@ -131,7 +144,6 @@ const Analysis = () => {
             />
           )}
 
-          {/* Right: Leverage */}
           {leverageResult && (
             <LeveragePanel
               leverageResult={leverageResult}

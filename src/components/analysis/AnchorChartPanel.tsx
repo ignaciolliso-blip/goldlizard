@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
-  ComposedChart, Line, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  ComposedChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   ReferenceLine, CartesianGrid,
 } from 'recharts';
 import type { AnchorResult } from '@/lib/anchorEngine';
@@ -34,10 +34,14 @@ const TIME_RANGES = ['10Y', '20Y', 'Max'] as const;
 type TimeRange = typeof TIME_RANGES[number];
 
 function fmt(n: number): string {
+  if (n >= 1000) return '$' + (n / 1000).toFixed(1) + 'k';
   return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
 }
 
-// Zone table data
+function fmtFull(n: number): string {
+  return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+}
+
 const ZONE_TABLE = [
   {
     zone: 'Above Parity (gold > implied)',
@@ -87,12 +91,10 @@ export default function AnchorChartPanel({ anchorResult, goldSpot, m2Data }: Pro
       startDate = d.toISOString().split('T')[0];
     }
 
-    // Build dual-line series from anchorResult
     const points: ChartPoint[] = [];
     const goldSeries = anchorResult.goldSeries.filter(o => o.date >= startDate);
     const impliedSeries = anchorResult.impliedPriceSeries.filter(o => o.date >= startDate);
 
-    // Merge by date
     const dateMap = new Map<string, ChartPoint>();
     for (const g of goldSeries) {
       dateMap.set(g.date, { date: g.date, ts: new Date(g.date).getTime(), goldPrice: g.value });
@@ -109,7 +111,6 @@ export default function AnchorChartPanel({ anchorResult, goldSpot, m2Data }: Pro
     const sorted = Array.from(dateMap.values()).sort((a, b) => a.ts - b.ts);
     points.push(...sorted);
 
-    // Forward projection (5 years)
     const todayTs = now.getTime();
     const horizons = [0, 0.5, 1, 2, 3, 4, 5];
     for (const y of horizons) {
@@ -118,7 +119,6 @@ export default function AnchorChartPanel({ anchorResult, goldSpot, m2Data }: Pro
 
       const futureImplied = investableParity * Math.pow(1 + NET_PARITY_GROWTH, y);
       const tracksM2Price = currentGoldPrice * Math.pow(1 + M2_GROWTH, y);
-      // Toward parity: target 75% of investable parity at 5yr
       const targetPct = 0.75;
       const currentPct = pctOfInvestableParity / 100;
       const towardPct = currentPct + (targetPct - currentPct) * Math.min(1, y / 5);
@@ -152,7 +152,6 @@ export default function AnchorChartPanel({ anchorResult, goldSpot, m2Data }: Pro
     return filtered;
   }, [timeRange, isMobile, showAllEvents]);
 
-  // 5Y projections for legend
   const proj5y = useMemo(() => {
     const futureImplied = investableParity * Math.pow(1 + NET_PARITY_GROWTH, 5);
     const tracksM2Price = currentGoldPrice * Math.pow(1 + M2_GROWTH, 5);
@@ -168,22 +167,26 @@ export default function AnchorChartPanel({ anchorResult, goldSpot, m2Data }: Pro
     };
   }, [currentGoldPrice, investableParity]);
 
-  // Determine current zone for table highlighting
   const currentZoneKey = pctOfInvestableParity >= 100 ? 'above_parity'
     : pctOfInvestableParity >= 50 ? 'transition'
     : pctOfInvestableParity >= 20 ? 'undervalued'
     : 'extreme_undervaluation';
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <GuideTooltip id="anchor-chart" text="This chart shows two lines: the actual gold price and its 'implied price' from the M2 money supply. The gap between them is the debasement that hasn't been priced in. Gold has only exceeded its implied price once — during the 1980 mania. Click any event marker for context.">
-          <h2 className="font-display text-lg text-foreground">Gold vs M2 Implied Price</h2>
-        </GuideTooltip>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <GuideTooltip id="anchor-chart" text="This chart shows two lines: the actual gold price and its 'implied price' from the M2 money supply. The gap between them is the debasement that hasn't been priced in. Gold has only exceeded its implied price once — during the 1980 mania.">
+            <h2 className="font-display text-xl text-foreground">Gold vs M2 Implied Price</h2>
+          </GuideTooltip>
+          <p className="text-sm text-muted-foreground mt-1">
+            Gold price (gold line) vs M2 implied price (blue dashed). Click any marker for context.
+          </p>
+        </div>
         <div className="flex gap-1">
           {TIME_RANGES.map(r => (
             <button key={r} onClick={() => setTimeRange(r)}
-              className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
                 timeRange === r ? 'bg-primary/15 text-primary border border-primary/30' : 'text-muted-foreground hover:text-foreground'
               }`}
             >{r}</button>
@@ -191,27 +194,26 @@ export default function AnchorChartPanel({ anchorResult, goldSpot, m2Data }: Pro
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-xl p-4">
+      <div className="bg-card border border-border rounded-xl p-4 sm:p-5">
         <ResponsiveContainer width="100%" height={isMobile ? 300 : 500}>
-          <ComposedChart data={chartData.points} margin={{ top: 20, right: 50, bottom: 10, left: 10 }}>
+          <ComposedChart data={chartData.points} margin={{ top: 20, right: 50, bottom: 30, left: 60 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
 
             <XAxis
               dataKey="ts" type="number" domain={['dataMin', 'dataMax']}
               tickFormatter={(ts) => new Date(ts).getFullYear().toString()}
-              stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false}
+              stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false}
             />
             <YAxis
               scale="log"
               domain={['auto', 'auto']}
               tickFormatter={(v) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`}
-              stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false}
+              stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false}
+              tickCount={5}
             />
 
-            {/* Today vertical line */}
             <ReferenceLine x={chartData.todayTs} stroke="hsl(var(--muted-foreground))" strokeDasharray="4 4" opacity={0.5} />
 
-            {/* Annotation lines */}
             {visibleAnnotations.map(a => (
               <ReferenceLine
                 key={a.date}
@@ -230,23 +232,23 @@ export default function AnchorChartPanel({ anchorResult, goldSpot, m2Data }: Pro
                   Math.abs(new Date(a.date).getTime() - d.ts) < 60 * 24 * 60 * 60 * 1000
                 );
                 return (
-                  <div className="bg-card border border-border rounded-lg p-3 text-xs shadow-lg max-w-xs">
+                  <div className="bg-card border border-border rounded-xl p-4 text-sm shadow-[0_8px_32px_rgba(0,0,0,0.4)] max-w-sm">
                     <p className="font-medium text-foreground mb-1">{d.date}{d.isForecast ? ' (projected)' : ''}</p>
-                    {d.goldPrice != null && <p className="text-primary font-mono">Gold: {fmt(d.goldPrice)}</p>}
-                    {d.impliedPrice != null && <p className="text-blue-400 font-mono">M2 Implied: {fmt(d.impliedPrice)}</p>}
+                    {d.goldPrice != null && <p className="text-primary font-mono">Gold: {fmtFull(d.goldPrice)}</p>}
+                    {d.impliedPrice != null && <p className="text-blue-400 font-mono">M2 Implied: {fmtFull(d.impliedPrice)}</p>}
                     {d.goldPrice != null && d.impliedPrice != null && (
                       <p className="text-muted-foreground font-mono">
                         {((d.goldPrice / d.impliedPrice) * 100).toFixed(0)}% of parity
                       </p>
                     )}
-                    {d.flatGold != null && <p className="text-bearish font-mono">Gold flat: {fmt(d.flatGold)}</p>}
-                    {d.tracksM2Gold != null && <p className="text-neutral font-mono">Tracks M2: {fmt(d.tracksM2Gold)}</p>}
-                    {d.towardParityGold != null && <p className="text-bullish font-mono">Toward parity: {fmt(d.towardParityGold)}</p>}
-                    {d.projImplied != null && <p className="text-blue-400 font-mono">Implied: {fmt(d.projImplied)}</p>}
+                    {d.flatGold != null && <p className="text-bearish font-mono">Gold flat: {fmtFull(d.flatGold)}</p>}
+                    {d.tracksM2Gold != null && <p className="text-neutral font-mono">Tracks M2: {fmtFull(d.tracksM2Gold)}</p>}
+                    {d.towardParityGold != null && <p className="text-bullish font-mono">Toward parity: {fmtFull(d.towardParityGold)}</p>}
+                    {d.projImplied != null && <p className="text-blue-400 font-mono">Implied: {fmtFull(d.projImplied)}</p>}
                     {annotation && (
                       <div className="mt-2 pt-2 border-t border-border">
                         <p className="font-semibold text-foreground">{annotation.label}</p>
-                        <p className="text-muted-foreground mt-0.5">{annotation.detail}</p>
+                        <p className="text-muted-foreground mt-0.5 leading-relaxed">{annotation.detail}</p>
                       </div>
                     )}
                   </div>
@@ -254,17 +256,9 @@ export default function AnchorChartPanel({ anchorResult, goldSpot, m2Data }: Pro
               }}
             />
 
-            {/* Shaded gap — gold below implied = blue, above = red */}
-            {/* We approximate this with the area between the two lines */}
-            {/* Since Recharts doesn't support between-area natively, show implied as an area baseline */}
-
-            {/* M2 Implied Price line */}
             <Line dataKey="impliedPrice" stroke="hsl(210 80% 60%)" strokeWidth={2} strokeDasharray="6 3" dot={false} connectNulls name="M2 Implied" />
-
-            {/* Gold spot price line */}
             <Line dataKey="goldPrice" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={false} connectNulls name="Gold" />
 
-            {/* Forward projections */}
             <Line dataKey="projImplied" stroke="hsl(210 80% 60%)" strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls />
             <Line dataKey="flatGold" stroke="hsl(var(--bearish))" strokeWidth={1.5} strokeDasharray="6 3" dot={false} connectNulls />
             <Line dataKey="tracksM2Gold" stroke="hsl(var(--neutral))" strokeWidth={1.5} strokeDasharray="6 3" dot={false} connectNulls />
@@ -273,28 +267,28 @@ export default function AnchorChartPanel({ anchorResult, goldSpot, m2Data }: Pro
         </ResponsiveContainer>
 
         {/* Legend */}
-        <GuideTooltip id="anchor-gap" text="The gap between the lines is the 'debasement gap' — money that's been printed but gold hasn't caught up to. When the gap narrows, gold is repricing toward the money supply. When it widens, gold is being forgotten while printing continues.">
-          <div className="flex flex-wrap gap-4 mt-2 text-[10px] text-muted-foreground justify-center">
-            <span className="flex items-center gap-1"><span className="w-4 h-0.5 bg-primary inline-block" /> Gold spot</span>
-            <span className="flex items-center gap-1"><span className="w-4 h-px bg-blue-400 inline-block border-t border-dashed border-blue-400" /> M2 implied (inv. parity)</span>
+        <GuideTooltip id="anchor-gap" text="The gap between the lines is the 'debasement gap' — money that's been printed but gold hasn't caught up to. When the gap narrows, gold is repricing toward the money supply.">
+          <div className="flex flex-wrap gap-4 mt-3 text-xs text-muted-foreground justify-center">
+            <span className="flex items-center gap-1.5"><span className="w-5 h-0.5 bg-primary inline-block" /> Gold spot</span>
+            <span className="flex items-center gap-1.5"><span className="w-5 h-px bg-blue-400 inline-block border-t border-dashed border-blue-400" /> M2 implied (inv. parity)</span>
           </div>
         </GuideTooltip>
 
-        <GuideTooltip id="proj-lines" text="The three forward lines show what happens if gold stays flat (loses ground to money printing), tracks M2 (treads water at ~57%), or reprices toward 75% of parity (the bull case). The implied price line itself rises ~4.5%/yr.">
-          <div className="flex flex-wrap gap-4 mt-1 text-[10px] text-muted-foreground justify-center">
-            <span className="flex items-center gap-1"><span className="w-4 h-px bg-bearish inline-block" /> Flat: {fmt(proj5y.flat)} → {proj5y.flatPct}%</span>
-            <span className="flex items-center gap-1"><span className="w-4 h-px bg-neutral inline-block" /> Tracks M2: ~{fmt(proj5y.tracksM2)} → {proj5y.tracksM2Pct}%</span>
-            <span className="flex items-center gap-1"><span className="w-4 h-px bg-bullish inline-block" /> Toward parity: ~{fmt(proj5y.towardParity)} → 75%</span>
+        <GuideTooltip id="proj-lines" text="The three forward lines show what happens if gold stays flat (loses ground), tracks M2 (treads water at ~57%), or reprices toward 75% of parity (the bull case). The implied price line rises ~4.5%/yr.">
+          <div className="flex flex-wrap gap-4 mt-2 text-xs text-muted-foreground justify-center">
+            <span className="flex items-center gap-1.5"><span className="w-5 h-px bg-bearish inline-block" /> Flat: {fmtFull(proj5y.flat)} → {proj5y.flatPct}%</span>
+            <span className="flex items-center gap-1.5"><span className="w-5 h-px bg-neutral inline-block" /> Tracks M2: ~{fmtFull(proj5y.tracksM2)} → {proj5y.tracksM2Pct}%</span>
+            <span className="flex items-center gap-1.5"><span className="w-5 h-px bg-bullish inline-block" /> Toward parity: ~{fmtFull(proj5y.towardParity)} → 75%</span>
           </div>
         </GuideTooltip>
-        <p className="text-[9px] text-muted-foreground/60 text-center mt-1">
-          Investable parity at 5yr: ~{fmt(proj5y.futureImplied)} | Uses current investable gold stock (86,389t)
+        <p className="text-xs text-muted-foreground/60 text-center mt-2">
+          Investable parity at 5yr: ~{fmtFull(proj5y.futureImplied)} | Uses current investable gold stock (86,389t)
         </p>
 
         {isMobile && (
           <button
             onClick={() => setShowAllEvents(p => !p)}
-            className="text-[10px] text-primary mt-2 hover:underline"
+            className="text-xs text-primary mt-3 hover:underline"
           >
             {showAllEvents ? 'Show key events only' : 'Show all events'}
           </button>
@@ -303,33 +297,35 @@ export default function AnchorChartPanel({ anchorResult, goldSpot, m2Data }: Pro
 
       {/* Historical Pattern Table */}
       <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <table className="w-full text-[10px] sm:text-xs">
-          <thead>
-            <tr className="border-b border-border">
-              <th className="text-left px-3 py-2 text-muted-foreground font-medium">Pattern</th>
-              <th className="text-center px-2 py-2 text-muted-foreground font-medium">% Parity</th>
-              <th className="text-left px-2 py-2 text-muted-foreground font-medium hidden sm:table-cell">Last Seen</th>
-              <th className="text-left px-3 py-2 text-muted-foreground font-medium">What Was Happening</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ZONE_TABLE.map(z => {
-              const isCurrent = z.zoneKey === currentZoneKey;
-              return (
-                <tr key={z.zoneKey} className={`border-b border-border/50 ${isCurrent ? 'bg-primary/5 border-l-2 border-l-primary' : ''}`}>
-                  <td className="px-3 py-2 font-medium text-foreground">
-                    {z.zone} {isCurrent && <span className="text-primary">●</span>}
-                  </td>
-                  <td className="text-center px-2 py-2 font-mono text-muted-foreground">{z.pctRange}</td>
-                  <td className="px-2 py-2 text-muted-foreground hidden sm:table-cell">{z.lastSeen}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{z.context}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        <div className="px-3 py-2 border-t border-border/30">
-          <p className="text-[9px] text-muted-foreground/60">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Pattern</th>
+                <th className="text-center px-3 py-3 text-muted-foreground font-medium">% Parity</th>
+                <th className="text-left px-3 py-3 text-muted-foreground font-medium hidden sm:table-cell">Last Seen</th>
+                <th className="text-left px-4 py-3 text-muted-foreground font-medium">What Was Happening</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ZONE_TABLE.map(z => {
+                const isCurrent = z.zoneKey === currentZoneKey;
+                return (
+                  <tr key={z.zoneKey} className={`border-b border-border/50 ${isCurrent ? 'bg-primary/5 border-l-2 border-l-primary' : ''}`}>
+                    <td className="px-4 py-3 font-medium text-foreground">
+                      {z.zone} {isCurrent && <span className="text-primary">●</span>}
+                    </td>
+                    <td className="text-center px-3 py-3 font-mono text-muted-foreground">{z.pctRange}</td>
+                    <td className="px-3 py-3 text-muted-foreground hidden sm:table-cell">{z.lastSeen}</td>
+                    <td className="px-4 py-3 text-muted-foreground leading-relaxed">{z.context}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <div className="px-4 py-3 border-t border-border/30">
+          <p className="text-xs text-muted-foreground/60">
             Historical average: ~{HISTORICAL_MEAN_PCT}% of parity (mean since 1980). Today: {pctOfInvestableParity.toFixed(0)}% — above average but below the only time gold exceeded parity.
           </p>
         </div>

@@ -93,14 +93,14 @@ export default function SignalPositioning({
   const narrative = `Gold at ${pctParity.toFixed(0)}% of investable parity (${zoneInfo?.label || '—'}). The GDI reads ${currentGDI >= 0 ? '+' : ''}${currentGDI.toFixed(1)} / ${gdiSignal.toUpperCase()}, driven primarily by ${keyDriver?.name || 'multiple factors'}. Miners (GDX) at the ${minerPercentile.toFixed(0)}th percentile — ${percentileDesc}. 5-year expected CAGR: ${goldCagr5y} gold, ${gdxCagr5y} GDX.`;
 
   return (
-    <div className={`bg-card border border-border ${borderColorMap[positioning.color]} border-l-4 rounded-xl p-6 space-y-4`}>
+    <div className={`bg-card border border-border ${borderColorMap[positioning.color]} border-l-4 rounded-xl p-6 sm:p-7 space-y-4`}>
       <div>
         <GuideTooltip id="positioning-call" text="This recommendation comes from the three-lens convergence: gold's position vs investable parity (Anchor), macro force direction (GDI), and miner leverage (GDX/Gold ratio). When all three agree, conviction is highest.">
           <h2 className={`font-display text-2xl ${textColorMap[positioning.color]}`}>
             {positioning.text}
           </h2>
         </GuideTooltip>
-        <p className="text-sm text-muted-foreground mt-1">{positioning.detail}</p>
+        <p className="text-sm text-muted-foreground mt-2">{positioning.detail}</p>
       </div>
 
       <p className="text-sm text-foreground/80 leading-relaxed">
