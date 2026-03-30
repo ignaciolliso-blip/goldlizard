@@ -7,8 +7,11 @@ import { GuideModeProvider } from "@/components/GuideMode";
 import AppNav from "@/components/AppNav";
 import Index from "./pages/Index.tsx";
 import Analysis from "./pages/Analysis.tsx";
-import Evidence from "./pages/Evidence.tsx";
+import { lazy, Suspense } from "react";
 import NotFound from "./pages/NotFound.tsx";
+import LoadingProgress from "@/components/LoadingProgress";
+
+const Evidence = lazy(() => import("./pages/Evidence.tsx"));
 
 const queryClient = new QueryClient();
 
@@ -20,13 +23,22 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AppNav />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/analysis" element={<Analysis />} />
-            <Route path="/evidence" element={<Evidence />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <div className="pt-[88px] md:pt-[96px]">
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/analysis" element={<Analysis />} />
+              <Route
+                path="/evidence"
+                element={
+                  <Suspense fallback={<LoadingProgress message="Loading Evidence..." />}>
+                    <Evidence />
+                  </Suspense>
+                }
+              />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </div>
         </BrowserRouter>
       </GuideModeProvider>
     </TooltipProvider>

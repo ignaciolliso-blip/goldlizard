@@ -11,6 +11,7 @@ import LoadingProgress from '@/components/LoadingProgress';
 import AnchorChartPanel from '@/components/analysis/AnchorChartPanel';
 import ForcesPanel from '@/components/analysis/ForcesPanel';
 import LeveragePanel from '@/components/analysis/LeveragePanel';
+import Footer from '@/components/Footer';
 
 const Analysis = () => {
   const [loading, setLoading] = useState(true);
@@ -107,7 +108,7 @@ const Analysis = () => {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center">
-          <h1 className="font-display text-xl text-bearish mb-2">Error</h1>
+          <h1 className="font-display text-xl text-destructive mb-2">Error</h1>
           <p className="text-muted-foreground text-sm mb-4">{error}</p>
           <button onClick={() => window.location.reload()} className="px-4 py-2 bg-primary/20 text-primary rounded text-sm font-medium hover:bg-primary/30 transition-colors">
             Retry
@@ -119,7 +120,7 @@ const Analysis = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 pt-4 pb-16">
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 pt-4 pb-8">
         {/* Breadcrumb */}
         <div className="flex items-center justify-between mb-4">
           <Link to="/" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
@@ -130,19 +131,21 @@ const Analysis = () => {
           </Link>
         </div>
 
-        {/* Three-panel layout */}
-        <div className="grid grid-cols-1 xl:grid-cols-[2fr_1.5fr_1.5fr] gap-4">
-          {/* Left: Anchor */}
+        {/* Three-panel layout: Desktop 40-30-30, Tablet anchor full + 50-50, Mobile stacked */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-[2fr_1.5fr_1.5fr] gap-4">
+          {/* Left: Anchor - full width on tablet */}
           {anchorResult && rawData && (
-            <AnchorChartPanel
-              anchorResult={anchorResult}
-              goldSpot={goldSpot}
-              cpiData={rawData.fredResults['CPIAUCSL'] || []}
-              m2Data={rawData.fredResults['WM2NS'] || []}
-              gdiWeightedEVs={gdiWeightedEVs}
-              onBaselineChange={setBaseline}
-              baseline={baseline}
-            />
+            <div className="lg:col-span-2 xl:col-span-1">
+              <AnchorChartPanel
+                anchorResult={anchorResult}
+                goldSpot={goldSpot}
+                cpiData={rawData.fredResults['CPIAUCSL'] || []}
+                m2Data={rawData.fredResults['WM2NS'] || []}
+                gdiWeightedEVs={gdiWeightedEVs}
+                onBaselineChange={setBaseline}
+                baseline={baseline}
+              />
+            </div>
           )}
 
           {/* Centre: Forces */}
@@ -166,6 +169,8 @@ const Analysis = () => {
             />
           )}
         </div>
+
+        <Footer />
       </div>
     </div>
   );
