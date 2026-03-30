@@ -17,7 +17,7 @@ const Analysis = () => {
   const [loading, setLoading] = useState(true);
   const [statusMsg, setStatusMsg] = useState('Initializing...');
   const [error, setError] = useState<string | null>(null);
-  const [baseline, setBaseline] = useState<'1971' | '2000'>('2000');
+  // baseline removed — M2/Gold ratio doesn't need it
 
   const [rawData, setRawData] = useState<{
     fredResults: Record<string, Observation[]>;
@@ -49,9 +49,8 @@ const Analysis = () => {
         );
         setGdiResult(result);
 
-        const cpiData = data.fredResults['CPIAUCSL'] || [];
         const m2Data = data.fredResults['WM2NS'] || [];
-        const anchor = computeAnchor(data.goldSpot, cpiData, m2Data, '2000');
+        const anchor = computeAnchor(data.goldSpot, m2Data);
         setAnchorResult(anchor);
 
         const leverage = computeLeverage(data.goldSpot, data.minerPrices);
@@ -65,14 +64,7 @@ const Analysis = () => {
     load();
   }, []);
 
-  // Recompute anchor when baseline changes
-  useEffect(() => {
-    if (!rawData) return;
-    const cpiData = rawData.fredResults['CPIAUCSL'] || [];
-    const m2Data = rawData.fredResults['WM2NS'] || [];
-    const anchor = computeAnchor(rawData.goldSpot, cpiData, m2Data, baseline);
-    setAnchorResult(anchor);
-  }, [baseline, rawData]);
+  // No baseline recompute needed for M2/Gold ratio
 
   const currentGDI = gdiResult ? gdiResult.gdiValues[gdiResult.gdiValues.length - 1] : 0;
   const goldSpot = rawData?.goldSpot || [];
@@ -139,11 +131,7 @@ const Analysis = () => {
               <AnchorChartPanel
                 anchorResult={anchorResult}
                 goldSpot={goldSpot}
-                cpiData={rawData.fredResults['CPIAUCSL'] || []}
                 m2Data={rawData.fredResults['WM2NS'] || []}
-                gdiWeightedEVs={gdiWeightedEVs}
-                onBaselineChange={setBaseline}
-                baseline={baseline}
               />
             </div>
           )}

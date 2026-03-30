@@ -138,29 +138,20 @@ const DebugTable = ({ rawData, gdiResult, anchorResult, leverageResult, currentG
           {/* Anchor Metrics */}
           {anchorResult && (
             <div>
-              <h3 className="text-xs font-mono text-gold mb-2">Lens 1: The Anchor — Fair Value Corridor</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+              <h3 className="text-xs font-mono text-gold mb-2">Lens 1: The Anchor — M2/Gold Ratio</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs font-mono">
                 <div className="rounded border border-border p-2">
-                  <div className="text-muted-foreground text-[10px]">CPI Fair Value</div>
-                  <div className="text-anchor-cpi">${anchorResult.cpiFairValue.toFixed(0)}</div>
+                  <div className="text-muted-foreground text-[10px]">M2/Gold Ratio</div>
+                  <div className="text-primary">{anchorResult.m2GoldRatio.toFixed(1)}</div>
                 </div>
                 <div className="rounded border border-border p-2">
-                  <div className="text-muted-foreground text-[10px]">M2 Fair Value</div>
-                  <div className="text-anchor-m2">${anchorResult.m2FairValue.toFixed(0)}</div>
+                  <div className="text-muted-foreground text-[10px]">Zone</div>
+                  <div className="text-foreground">{anchorResult.zoneLabel}</div>
                 </div>
                 <div className="rounded border border-border p-2">
-                  <div className="text-muted-foreground text-[10px]">Gold/CPI Ratio</div>
-                  <div className="text-foreground">{anchorResult.goldCPIRatio.toFixed(2)}</div>
-                  <div className="text-muted-foreground text-[10px]">avg: {anchorResult.historicalAvgGoldCPIRatio.toFixed(2)}</div>
+                  <div className="text-muted-foreground text-[10px]">Gold</div>
+                  <div className="text-foreground">${anchorResult.currentGoldPrice.toFixed(0)}</div>
                 </div>
-                <div className="rounded border border-border p-2">
-                  <div className="text-muted-foreground text-[10px]">Gold/M2 Ratio</div>
-                  <div className="text-foreground">{anchorResult.goldM2Ratio.toFixed(6)}</div>
-                  <div className="text-muted-foreground text-[10px]">avg: {anchorResult.historicalAvgGoldM2Ratio.toFixed(6)}</div>
-                </div>
-              </div>
-              <div className="mt-2 text-xs text-muted-foreground">
-                Gold at ${anchorResult.currentGoldPrice.toFixed(0)} — corridor: ${anchorResult.cpiFairValue.toFixed(0)} (CPI floor) to ${anchorResult.m2FairValue.toFixed(0)} (M2 ceiling)
               </div>
             </div>
           )}
