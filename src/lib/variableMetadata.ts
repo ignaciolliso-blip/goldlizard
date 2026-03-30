@@ -30,21 +30,62 @@ export interface VariableMetadata {
 }
 
 export const VARIABLE_METADATA: Record<string, VariableMetadata> = {
+  GOLD_CPI_RATIO: {
+    id: 'GOLD_CPI_RATIO',
+    name: 'Gold / CPI Ratio',
+    fredUrl: 'https://fred.stlouisfed.org/series/CPIAUCSL',
+    provider: 'Computed from FRED: GOLDAMGBD228NLBM / CPIAUCSL',
+    frequency: 'Monthly',
+    unit: 'ratio',
+    explanation:
+      "The Gold/CPI ratio measures how many 'baskets of consumer goods' one ounce of gold can buy. When this ratio is above its long-term average, gold has outpaced consumer inflation — it's 'expensive' in real terms. When below, gold is 'cheap' relative to the cost of living. Over 200 years, this ratio has mean-reverted, making it one of the most reliable long-term valuation anchors for gold. The ratio spiked dramatically in 1980 and 2011 before mean-reverting, and is currently elevated but below those historical extremes.",
+    evidenceSources: [
+      { title: 'World Gold Council — Gold as a strategic inflation hedge', quote: 'Gold has historically outpaced CPI over multi-decade periods', url: 'https://www.gold.org/goldhub/research/beyond-cpi-gold-as-a-strategic-inflation-hedge' },
+      { title: 'GoldSilver.com — Gold vs Inflation: What 100 Years of Data Shows', quote: 'Gold preserves purchasing power across inflationary regimes', url: 'https://goldsilver.com/industry-news/article/gold-vs-inflation-what-100-years-of-data-shows/' },
+      { title: 'SPDR Gold Research — Gold as a Store of Value (Harmston study)', quote: 'Gold maintains purchasing power over centuries', url: 'https://www.spdrgoldshares.com/media/GLD/file/research_study_22.pdf' },
+    ],
+    contextLinks: [
+      { title: 'BLS CPI Data', url: 'https://www.bls.gov/cpi/' },
+      { title: 'FRED CPI Series', url: 'https://fred.stlouisfed.org/series/CPIAUCSL' },
+    ],
+  },
+
+  GOLD_M2_RATIO: {
+    id: 'GOLD_M2_RATIO',
+    name: 'Gold / M2 Ratio',
+    fredUrl: 'https://fred.stlouisfed.org/series/WM2NS',
+    provider: 'Computed from FRED: GOLDAMGBD228NLBM / WM2NS',
+    frequency: 'Monthly',
+    unit: 'ratio',
+    explanation:
+      "The Gold/M2 ratio measures how much gold one unit of money supply can buy. When M2 expands (money printing), but gold hasn't repriced proportionally, this ratio falls — signalling that gold is 'cheap' relative to the money that's been created. This is the core debasement indicator. Since 1971, the ratio has oscillated but shown a clear pattern: after major money supply expansions, gold eventually reprices upward to close the gap. The massive M2 expansion of 2020-2021 ($6 trillion in new money) pushed this ratio to historic lows, from which gold has been repricing upward.",
+    evidenceSources: [
+      { title: 'Vaulted — Gold vs Money Supply', quote: 'Gold historically reprices to reflect monetary expansion', url: 'https://vaulted.com/nuggets/gold-vs-money-supply/' },
+      { title: 'MoneyMetals — U.S. and Global Money Supply Surges to Record Highs', quote: 'Global M2 at record levels signals continued gold tailwind', url: 'https://www.moneymetals.com/news/2025/06/05/us-and-global-money-supply-surges-to-record-highs-004101' },
+      { title: 'Scottsdale Bullion — Why Gold Isn\'t Expensive Even at ATHs', quote: 'Relative to money supply, gold remains undervalued', url: 'https://www.sbcgold.com/blog/why-gold-isnt-expensive-even-at-all-time-highs/' },
+      { title: 'In Gold We Trust — M2 Gold Ratio Chart', quote: 'The M2/Gold ratio reveals long-term debasement cycles', url: 'https://ingoldwetrust.report/chart-m2-gold-ratio/?lang=en' },
+    ],
+    contextLinks: [
+      { title: 'FRED M2 Series', url: 'https://fred.stlouisfed.org/series/WM2NS' },
+      { title: 'Fed Balance Sheet', url: 'https://www.federalreserve.gov/monetarypolicy/bst_recenttrends.htm' },
+    ],
+  },
+
   WM2NS_DEV: {
     id: 'WM2NS_DEV',
     name: 'M2 Cumulative Deviation from Trend',
     fredUrl: 'https://fred.stlouisfed.org/series/WM2NS',
-    provider: 'Federal Reserve Board',
+    provider: 'Computed from FRED: WM2NS (deviation from exponential trend fit)',
     frequency: 'Weekly → Monthly',
     unit: '%',
     explanation:
-      'Measures how far M2 money supply has deviated from its 20-year exponential trend. After the 2020-2021 surge, M2 remains well above pre-COVID trend despite the 2022-2023 contraction. The cumulative excess from money creation eventually flows into asset prices including gold. The level matters more than the growth rate — even when M2 growth turned negative, the accumulated deviation stayed elevated.',
+      "This measures how far the actual M2 money supply has deviated from its long-term exponential growth trend. After the 2020-2021 pandemic stimulus, M2 surged approximately $6 trillion above trend — the largest deviation in history. Even after the 2022-2023 contraction, M2 remains well above where it would have been without the extraordinary money creation. This excess liquidity eventually flows into asset prices, including gold. The cumulative nature of the metric is key: it captures the total stock of excess money, not just the rate of change.",
     evidenceSources: [
-      { title: 'St. Louis Fed', quote: 'M2 grew 40% in 2020-2021, unprecedented peacetime expansion', url: 'https://fred.stlouisfed.org/series/WM2NS' },
-      { title: 'Bridgewater Associates', quote: 'Monetary debasement is the primary driver of gold over centuries', url: 'https://www.bridgewater.com/' },
+      { title: 'Metalorix — M2 Money Supply and Gold Prices', quote: 'Excess M2 above trend is a leading indicator for gold price appreciation', url: 'https://metalorix.com/en/learn/price-factors/money-supply-m2-and-gold' },
+      { title: 'National Gold Group — M2 Money Supply Hits $22.4 Trillion', quote: 'M2 remains elevated above pre-COVID trend despite contraction', url: 'https://www.nationalgoldgroup.com/blog/m2-money-supply-hits-22-4-trillion-what-it-means-for-inflation/' },
     ],
     contextLinks: [
-      { title: 'FRED M2 Data', url: 'https://fred.stlouisfed.org/series/WM2NS' },
+      { title: 'FRED M2 Weekly', url: 'https://fred.stlouisfed.org/series/WM2NS' },
       { title: 'Fed Balance Sheet', url: 'https://www.federalreserve.gov/monetarypolicy/bst_recenttrends.htm' },
     ],
   },
@@ -57,34 +98,36 @@ export const VARIABLE_METADATA: Record<string, VariableMetadata> = {
     frequency: 'Quarterly',
     unit: '%',
     explanation:
-      'The ratio of total public debt to GDP. Higher debt/GDP creates incentive for financial repression (keeping real rates below growth rates to erode debt). This is structurally one-directional — debt only increases in current political regime. CBO projects 120% rising to 140%+ by 2031. This persistent fiscal deterioration is a fundamental reason gold is repricing as a monetary asset.',
+      "Federal debt as a percentage of GDP measures the government's debt burden relative to the size of the economy. At over 120% and rising, it's at levels last seen during World War II. The higher this ratio, the stronger the government's incentive to allow inflation to erode the real value of its debt — a process economists call 'financial repression.' Reinhart and Sbrancia's landmark IMF research showed that this mechanism liquidated 3-4% of GDP per year in government debt during 1945-1980. The CBO projects debt/GDP rising to ~140% by 2031, making this a structurally bullish force for gold that only intensifies over time.",
     evidenceSources: [
-      { title: 'World Gold Council', quote: 'Fiscal stress statistically significant alongside DXY and yields', url: 'https://www.gold.org/goldhub/gold-focus/2025/06/you-asked-we-answered-are-fiscal-concerns-driving-gold' },
-      { title: 'CBO Budget Outlook', quote: 'Debt/GDP projected to reach 140%+ by 2031', url: 'https://www.cbo.gov/topics/budget' },
+      { title: 'IMF — The Liquidation of Government Debt (Reinhart & Sbrancia)', quote: 'Financial repression liquidated 3-4% of GDP per year in government debt during 1945-1980', url: 'https://www.imf.org/external/np/seminars/eng/2011/res2/pdf/crbs.pdf' },
+      { title: 'Richmond Fed — A Look Back at Financial Repression', quote: 'Governments historically use negative real rates to erode debt burdens', url: 'https://www.richmondfed.org/publications/research/econ_focus/2021/q1/economic_history' },
+      { title: 'Beacon Pointe — Investing in the Age of Financial Repression', quote: 'Real assets like gold benefit most during financial repression regimes', url: 'https://beaconpointe.com/investing-in-the-age-of-financial-repression/' },
     ],
     contextLinks: [
       { title: 'CBO Budget Outlook', url: 'https://www.cbo.gov/topics/budget' },
-      { title: 'US Debt Clock', url: 'https://www.usdebtclock.org/' },
-      { title: 'TradingEconomics', url: 'https://tradingeconomics.com/united-states/government-debt-to-gdp' },
+      { title: 'FRED Debt/GDP', url: 'https://fred.stlouisfed.org/series/GFDEGDQ188S' },
+      { title: 'US Treasury Fiscal Data', url: 'https://fiscaldata.treasury.gov/' },
     ],
   },
 
   REAL_FFR: {
     id: 'REAL_FFR',
-    name: 'Real Fed Funds Rate',
+    name: 'Real Federal Funds Rate',
     fredUrl: 'https://fred.stlouisfed.org/series/DFF',
-    provider: 'Federal Reserve / BLS (computed)',
+    provider: 'Federal Reserve / BLS (computed: DFF minus CPI YoY)',
     frequency: 'Daily (DFF) / Monthly (CPI)',
     unit: '%',
     explanation:
-      'The effective Fed Funds Rate minus CPI YoY inflation. When negative, the government is actively eroding the real value of its debt — the operational mechanism of financial repression. Distinct from the 10Y TIPS yield (market real rate expectation); this measures the policy real rate. They can diverge significantly.',
+      "The real Fed Funds rate is the Federal Reserve's policy rate minus the current inflation rate. When it's negative, the government is actively eroding the purchasing power of cash and debt — savers lose money in real terms, and debtors (including the government) benefit. This is the operational mechanism of financial repression. Gold thrives in negative real rate environments because holding cash is a guaranteed loss. Currently the real FFR is slightly positive, but the structural trajectory — given debt levels and the political impossibility of sustained austerity — points toward lower or negative real rates over the medium term.",
     evidenceSources: [
-      { title: 'J.P. Morgan Private Bank', quote: 'ETF demand inversely correlated with cash rates; rate cuts → reallocation into gold', url: 'https://privatebank.jpmorgan.com/eur/en/insights/markets-and-investing/is-it-a-golden-era-for-gold' },
-      { title: 'State Street', quote: 'Fed shift from QT to supportive stance marks inflection', url: 'https://www.ssga.com/us/en/intermediary/insights/gold-2026-outlook-can-the-structural-bull-cycle-continue-to-5000' },
+      { title: 'MintBuilder — How Inflation Affects Gold Prices', quote: 'Negative real rates are the primary mechanism through which gold benefits from monetary policy', url: 'https://mintbuilder.com/blog/how-inflation-affects-gold-prices' },
+      { title: 'PIMCO — Understanding Gold Prices', quote: 'Real interest rates are the single most important driver of gold prices', url: 'https://www.pimco.com/us/en/resources/education/understanding-gold-prices' },
+      { title: 'Intereconomics — Beware of Financial Repression', quote: 'Financial repression transfers wealth from savers to governments through negative real rates', url: 'https://www.intereconomics.eu/contents/year/2019/number/4/article/beware-of-financial-repression-lessons-from-history.html' },
     ],
     contextLinks: [
       { title: 'CME FedWatch', url: 'https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html' },
-      { title: 'BLS CPI Release', url: 'https://www.bls.gov/schedule/news_release/cpi.htm' },
+      { title: 'BLS CPI', url: 'https://www.bls.gov/cpi/' },
       { title: 'FOMC Calendar', url: 'https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm' },
     ],
   },
@@ -159,7 +202,7 @@ export const VARIABLE_METADATA: Record<string, VariableMetadata> = {
     frequency: 'Daily',
     unit: 'index',
     explanation:
-      'Gold is priced globally in USD, creating a mechanical denominator effect. A stronger dollar makes gold more expensive for foreign buyers. The 5-month correlation with gold averages -39%. J.P. Morgan estimates the dollar is ~9% overvalued, suggesting structural weakening ahead.',
+      "Gold is priced globally in USD, creating a mechanical denominator effect. A stronger dollar makes gold more expensive for foreign buyers. The 5-month correlation with gold averages -39%. J.P. Morgan estimates the dollar is ~9% overvalued, suggesting structural weakening ahead.",
     evidenceSources: [
       { title: 'E*TRADE / Morgan Stanley', quote: '5-month gold-DXY correlation >-95% → gold averaged 8% returns', url: 'https://us.etrade.com/knowledge/library/perspectives/daily-insights/gold-dollar-correlation' },
       { title: 'CME Group', quote: 'Since 2022, central bank diversification partially decoupled the gold-dollar inverse', url: 'https://www.cmegroup.com/openmarkets/metals/2025/Gold-and-the-US-Dollar-An-Evolving-Relationship.html' },
@@ -223,6 +266,28 @@ export const VARIABLE_METADATA: Record<string, VariableMetadata> = {
     contextLinks: [
       { title: 'EIA Outlook', url: 'https://www.eia.gov/outlooks/steo/' },
       { title: 'OPEC Monthly Report', url: 'https://www.opec.org/opec_web/en/publications/338.htm' },
+    ],
+  },
+
+  GDX_GOLD_RATIO: {
+    id: 'GDX_GOLD_RATIO',
+    name: 'GDX / Gold Ratio',
+    fredUrl: '',
+    provider: 'GDX price from miner_prices table / gold spot',
+    frequency: 'Daily (manually updated)',
+    unit: 'ratio',
+    explanation:
+      "The GDX/Gold ratio measures whether gold mining equities are cheap or expensive relative to the commodity they produce. When the ratio is low, it means the market hasn't yet translated gold's strength into miner valuations — representing catch-up potential. Miners have historically traded at a significant discount to gold in recent years, with senior producers at 0.5-0.7x NAV versus historical norms of 1.5-3.0x. This discount reflects market skepticism, cost inflation fears, and ESG concerns. However, with record margins (AISC ~$1,600 vs gold ~$4,300), improved capital discipline, and a technical breakout in the HUI/Gold ratio in September 2025, the conditions for a multi-year re-rating are in place.",
+    evidenceSources: [
+      { title: 'Investing.com — Gold: HUI Ratio Signals Regime Shift', quote: 'HUI/Gold ratio breakout signals miners stepping out of bullion\'s shadow', url: 'https://www.investing.com/analysis/gold-hui-ratio-signals-regime-shift-as-miners-step-out-of-bullions-shadow-200667943' },
+      { title: 'Sprott — Gold Miners Shine in 2025', quote: 'Record margins and improved capital discipline drive miner re-rating', url: 'https://sprott.com/insights/gold-miners-shine-in-2025/' },
+      { title: 'VanEck — Gold in 2025: A New Era', quote: 'Structural strength and enduring appeal support gold miners', url: 'https://www.vaneck.com/us/en/blogs/gold-investing/gold-in-2025-a-new-era-of-structural-strength-and-enduring-appeal/' },
+      { title: 'AInvest — Gold Miners Underperformance: Valuation Misalignment', quote: 'Valuation misalignment creates opportunity as sector momentum shifts', url: 'https://www.ainvest.com/news/gold-miners-underperformance-valuation-misalignment-sector-momentum-shifts-2510/' },
+    ],
+    contextLinks: [
+      { title: 'VanEck GDX Fund', url: 'https://www.vaneck.com/us/en/investments/gold-miners-etf-gdx/' },
+      { title: 'Yahoo Finance GDX', url: 'https://finance.yahoo.com/quote/GDX/' },
+      { title: 'Blackrock World Gold Fund', url: 'https://www.blackrock.com/' },
     ],
   },
 };
