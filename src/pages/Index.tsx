@@ -12,6 +12,7 @@ import SignalLenses from '@/components/signal/SignalLenses';
 import SignalProjectionTable from '@/components/signal/SignalProjectionTable';
 import SignalPositioning from '@/components/signal/SignalPositioning';
 import NarratorPanel from '@/components/NarratorPanel';
+import PageIntro from '@/components/PageIntro';
 import Footer from '@/components/Footer';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
@@ -38,26 +39,9 @@ const Index = () => {
   useEffect(() => {
     async function load() {
       try {
-        const handleStatus = (msg: string) => {
-          setStatusMsg(msg);
-          // Track completed series
-          if (msg.startsWith('Fetching ')) {
-            // Previous one completed
-          }
-          const match = msg.match(/^Fetching (.+)\.\.\.$/);
-          if (!match) {
-            // If not fetching, the previous series completed
-            setCompletedSeries(prev => {
-              // Add the status message as completed
-              return prev;
-            });
-          }
-        };
-
         const [data, scenarios] = await Promise.all([
           fetchAllData((msg) => {
             setStatusMsg(msg);
-            // Track completed fetches
             setCompletedSeries(prev => {
               if (msg.startsWith('Fetching ') && prev.length > 0) return prev;
               if (!msg.startsWith('Fetching ') && !msg.startsWith('Computing')) return prev;
@@ -69,7 +53,6 @@ const Index = () => {
         setRawData(data);
         setScenarioConfig(scenarios);
 
-        // Mark all fetched series as completed
         const fetched = Object.keys(data.fredResults).map(id => {
           const s = FRED_SERIES.find(f => f.id === id);
           return s?.name || id;
@@ -116,9 +99,9 @@ const Index = () => {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center">
-          <h1 className="font-display text-xl sm:text-2xl text-destructive mb-2">Error</h1>
-          <p className="text-muted-foreground text-sm mb-4">{error}</p>
-          <button onClick={() => window.location.reload()} className="px-4 py-2 bg-primary/20 text-primary rounded text-sm font-medium hover:bg-primary/30 transition-colors">
+          <h1 className="font-display text-2xl text-destructive mb-3">Error</h1>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <button onClick={() => window.location.reload()} className="px-5 py-2.5 bg-primary/20 text-primary rounded-lg font-medium hover:bg-primary/30 transition-colors">
             Retry
           </button>
         </div>
@@ -129,6 +112,32 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 pt-6 pb-8 space-y-10">
+        {/* Page intro — dismissible */}
+        <PageIntro storageKey="signal_intro_dismissed">
+          <h3 className="font-display text-foreground mb-3">How to Read This Page</h3>
+          <p className="text-muted-foreground leading-relaxed mb-4">
+            This page answers one question: <span className="text-foreground font-medium">should you buy, hold, or sell gold and gold miners?</span>
+          </p>
+          <p className="text-muted-foreground leading-relaxed mb-2">It uses three independent lenses:</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+            <div className="bg-secondary/30 rounded-lg p-3">
+              <span className="text-primary font-semibold">THE ANCHOR</span>
+              <span className="text-muted-foreground ml-2">Is gold cheap or expensive relative to the money supply?</span>
+            </div>
+            <div className="bg-secondary/30 rounded-lg p-3">
+              <span className="text-primary font-semibold">THE FORCES</span>
+              <span className="text-muted-foreground ml-2">Are the macro forces pushing gold up or down?</span>
+            </div>
+            <div className="bg-secondary/30 rounded-lg p-3">
+              <span className="text-primary font-semibold">THE LEVERAGE</span>
+              <span className="text-muted-foreground ml-2">Are miners cheap or expensive relative to gold?</span>
+            </div>
+          </div>
+          <p className="text-muted-foreground text-sm mt-3">
+            When all three agree, the signal is strongest. Scroll down for projections and positioning.
+          </p>
+        </PageIntro>
+
         {/* Band 1: Three Lenses */}
         <SignalLenses
           anchorResult={anchorResult}
@@ -139,27 +148,38 @@ const Index = () => {
         />
 
         {/* Band 2: Projection Table */}
-        <SignalProjectionTable
-          anchorResult={anchorResult}
-          leverageResult={leverageResult}
-          scenarioConfig={scenarioConfig}
-          currentGoldPrice={currentGoldPrice}
-          currentGDXPrice={currentGDXPrice}
-          currentGDI={currentGDI}
-          probs={probs}
-        />
+        <div className="space-y-3">
+          <div>
+            <h3 className="font-display text-foreground">Where Is Gold Heading?</h3>
+            <p className="text-muted-foreground text-sm mt-1">
+              Projections at future horizons based on the three lenses. "Investable Parity" shows what gold would be worth if it fully reflected the money supply. "GDI-Weighted EV" is the probability-weighted estimate from the Forces lens.
+            </p>
+          </div>
+          <SignalProjectionTable
+            anchorResult={anchorResult}
+            leverageResult={leverageResult}
+            scenarioConfig={scenarioConfig}
+            currentGoldPrice={currentGoldPrice}
+            currentGDXPrice={currentGDXPrice}
+            currentGDI={currentGDI}
+            probs={probs}
+          />
+        </div>
 
         {/* Band 3: Positioning & Narrative */}
-        <SignalPositioning
-          anchorResult={anchorResult}
-          gdiResult={gdiResult}
-          leverageResult={leverageResult}
-          currentGDI={currentGDI}
-          currentGoldPrice={currentGoldPrice}
-          currentGDXPrice={currentGDXPrice}
-          probs={probs}
-          scenarioConfig={scenarioConfig}
-        />
+        <div className="space-y-3">
+          <p className="text-muted-foreground text-sm">Based on the combined reading of all three lenses:</p>
+          <SignalPositioning
+            anchorResult={anchorResult}
+            gdiResult={gdiResult}
+            leverageResult={leverageResult}
+            currentGDI={currentGDI}
+            currentGoldPrice={currentGoldPrice}
+            currentGDXPrice={currentGDXPrice}
+            probs={probs}
+            scenarioConfig={scenarioConfig}
+          />
+        </div>
 
         {/* AI Narrator */}
         {gdiResult && (
@@ -181,7 +201,7 @@ const Index = () => {
         <div className="text-center">
           <Link
             to="/analysis"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-card border border-border text-foreground font-medium hover:border-gold/30 hover:shadow-[0_0_15px_-5px_hsl(var(--gold)/0.3)] transition-all duration-200"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-card border border-border text-foreground font-medium hover:border-primary/30 hover:shadow-[0_0_15px_-5px_hsl(var(--gold)/0.3)] transition-all duration-200"
           >
             Explore Analysis <ArrowRight size={16} />
           </Link>

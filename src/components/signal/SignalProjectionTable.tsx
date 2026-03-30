@@ -17,17 +17,17 @@ interface Props {
 }
 
 const HORIZONS = [
-  { key: '1y', label: '1 Yr', years: 1 },
-  { key: '3y', label: '3 Yr', years: 3 },
-  { key: '5y', label: '5 Yr', years: 5 },
+  { key: '1y', label: '1Y', years: 1 },
+  { key: '3y', label: '3Y', years: 3 },
+  { key: '5y', label: '5Y', years: 5 },
 ] as const;
 
 const SHORT_HORIZONS = [
-  { key: '3m', label: '3 Mo', years: 0.25 },
-  { key: '6m', label: '6 Mo', years: 0.5 },
-  { key: '1y', label: '1 Yr', years: 1 },
-  { key: '3y', label: '3 Yr', years: 3 },
-  { key: '5y', label: '5 Yr', years: 5 },
+  { key: '3m', label: '3M', years: 0.25 },
+  { key: '6m', label: '6M', years: 0.5 },
+  { key: '1y', label: '1Y', years: 1 },
+  { key: '3y', label: '3Y', years: 3 },
+  { key: '5y', label: '5Y', years: 5 },
 ] as const;
 
 function fmt(n: number): string {
@@ -42,11 +42,9 @@ export default function SignalProjectionTable({ anchorResult, leverageResult, sc
   const totalParity = anchorResult?.totalParity ?? 0;
   const investableParity = anchorResult?.investableParity ?? 0;
 
-  // Parity projections (grow at NET_PARITY_GROWTH ~4.5%/yr)
   const totalParityRow = HORIZONS.map(h => projectParity(totalParity, h.years));
   const invParityRow = HORIZONS.map(h => projectParity(investableParity, h.years));
 
-  // GDI-Weighted EV (uses all 5 horizons)
   const bull = scenarioConfig?.scenarios?.find(s => s.name === 'Bull');
   const base = scenarioConfig?.scenarios?.find(s => s.name === 'Base');
   const bear = scenarioConfig?.scenarios?.find(s => s.name === 'Bear');
@@ -56,18 +54,15 @@ export default function SignalProjectionTable({ anchorResult, leverageResult, sc
     return probs.bull * bull.targets[h.key] + probs.base * base.targets[h.key] + probs.bear * bear.targets[h.key];
   });
 
-  // Bank consensus (only 1y)
   const bankMin = Math.min(...BANK_CONSENSUS.filter(b => b.date.startsWith('2026')).map(b => b.price));
   const bankMax = Math.max(...BANK_CONSENSUS.filter(b => b.date.startsWith('2026')).map(b => b.price));
 
-  // Gold CAGR (1y, 3y, 5y only)
-  const goldCagrRow = HORIZONS.map((h, i) => {
+  const goldCagrRow = HORIZONS.map((h) => {
     const evIdx = SHORT_HORIZONS.findIndex(sh => sh.key === h.key);
     const ev = evRowFull[evIdx];
     return (Math.pow(ev / currentGoldPrice, 1 / h.years) - 1) * 100;
   });
 
-  // GDX projections (all 5 horizons)
   const gdxRatioRow = SHORT_HORIZONS.map(h => {
     if (!leverageResult) return 0;
     return projectGDXGoldRatio(leverageResult.currentGDXGoldRatio, leverageResult.medianRatio, h.years);
@@ -90,109 +85,101 @@ export default function SignalProjectionTable({ anchorResult, leverageResult, sc
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full">
           <thead>
             <tr className="border-b border-border">
-              <th className="text-left px-4 py-3 text-xs text-muted-foreground font-medium w-[200px]" />
-              {/* Parity section: 1y, 3y, 5y only */}
-              <th colSpan={3} className="text-center px-2 py-1 text-[9px] text-muted-foreground/60 font-normal border-b border-border/30" />
-            </tr>
-            <tr className="border-b border-border">
-              <th className="text-left px-4 py-2 text-xs text-muted-foreground font-medium w-[200px]" />
+              <th className="text-left px-4 py-3 text-sm text-muted-foreground font-medium w-[200px]" />
               {HORIZONS.map(h => (
-                <th key={h.key} className="text-right px-4 py-2 text-xs text-muted-foreground font-medium font-mono">{h.label}</th>
+                <th key={h.key} className="text-right px-4 py-3 text-sm text-muted-foreground font-medium font-mono">{h.label}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {/* Parity rows */}
             <tr className="border-b border-border">
-              <td className="px-4 py-2 text-xs text-muted-foreground">
+              <td className="px-4 py-3 text-sm text-muted-foreground">
                 <GuideTooltip id="proj-total-parity" text="Total parity = M2 money supply ÷ all gold ever mined. The absolute floor — if every ounce of gold (including jewellery) backed the money supply equally.">
                   Total Parity (M2 ÷ all oz)
                 </GuideTooltip>
               </td>
               {totalParityRow.map((v, i) => (
-                <td key={i} className="text-right px-4 py-2 font-mono text-xs text-bullish">{fmt(v)}</td>
+                <td key={i} className="text-right px-4 py-3 font-mono text-sm text-bullish whitespace-nowrap">{fmt(v)}</td>
               ))}
             </tr>
             <tr className="border-b border-border">
-              <td className="px-4 py-2 text-xs text-muted-foreground">
-                <GuideTooltip id="proj-inv-parity" text="Investable parity = M2 ÷ gold available for investment (bars, coins, ETFs + central bank reserves). The structural ceiling — gold's price if it fully absorbed all M2 relative to investable gold.">
+              <td className="px-4 py-3 text-sm text-muted-foreground">
+                <GuideTooltip id="proj-inv-parity" text="Investable parity = M2 ÷ gold available for investment (bars, coins, ETFs + central bank reserves). The structural ceiling.">
                   Investable Parity (M2 ÷ inv. oz)
                 </GuideTooltip>
               </td>
               {invParityRow.map((v, i) => (
-                <td key={i} className="text-right px-4 py-2 font-mono text-xs text-blue-400">{fmt(v)}</td>
+                <td key={i} className="text-right px-4 py-3 font-mono text-sm text-blue-400 whitespace-nowrap">{fmt(v)}</td>
               ))}
             </tr>
           </tbody>
         </table>
 
-        {/* GDI + Miner section with all 5 horizons */}
-        <table className="w-full text-sm">
+        {/* GDI + Miner section */}
+        <table className="w-full">
           <thead>
             <tr className="border-b border-border">
-              <th className="text-left px-4 py-2 text-xs text-muted-foreground font-medium w-[200px]" />
+              <th className="text-left px-4 py-3 text-sm text-muted-foreground font-medium w-[200px]" />
               {SHORT_HORIZONS.map(h => (
-                <th key={h.key} className="text-right px-4 py-2 text-xs text-muted-foreground font-medium font-mono">{h.label}</th>
+                <th key={h.key} className="text-right px-4 py-3 text-sm text-muted-foreground font-medium font-mono">{h.label}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             <Row label="GDI-Weighted EV" values={evRowFull.map(fmt)} colorClass="text-primary" bold />
             <tr className="border-b border-border">
-              <td className="px-4 py-2 text-xs text-muted-foreground">Bank Consensus</td>
+              <td className="px-4 py-3 text-sm text-muted-foreground">Bank Consensus</td>
               {SHORT_HORIZONS.map(h => (
-                <td key={h.key} className="text-right px-4 py-2 font-mono text-xs text-foreground">
+                <td key={h.key} className="text-right px-4 py-3 font-mono text-sm text-foreground whitespace-nowrap">
                   {h.key === '1y' && bankMin > 0 ? `${fmt(bankMin)}–${fmt(bankMax)}` : '—'}
                 </td>
               ))}
             </tr>
             <tr className="border-b border-border">
-              <td className="px-4 py-2 text-xs text-muted-foreground">
+              <td className="px-4 py-3 text-sm text-muted-foreground">
                 <GuideTooltip id="proj-gold-cagr" text="Compound annual growth rate — what your investment would earn per year. Bold values exceed gold's long-run average of 7.9%.">
                   Gold Impl. CAGR
                 </GuideTooltip>
               </td>
               {SHORT_HORIZONS.map((h, i) => {
-                if (h.years < 1) return <td key={h.key} className="text-right px-4 py-2 font-mono text-xs text-muted-foreground">—</td>;
+                if (h.years < 1) return <td key={h.key} className="text-right px-4 py-3 font-mono text-sm text-muted-foreground">—</td>;
                 const goldIdx = HORIZONS.findIndex(hh => hh.key === h.key);
                 const v = goldIdx >= 0 ? goldCagrRow[goldIdx] : null;
                 return (
-                  <td key={h.key} className={`text-right px-4 py-2 font-mono text-xs ${v !== null && v > 7.9 ? 'text-primary font-bold' : 'text-foreground'}`}>
+                  <td key={h.key} className={`text-right px-4 py-3 font-mono text-sm whitespace-nowrap ${v !== null && v > 7.9 ? 'text-primary font-bold' : 'text-foreground'}`}>
                     {v !== null ? pctFmt(v) : '—'}
                   </td>
                 );
               })}
             </tr>
 
-            {/* Divider */}
             <tr>
               <td colSpan={6} className="px-4 py-1">
                 <div className="border-t border-border" />
               </td>
             </tr>
 
-            {/* Miner section */}
             <Row label="GDX/Gold Ratio" values={gdxRatioRow.map(v => v.toFixed(4))} colorClass="text-leverage-miner" />
             <Row label="GDX Projected" values={gdxProjRow.map(v => fmt(v))} colorClass="text-leverage-miner" />
             <tr className="border-b border-border">
-              <td className="px-4 py-2 text-xs text-muted-foreground">GDX Impl. CAGR</td>
+              <td className="px-4 py-3 text-sm text-muted-foreground">GDX Impl. CAGR</td>
               {gdxCagrRow.map((v, i) => (
-                <td key={i} className="text-right px-4 py-2 font-mono text-xs text-leverage-miner">
+                <td key={i} className="text-right px-4 py-3 font-mono text-sm text-leverage-miner whitespace-nowrap">
                   {v !== null ? pctFmt(v) : '—'}
                 </td>
               ))}
             </tr>
             <tr>
-              <td className="px-4 py-2 text-xs text-muted-foreground">
+              <td className="px-4 py-3 text-sm text-muted-foreground">
                 <GuideTooltip id="proj-vs-gold" text="How much extra return miners deliver over gold. The premium comes from gold appreciation plus miner re-rating toward historical norms.">
                   vs. Gold CAGR
                 </GuideTooltip>
               </td>
               {vsGoldCagrRow.map((v, i) => (
-                <td key={i} className={`text-right px-4 py-2 font-mono text-xs font-semibold ${v !== null ? (v >= 0 ? 'text-bullish' : 'text-bearish') : 'text-muted-foreground'}`}>
+                <td key={i} className={`text-right px-4 py-3 font-mono text-sm font-semibold whitespace-nowrap ${v !== null ? (v >= 0 ? 'text-bullish' : 'text-bearish') : 'text-muted-foreground'}`}>
                   {v !== null ? `${v >= 0 ? '+' : ''}${v.toFixed(0)}pp` : '—'}
                 </td>
               ))}
@@ -201,15 +188,14 @@ export default function SignalProjectionTable({ anchorResult, leverageResult, sc
         </table>
       </div>
 
-      {/* Footer */}
       <div className="px-4 py-3 border-t border-border">
-        <p className="text-[11px] text-muted-foreground font-mono text-center">
+        <p className="text-xs text-muted-foreground font-mono text-center">
           Gold: {fmt(currentGoldPrice)} | GDX: ${currentGDXPrice.toFixed(2)}
           {leverageResult && ` | GDX/Gold: ${leverageResult.currentGDXGoldRatio.toFixed(4)}`}
           {anchorResult && ` | ${anchorResult.pctOfInvestableParity.toFixed(0)}% of inv. parity`}
           {bankMin > 0 && ` | Bank YE2026: ${fmt(bankMin)}–${fmt(bankMax)}`}
         </p>
-        <p className="text-[9px] text-muted-foreground/50 text-center mt-1">
+        <p className="text-xs text-muted-foreground/60 text-center mt-1">
           Total gold: 216,265t (WGC). Investable: 86,389t. M2 from FRED WM2NS. Parities grow ~4.5%/yr.
         </p>
       </div>
@@ -220,9 +206,9 @@ export default function SignalProjectionTable({ anchorResult, leverageResult, sc
 function Row({ label, values, colorClass, bold }: { label: string; values: string[]; colorClass: string; bold?: boolean }) {
   return (
     <tr className="border-b border-border">
-      <td className="px-4 py-2 text-xs text-muted-foreground">{label}</td>
+      <td className="px-4 py-3 text-sm text-muted-foreground">{label}</td>
       {values.map((v, i) => (
-        <td key={i} className={`text-right px-4 py-2 font-mono text-xs ${colorClass} ${bold ? 'font-bold' : ''}`}>
+        <td key={i} className={`text-right px-4 py-3 font-mono text-sm whitespace-nowrap ${colorClass} ${bold ? 'font-bold' : ''}`}>
           {v}
         </td>
       ))}
