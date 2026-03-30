@@ -4,6 +4,7 @@ import {
   CartesianGrid, ReferenceLine, Bar,
 } from 'recharts';
 import type { AnchorResult } from '@/lib/anchorEngine';
+import { getZone } from '@/lib/anchorEngine';
 import type { GDIResult } from '@/lib/gdiEngine';
 import type { LeverageResult } from '@/lib/leverageEngine';
 import type { ScenarioConfig, ScenarioProbabilities } from '@/lib/scenarioEngine';
@@ -28,9 +29,9 @@ function derivePositioning(anchorZone: string, gdiSignal: string, minerPercentil
   const minersUndervalued = minerPercentile < 25;
   const minersFairValue = minerPercentile >= 25 && minerPercentile <= 75;
 
-  if ((anchorZone === 'complacency' || anchorZone === 'extreme_complacency') && gdiSignal === 'bullish' && minersUndervalued)
+  if ((anchorZone === 'undervalued' || anchorZone === 'extreme_undervaluation') && gdiSignal === 'bullish' && minersUndervalued)
     return { text: 'STRONG BUY MINERS', color: 'bullish' };
-  if ((anchorZone === 'complacency' || anchorZone === 'extreme_complacency') && gdiSignal === 'bearish')
+  if ((anchorZone === 'undervalued' || anchorZone === 'extreme_undervaluation') && gdiSignal === 'bearish')
     return { text: 'ACCUMULATE ON WEAKNESS', color: 'neutral' };
   if (anchorZone === 'transition' && gdiSignal === 'bullish' && minersUndervalued)
     return { text: 'ACCUMULATE MINERS', color: 'bullish' };
@@ -38,62 +39,52 @@ function derivePositioning(anchorZone: string, gdiSignal: string, minerPercentil
     return { text: 'HOLD / ADD GOLD', color: 'primary' };
   if (anchorZone === 'transition' && gdiSignal === 'bearish')
     return { text: 'HOLD', color: 'neutral' };
-  if (anchorZone === 'elevated_fear' && gdiSignal === 'bullish' && minersUndervalued)
+  if (anchorZone === 'elevated' && gdiSignal === 'bullish' && minersUndervalued)
     return { text: 'HOLD / ADD SELECTIVELY', color: 'primary' };
-  if (anchorZone === 'elevated_fear' && gdiSignal === 'bearish')
+  if (anchorZone === 'elevated' && gdiSignal === 'bearish')
     return { text: 'TAKE PROFITS', color: 'destructive' };
-  if (anchorZone === 'extreme_fear')
+  if (anchorZone === 'above_parity')
     return { text: 'REDUCE', color: 'destructive' };
   return { text: 'HOLD', color: 'neutral' };
 }
 
 const MATRIX_ROWS = [
-  { anchor: 'extreme_complacency', label: 'Extreme Complacency (>15)' },
-  { anchor: 'complacency', label: 'Complacency (10-15)' },
-  { anchor: 'transition', label: 'Transition (5-10)' },
-  { anchor: 'elevated_fear', label: 'Elevated Fear (3-5)' },
-  { anchor: 'extreme_fear', label: 'Extreme Fear (<3)' },
+  { anchor: 'above_parity', label: 'Above Parity (>100%)' },
+  { anchor: 'elevated', label: 'Elevated (60-100%)' },
+  { anchor: 'transition', label: 'Transition (30-60%)' },
+  { anchor: 'undervalued', label: 'Undervalued (10-30%)' },
+  { anchor: 'extreme_undervaluation', label: 'Extreme (<10%)' },
 ];
 const MATRIX_COLS = ['bullish', 'neutral', 'bearish'];
 const MINER_STATES = [
-  { label: 'Undervalued (<25th)', pctile: 10 },
+  { label: 'Under (<25th)', pctile: 10 },
   { label: 'Fair (25-75th)', pctile: 50 },
-  { label: 'Overvalued (>75th)', pctile: 90 },
+  { label: 'Over (>75th)', pctile: 90 },
 ];
 
 export default function ConvergenceAnalysis({
   anchorResult, gdiResult, leverageResult, currentGDI, currentGoldPrice, currentGDXPrice,
   scenarioConfig, probs, forwardGDI, horizonProbs,
 }: Props) {
-  // Current states
-  const anchorStatus = anchorResult
-    ? anchorResult.m2GoldRatio > 15 ? 'extreme_complacency'
-    : anchorResult.m2GoldRatio > 10 ? 'complacency'
-    : anchorResult.m2GoldRatio > 5 ? 'transition'
-    : anchorResult.m2GoldRatio > 3 ? 'elevated_fear' : 'extreme_fear'
-    : 'transition';
+  const pctParity = anchorResult?.pctOfInvestableParity ?? 50;
+  const anchorStatus = anchorResult ? getZone(pctParity).zone : 'transition';
 
   const gdiSignal = currentGDI > 0.5 ? 'bullish' : currentGDI < -0.5 ? 'bearish' : 'neutral';
   const minerPctile = leverageResult?.currentPercentile ?? 50;
   const currentPositioning = derivePositioning(anchorStatus, gdiSignal, minerPctile);
 
-  // Ratio chart data
   const ratioChartData = useMemo(() => {
     if (!leverageResult) return [];
     const { ratioSeries, medianRatio } = leverageResult;
     const values = ratioSeries.map(r => r.value).sort((a, b) => a - b);
     const p25 = values[Math.floor(values.length * 0.25)] || 0;
     const p75 = values[Math.floor(values.length * 0.75)] || 0;
-
     return ratioSeries.map(r => ({
-      date: r.date,
-      ts: new Date(r.date).getTime(),
-      ratio: r.value,
-      p25, p75, median: medianRatio,
+      date: r.date, ts: new Date(r.date).getTime(),
+      ratio: r.value, p25, p75, median: medianRatio,
     }));
   }, [leverageResult]);
 
-  // Forward GDI chart
   const forwardGDIData = useMemo(() => {
     const horizons = [
       { key: 'now', label: 'Now', months: 0 },
@@ -109,14 +100,7 @@ export default function ConvergenceAnalysis({
       d.setMonth(d.getMonth() + h.months);
       const gdi = h.key === 'now' ? currentGDI : (forwardGDI[h.key] ?? 0);
       const hp = h.key === 'now' ? probs : (horizonProbs[h.key] ?? probs);
-      return {
-        label: h.label,
-        ts: d.getTime(),
-        gdi,
-        bull: hp.bull * 100,
-        base: hp.base * 100,
-        bear: hp.bear * 100,
-      };
+      return { label: h.label, ts: d.getTime(), gdi, bull: hp.bull * 100, base: hp.base * 100, bear: hp.bear * 100 };
     });
   }, [currentGDI, forwardGDI, horizonProbs, probs]);
 
@@ -133,13 +117,12 @@ export default function ConvergenceAnalysis({
       <div className="bg-card border border-border rounded-xl p-4">
         <h3 className="text-sm font-semibold text-foreground mb-4">Three-Lens Agreement Matrix</h3>
 
-        {/* Current state summary */}
         <div className="grid grid-cols-4 gap-3 mb-6">
           <div className="bg-secondary/20 rounded-lg p-3 text-center">
             <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">The Anchor</p>
-            <p className={`text-sm font-semibold ${anchorStatus === 'complacency' || anchorStatus === 'extreme_complacency' ? 'text-bullish' : anchorStatus === 'extreme_fear' ? 'text-destructive' : 'text-primary'}`}>
-              {anchorStatus === 'complacency' ? 'Complacency' : anchorStatus === 'extreme_complacency' ? 'Extreme Complacency' : anchorStatus === 'elevated_fear' ? 'Elevated Fear' : anchorStatus === 'extreme_fear' ? 'Extreme Fear' : 'Transition'}
-              {anchorResult && ` (${anchorResult.m2GoldRatio.toFixed(1)})`}
+            <p className={`text-sm font-semibold ${pctParity >= 60 ? 'text-destructive' : pctParity < 30 ? 'text-bullish' : 'text-primary'}`}>
+              {getZone(pctParity).label.split(' — ')[0]}
+              {anchorResult && ` (${pctParity.toFixed(0)}%)`}
             </p>
           </div>
           <div className="bg-secondary/20 rounded-lg p-3 text-center">
@@ -216,34 +199,24 @@ export default function ConvergenceAnalysis({
           <ResponsiveContainer width="100%" height={350}>
             <ComposedChart data={ratioChartData} margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-              <XAxis
-                dataKey="ts" type="number" domain={['dataMin', 'dataMax']}
-                tickFormatter={(ts) => new Date(ts).getFullYear().toString()}
-                stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false}
-              />
+              <XAxis dataKey="ts" type="number" domain={['dataMin', 'dataMax']} tickFormatter={(ts) => new Date(ts).getFullYear().toString()} stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} />
               <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => v.toFixed(3)} />
-              <Tooltip
-                content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-                  const d = payload[0]?.payload;
-                  return (
-                    <div className="bg-card border border-border rounded-lg p-2 text-xs shadow-lg">
-                      <p className="text-muted-foreground">{d?.date}</p>
-                      <p className="text-purple-400 font-mono">Ratio: {d?.ratio?.toFixed(4)}</p>
-                    </div>
-                  );
-                }}
-              />
+              <Tooltip content={({ active, payload }) => {
+                if (!active || !payload?.length) return null;
+                const d = payload[0]?.payload;
+                return (
+                  <div className="bg-card border border-border rounded-lg p-2 text-xs shadow-lg">
+                    <p className="text-muted-foreground">{d?.date}</p>
+                    <p className="text-purple-400 font-mono">Ratio: {d?.ratio?.toFixed(4)}</p>
+                  </div>
+                );
+              }} />
               <Area dataKey="p75" stroke="none" fill="hsl(270 95% 75%)" fillOpacity={0.06} />
               <Area dataKey="p25" stroke="none" fill="hsl(var(--background))" fillOpacity={1} />
               <ReferenceLine y={leverageResult.medianRatio} stroke="hsl(var(--muted-foreground))" strokeDasharray="6 3" opacity={0.5} label={{ value: 'Median', fill: 'hsl(var(--muted-foreground))', fontSize: 9, position: 'right' }} />
               <Line dataKey="ratio" stroke="hsl(270 95% 75%)" strokeWidth={2} dot={false} connectNulls />
             </ComposedChart>
           </ResponsiveContainer>
-
-          <p className="text-[10px] text-muted-foreground/80 mt-3 italic">
-            When GDX/Gold &lt; 25th percentile AND GDI &gt; +0.5, miners have historically outperformed gold by a median of ~35% over the following 12 months.
-          </p>
         </div>
       )}
 
@@ -258,21 +231,19 @@ export default function ConvergenceAnalysis({
             <XAxis dataKey="label" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} />
             <YAxis yAxisId="gdi" stroke="hsl(var(--primary))" fontSize={10} tickLine={false} axisLine={false} domain={[-2, 2]} />
             <YAxis yAxisId="prob" orientation="right" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} tickFormatter={v => `${v}%`} />
-            <Tooltip
-              content={({ active, payload }) => {
-                if (!active || !payload?.length) return null;
-                const d = payload[0]?.payload;
-                return (
-                  <div className="bg-card border border-border rounded-lg p-2 text-xs shadow-lg">
-                    <p className="text-foreground font-semibold mb-1">{d?.label}</p>
-                    <p className="text-primary font-mono">GDI: {d?.gdi > 0 ? '+' : ''}{d?.gdi?.toFixed(2)}</p>
-                    <p className="text-bullish font-mono">Bull: {d?.bull?.toFixed(0)}%</p>
-                    <p className="text-primary font-mono">Base: {d?.base?.toFixed(0)}%</p>
-                    <p className="text-destructive font-mono">Bear: {d?.bear?.toFixed(0)}%</p>
-                  </div>
-                );
-              }}
-            />
+            <Tooltip content={({ active, payload }) => {
+              if (!active || !payload?.length) return null;
+              const d = payload[0]?.payload;
+              return (
+                <div className="bg-card border border-border rounded-lg p-2 text-xs shadow-lg">
+                  <p className="text-foreground font-semibold mb-1">{d?.label}</p>
+                  <p className="text-primary font-mono">GDI: {d?.gdi > 0 ? '+' : ''}{d?.gdi?.toFixed(2)}</p>
+                  <p className="text-bullish font-mono">Bull: {d?.bull?.toFixed(0)}%</p>
+                  <p className="text-primary font-mono">Base: {d?.base?.toFixed(0)}%</p>
+                  <p className="text-destructive font-mono">Bear: {d?.bear?.toFixed(0)}%</p>
+                </div>
+              );
+            }} />
             <Line yAxisId="gdi" dataKey="gdi" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 4, fill: 'hsl(var(--primary))' }} />
             <Bar yAxisId="prob" dataKey="bull" fill="hsl(var(--bullish))" fillOpacity={0.4} stackId="probs" barSize={24} />
             <Bar yAxisId="prob" dataKey="base" fill="hsl(var(--primary))" fillOpacity={0.4} stackId="probs" barSize={24} />

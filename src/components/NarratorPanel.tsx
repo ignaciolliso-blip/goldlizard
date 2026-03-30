@@ -63,7 +63,7 @@ function buildDashboardDataString(props: NarratorPanelProps): string {
 
   // Anchor data
   const anchorStr = anchorResult
-    ? `\nAnchor:\n- M2/Gold Ratio: ${anchorResult.m2GoldRatio.toFixed(1)}\n- Zone: ${anchorResult.zoneLabel}\n- M2: $${(anchorResult.currentM2 / 1000).toFixed(1)}T\n- Gold: $${Math.round(anchorResult.currentGoldPrice).toLocaleString()}`
+    ? `\nAnchor:\n- % of Investable Parity: ${anchorResult.pctOfInvestableParity.toFixed(0)}%\n- Zone: ${anchorResult.zoneLabel}\n- Total Parity: $${Math.round(anchorResult.totalParity).toLocaleString()}\n- Investable Parity: $${Math.round(anchorResult.investableParity).toLocaleString()}\n- M2: $${(anchorResult.currentM2 / 1000).toFixed(1)}T\n- Gold: $${Math.round(anchorResult.currentGoldPrice).toLocaleString()}`
     : '';
 
   // Leverage data
