@@ -3,6 +3,7 @@ import type { GDIResult } from '@/lib/gdiEngine';
 import type { LeverageResult } from '@/lib/leverageEngine';
 import { projectGDXGoldRatio } from '@/lib/leverageEngine';
 import type { ScenarioConfig, ScenarioProbabilities } from '@/lib/scenarioEngine';
+import { GuideTooltip } from '@/components/GuideMode';
 
 interface Props {
   anchorResult: AnchorResult | null;
@@ -98,9 +99,11 @@ export default function SignalPositioning({
   return (
     <div className={`bg-card border border-border ${borderColorMap[positioning.color]} border-l-4 rounded-xl p-6 space-y-4`}>
       <div>
-        <h2 className={`font-display text-2xl ${textColorMap[positioning.color]}`}>
-          {positioning.text}
-        </h2>
+        <GuideTooltip id="positioning-call" text="This recommendation is derived from the three-lens convergence matrix: where gold sits relative to fair value (Anchor), which direction macro forces are pushing (GDI), and whether miners offer additional leverage (GDX/Gold ratio). When all three agree, conviction is highest.">
+          <h2 className={`font-display text-2xl ${textColorMap[positioning.color]}`}>
+            {positioning.text}
+          </h2>
+        </GuideTooltip>
         <p className="text-sm text-muted-foreground mt-1">{positioning.detail}</p>
       </div>
 

@@ -3,6 +3,9 @@ import { ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import type { GDIResult } from '@/lib/gdiEngine';
 import type { Observation } from '@/lib/dataFetcher';
 import type { ScenarioProbabilities, ScenarioConfig } from '@/lib/scenarioEngine';
+import type { AnchorResult } from '@/lib/anchorEngine';
+import type { LeverageResult } from '@/lib/leverageEngine';
+import { projectGDXGoldRatio } from '@/lib/leverageEngine';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -14,6 +17,9 @@ interface NarratorPanelProps {
   scenarioConfig: ScenarioConfig | null;
   currentGoldPrice: number;
   weightMode: 'fixed' | 'rolling';
+  anchorResult?: AnchorResult | null;
+  leverageResult?: LeverageResult | null;
+  currentGDXPrice?: number;
 }
 
 function computeDataHash(gdiResult: GDIResult, currentGDI: number): string {
@@ -25,7 +31,8 @@ function computeDataHash(gdiResult: GDIResult, currentGDI: number): string {
 }
 
 function buildDashboardDataString(props: NarratorPanelProps): string {
-  const { gdiResult, goldSpot, currentGDI, probs, scenarioConfig, currentGoldPrice, weightMode } = props;
+  const { gdiResult, goldSpot, currentGDI, probs, scenarioConfig, currentGoldPrice, weightMode,
+    anchorResult, leverageResult, currentGDXPrice } = props;
 
   const lastGold = goldSpot.length > 0 ? goldSpot[goldSpot.length - 1].value : 0;
   const gold30dAgo = goldSpot.length > 30 ? goldSpot[goldSpot.length - 31].value : lastGold;
@@ -54,7 +61,28 @@ function buildDashboardDataString(props: NarratorPanelProps): string {
     divStatus = `BEARISH DIVERGENCE: GDI reads ${currentGDI.toFixed(2)} but gold is up +${ret30d.toFixed(1)}%`;
   }
 
-  return `Gold spot: $${lastGold.toLocaleString()} (30d return: ${ret30d > 0 ? '+' : ''}${ret30d.toFixed(1)}%, ATH: $5,595)
+  // Anchor data
+  const anchorStr = anchorResult
+    ? `\nAnchor:\n- CPI Fair Value: $${Math.round(anchorResult.cpiFairValue).toLocaleString()}\n- M2 Fair Value: $${Math.round(anchorResult.m2FairValue).toLocaleString()}\n- Anchor status: ${currentGoldPrice < anchorResult.cpiFairValue ? 'Below both' : currentGoldPrice > anchorResult.m2FairValue ? 'Above both' : 'Between corridors'}`
+    : '';
+
+  // Leverage data
+  const gdxPrice = currentGDXPrice || 0;
+  const leverageStr = leverageResult
+    ? `\nLeverage:\n- GDX: $${gdxPrice.toFixed(2)}\n- GDX/Gold ratio: ${leverageResult.currentGDXGoldRatio.toFixed(4)}\n- Percentile: ${leverageResult.currentPercentile.toFixed(0)}th\n- 5Y GDX CAGR: ${(() => {
+        if (!scenarioConfig?.scenarios?.length || !gdxPrice) return 'N/A';
+        const bull = scenarioConfig.scenarios.find(s => s.name === 'Bull');
+        const base = scenarioConfig.scenarios.find(s => s.name === 'Base');
+        const bear = scenarioConfig.scenarios.find(s => s.name === 'Bear');
+        if (!bull || !base || !bear) return 'N/A';
+        const ev5y = probs.bull * bull.targets['5y'] + probs.base * base.targets['5y'] + probs.bear * bear.targets['5y'];
+        const projRatio = projectGDXGoldRatio(leverageResult.currentGDXGoldRatio, leverageResult.medianRatio, 5);
+        const gdx5y = ev5y * projRatio;
+        return ((Math.pow(gdx5y / gdxPrice, 1 / 5) - 1) * 100).toFixed(1) + '%';
+      })()}`
+    : '';
+
+  return `Gold spot: $${lastGold.toLocaleString()} (30d return: ${ret30d > 0 ? '+' : ''}${ret30d.toFixed(1)}%)
 GDI composite: ${currentGDI > 0 ? '+' : ''}${currentGDI.toFixed(3)} (${signal})
 Active weights: ${weightMode === 'fixed' ? 'Fixed' : 'Rolling'}
 
@@ -65,7 +93,7 @@ Scenario probabilities: Bull ${(probs.bull * 100).toFixed(0)}%, Base ${(probs.ba
 Expected values: 1Y=$${Math.round(ev1y).toLocaleString()}, 3Y=$${Math.round(ev3y).toLocaleString()}, 5Y=$${Math.round(ev5y).toLocaleString()}
 Implied 5Y CAGR: ${cagr5y.toFixed(1)}%
 
-Divergence status: ${divStatus}`;
+Divergence status: ${divStatus}${anchorStr}${leverageStr}`;
 }
 
 function buildFallbackBriefing(props: NarratorPanelProps): string {

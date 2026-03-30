@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { useGuideMode } from '@/components/GuideMode';
 
 const layers = [
   { to: '/', label: 'The Signal' },
@@ -16,11 +17,14 @@ const assets = [
 ];
 
 const AppNav = () => {
+  const { isGuideMode, toggleGuideMode } = useGuideMode();
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-b border-border">
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6">
         {/* Asset row */}
-        <div className="flex items-center gap-1 pt-2 pb-1 border-b border-border/50">
+        <div className="flex items-center justify-between pt-2 pb-1 border-b border-border/50">
+          <div className="flex items-center gap-1">
           {assets.map((a) => (
             <button
               key={a.label}
@@ -37,6 +41,18 @@ const AppNav = () => {
               {a.label}
             </button>
           ))}
+          </div>
+          <button
+            onClick={toggleGuideMode}
+            className={cn(
+              'px-3 py-1 text-xs font-medium rounded-sm transition-all',
+              isGuideMode
+                ? 'text-gold bg-gold/15 ring-1 ring-gold/40'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            Guide 🎓
+          </button>
         </div>
 
         {/* Layer tabs */}
