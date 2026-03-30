@@ -63,9 +63,10 @@ export default function ConvergenceAnalysis({
 }: Props) {
   // Current states
   const anchorStatus = anchorResult
-    ? currentGoldPrice < anchorResult.cpiFairValue ? 'below_both'
-    : currentGoldPrice > anchorResult.m2FairValue ? 'above_both' : 'between'
-    : 'between';
+    ? anchorResult.m2GoldRatio > 10 ? 'complacency'
+    : anchorResult.m2GoldRatio > 5 ? 'transition'
+    : anchorResult.m2GoldRatio > 3 ? 'elevated_fear' : 'extreme_fear'
+    : 'transition';
 
   const gdiSignal = currentGDI > 0.5 ? 'bullish' : currentGDI < -0.5 ? 'bearish' : 'neutral';
   const minerPctile = leverageResult?.currentPercentile ?? 50;
