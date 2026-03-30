@@ -197,58 +197,58 @@ const NarratorPanel = (props: NarratorPanelProps) => {
   }, []);
 
   return (
-    <div className="rounded-lg border border-card-border overflow-hidden" style={{ backgroundColor: '#1A1E28', borderLeft: '3px solid hsl(var(--gold))' }}>
+    <div className="rounded-xl border border-border overflow-hidden bg-card" style={{ borderLeft: '3px solid hsl(var(--primary))' }}>
       {/* Header */}
       <button
         onClick={toggleExpanded}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-secondary/10 transition-colors"
+        className="w-full flex items-center justify-between px-5 py-4 hover:bg-secondary/10 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <span className="text-base">📊</span>
-          <h2 className="font-display text-sm sm:text-base text-foreground">Market Briefing</h2>
+          <span className="text-lg">📊</span>
+          <h2 className="font-display text-foreground">Market Briefing</h2>
           {!isAI && briefing && (
-            <span className="text-[9px] bg-gold/10 text-gold px-1.5 py-0.5 rounded">Template</span>
+            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">Template</span>
           )}
         </div>
         <div className="flex items-center gap-3">
           {lastGenerated && (
-            <span className="text-[10px] text-muted-foreground hidden sm:inline">
+            <span className="text-xs text-muted-foreground hidden sm:inline">
               Last generated: {lastGenerated}
             </span>
           )}
-          {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+          {expanded ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
         </div>
       </button>
 
       {/* Body */}
       {expanded && (
-        <div className="px-4 pb-4">
-          <div className="flex justify-end mb-2">
+        <div className="px-5 pb-5">
+          <div className="flex justify-end mb-3">
             <button
               onClick={() => generateBriefing(true)}
               disabled={loading}
-              className="flex items-center gap-1.5 text-[10px] sm:text-xs text-gold hover:text-gold/80 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 disabled:opacity-50 transition-colors"
             >
-              <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               Regenerate
             </button>
           </div>
 
           {loading && !briefing ? (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {[1, 2, 3].map(i => (
-                <div key={i} className="h-4 rounded animate-pulse" style={{ backgroundColor: '#2A2E3A', width: `${100 - i * 10}%` }} />
+                <div key={i} className="h-5 rounded-lg animate-pulse bg-muted" style={{ width: `${100 - i * 10}%` }} />
               ))}
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {briefing.split('\n\n').filter(Boolean).map((paragraph, i) => (
-                <p key={i} className="text-sm leading-[1.7]" style={{ color: '#E8E6E1' }}>
+                <p key={i} className="text-foreground leading-relaxed">
                   {paragraph}
                 </p>
               ))}
               {!isAI && (
-                <p className="text-[10px] text-muted-foreground/60 italic mt-2">
+                <p className="text-xs text-muted-foreground/60 italic mt-2">
                   AI briefing unavailable — showing template summary
                 </p>
               )}
