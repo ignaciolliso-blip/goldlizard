@@ -11,6 +11,7 @@ import LoadingProgress from '@/components/LoadingProgress';
 import SignalLenses from '@/components/signal/SignalLenses';
 import SignalProjectionTable from '@/components/signal/SignalProjectionTable';
 import SignalPositioning from '@/components/signal/SignalPositioning';
+import NarratorPanel from '@/components/NarratorPanel';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 
@@ -127,6 +128,19 @@ const Index = () => {
           probs={probs}
           scenarioConfig={scenarioConfig}
         />
+
+        {/* AI Narrator */}
+        {gdiResult && (
+          <NarratorPanel
+            gdiResult={gdiResult}
+            goldSpot={goldSpot}
+            currentGDI={currentGDI}
+            probs={probs}
+            scenarioConfig={scenarioConfig}
+            currentGoldPrice={currentGoldPrice}
+            weightMode="fixed"
+          />
+        )}
 
         {/* Footer */}
         <div className="text-center space-y-4">
