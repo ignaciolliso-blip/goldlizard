@@ -2,6 +2,7 @@ import { Compass, Wind, Pickaxe } from 'lucide-react';
 import type { AnchorResult } from '@/lib/anchorEngine';
 import type { GDIResult } from '@/lib/gdiEngine';
 import type { LeverageResult } from '@/lib/leverageEngine';
+import { GuideTooltip } from '@/components/GuideMode';
 
 interface Props {
   anchorResult: AnchorResult | null;
@@ -36,7 +37,7 @@ function AnchorCard({ anchor }: { anchor: AnchorResult | null }) {
   }
 
   return (
-    <CardShell title="THE ANCHOR" icon={<Compass size={14} />}>
+    <CardShell title="THE ANCHOR" icon={<Compass size={14} />} guideId="lens-anchor" guideText="The Anchor shows where gold 'should' trade based on two inflation measures: CPI (consumer prices) and M2 (total money supply). If gold is between these values, the debasement hasn't been fully priced in yet.">
       <div className="space-y-3">
         <div className="space-y-1">
           <div className="flex justify-between items-baseline">
@@ -96,7 +97,7 @@ function ForcesCard({ gdiResult, currentGDI }: { gdiResult: GDIResult | null; cu
   const maxAbsContrib = Math.max(...tiers.map(t => Math.abs(t.value)), 0.01);
 
   return (
-    <CardShell title="THE FORCES" icon={<Wind size={14} />}>
+    <CardShell title="THE FORCES" icon={<Wind size={14} />} guideId="lens-forces" guideText="The Forces (GDI) combine 10 macro variables into a single composite reading. Above +0.5 = bullish macro backdrop for gold. Below -0.5 = bearish. The three tiers show which category of forces is dominant right now.">
       <div className="space-y-3">
         <div className="text-center">
           <span className={`font-mono text-2xl font-bold ${signalColor}`}>
@@ -151,7 +152,7 @@ function LeverageCard({ leverage, currentGDXPrice }: { leverage: LeverageResult 
   }
 
   return (
-    <CardShell title="THE LEVERAGE" icon={<Pickaxe size={14} />}>
+    <CardShell title="THE LEVERAGE" icon={<Pickaxe size={14} />} guideId="lens-leverage" guideText="The Leverage lens measures whether gold miners (GDX) are cheap or expensive relative to gold itself. When the ratio is below the 25th percentile, miners have historically delivered outsized returns as the ratio mean-reverts.">
       <div className="space-y-3">
         <div className="text-center space-y-1">
           <p className="text-xs text-muted-foreground">GDX/Gold Ratio</p>
@@ -187,12 +188,18 @@ function LeverageCard({ leverage, currentGDXPrice }: { leverage: LeverageResult 
   );
 }
 
-function CardShell({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
+function CardShell({ title, icon, children, guideId, guideText }: { title: string; icon: React.ReactNode; children: React.ReactNode; guideId?: string; guideText?: string }) {
   return (
     <div className="bg-card border border-border rounded-xl p-6 flex-1 min-w-[280px]">
       <div className="flex items-center gap-2 mb-4">
         <span className="text-muted-foreground">{icon}</span>
-        <h2 className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">{title}</h2>
+        {guideId && guideText ? (
+          <GuideTooltip id={guideId} text={guideText}>
+            <h2 className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">{title}</h2>
+          </GuideTooltip>
+        ) : (
+          <h2 className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">{title}</h2>
+        )}
       </div>
       {children}
     </div>
