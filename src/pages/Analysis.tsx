@@ -78,21 +78,7 @@ const Analysis = () => {
     return sorted[sorted.length - 1].close_price;
   }, [rawData]);
 
-  // Compute GDI-weighted EVs for anchor chart
-  const gdiWeightedEVs = useMemo(() => {
-    if (!scenarioConfig?.scenarios?.length) return {};
-    const bull = scenarioConfig.scenarios.find(s => s.name === 'Bull');
-    const base = scenarioConfig.scenarios.find(s => s.name === 'Base');
-    const bear = scenarioConfig.scenarios.find(s => s.name === 'Bear');
-    if (!bull || !base || !bear) return {};
-
-    const keys = ['3m', '6m', '1y', '3y', '5y'] as const;
-    const result: Record<string, number> = {};
-    for (const k of keys) {
-      result[k] = probs.bull * bull.targets[k] + probs.base * base.targets[k] + probs.bear * bear.targets[k];
-    }
-    return result;
-  }, [scenarioConfig, probs]);
+  // gdiWeightedEVs removed — anchor chart no longer needs them
 
   if (loading) return <LoadingProgress message={statusMsg} />;
 
