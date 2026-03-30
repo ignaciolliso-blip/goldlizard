@@ -1,5 +1,6 @@
 import { Compass, Wind, Pickaxe } from 'lucide-react';
 import type { AnchorResult } from '@/lib/anchorEngine';
+import { ANCHOR_ZONES, getZone, getZoneConclusion } from '@/lib/anchorEngine';
 import type { GDIResult } from '@/lib/gdiEngine';
 import type { LeverageResult } from '@/lib/leverageEngine';
 import { GuideTooltip } from '@/components/GuideMode';
@@ -13,64 +14,77 @@ interface Props {
 }
 
 function fmt(n: number): string {
-  return n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
 }
 
 function AnchorCard({ anchor }: { anchor: AnchorResult | null }) {
   if (!anchor) return <CardShell title="THE ANCHOR" icon={<Compass size={14} />}><p className="text-muted-foreground text-sm">Loading...</p></CardShell>;
 
-  const { cpiFairValue, m2FairValue, currentGoldPrice } = anchor;
-  const belowBoth = currentGoldPrice < cpiFairValue;
-  const aboveBoth = currentGoldPrice > m2FairValue;
+  const { m2GoldRatio, currentM2, currentGoldPrice } = anchor;
+  const zone = getZone(m2GoldRatio);
+  const conclusion = getZoneConclusion(m2GoldRatio);
 
-  // Gauge position: 0 = cpiFV, 1 = m2FV
-  const range = m2FairValue - cpiFairValue;
-  const position = range > 0 ? Math.max(0, Math.min(1, (currentGoldPrice - cpiFairValue) / range)) : 0.5;
+  const gaugeMin = 1.5;
+  const gaugeMax = 22;
+  const pct = (v: number) => Math.max(0, Math.min(100, ((v - gaugeMin) / (gaugeMax - gaugeMin)) * 100));
+  const currentPct = pct(m2GoldRatio);
 
-  let conclusion: { text: string; color: string };
-  if (belowBoth) {
-    conclusion = { text: 'BELOW BOTH FAIR VALUES — Compelling entry', color: 'text-anchor-cpi' };
-  } else if (aboveBoth) {
-    conclusion = { text: 'ABOVE BOTH FAIR VALUES — Stretched', color: 'text-bearish' };
-  } else {
-    conclusion = { text: 'DEBASEMENT NOT FULLY PRICED IN', color: 'text-neutral' };
-  }
+  const markers = [
+    { label: '1980', ratio: 2 },
+    { label: '2011', ratio: 3.5 },
+    { label: '2015', ratio: 13 },
+    { label: '2000', ratio: 20 },
+  ];
+
+  const priceAt2011 = currentM2 / 3.5;
+  const priceAt2015 = currentM2 / 13;
+  const priceAt1980 = currentM2 / 2;
+  const pctFrom = (target: number) => ((target / currentGoldPrice - 1) * 100);
+
+  const conclusionColor = zone.zone === 'extreme_fear' || zone.zone === 'elevated_fear'
+    ? 'text-bearish' : zone.zone === 'complacency' || zone.zone === 'extreme_complacency'
+    ? 'text-bullish' : 'text-primary';
 
   return (
-    <CardShell title="THE ANCHOR" icon={<Compass size={14} />} guideId="lens-anchor" guideText="The Anchor shows where gold 'should' trade based on two inflation measures: CPI (consumer prices) and M2 (total money supply). If gold is between these values, the debasement hasn't been fully priced in yet.">
+    <CardShell title="THE ANCHOR" icon={<Compass size={14} />} guideId="lens-anchor" guideText={`This gauge shows how many M2 dollars exist per ounce of gold. When the ratio is high, gold is relatively cheap. When low, gold has absorbed the money printing. We're at ${m2GoldRatio.toFixed(1)}, in the ${zone.label}.`}>
       <div className="space-y-3">
-        <div className="space-y-1">
-          <div className="flex justify-between items-baseline">
-            <span className="text-xs text-muted-foreground">CPI Fair Value</span>
-            <span className="font-mono text-sm text-anchor-cpi">${fmt(cpiFairValue)}</span>
+        {/* Horizontal gauge */}
+        <div className="relative mt-1">
+          <div className="flex h-2.5 rounded-full overflow-hidden">
+            {ANCHOR_ZONES.map((z, i) => {
+              const width = ((z.range[1] - z.range[0]) / (gaugeMax - gaugeMin)) * 100;
+              const colors = ['bg-bearish/70', 'bg-bearish/40', 'bg-primary/40', 'bg-bullish/30', 'bg-bullish/60'];
+              return <div key={i} className={colors[i]} style={{ width: `${width}%` }} />;
+            })}
           </div>
-          <div className="flex justify-between items-baseline">
-            <span className="text-xs text-muted-foreground">M2 Fair Value</span>
-            <span className="font-mono text-sm text-anchor-m2">${fmt(m2FairValue)}</span>
-          </div>
-          <div className="flex justify-between items-baseline">
-            <span className="text-xs text-muted-foreground">Spot Price</span>
-            <span className="font-mono text-lg text-primary font-semibold">${fmt(currentGoldPrice)}</span>
+          <div className="absolute -top-0.5 w-3.5 h-3.5 rounded-full bg-foreground border-2 border-background shadow-lg transform -translate-x-1/2" style={{ left: `${currentPct}%` }} />
+          <div className="relative h-6 mt-0.5">
+            {markers.map(m => (
+              <div key={m.label} className="absolute text-center transform -translate-x-1/2" style={{ left: `${pct(m.ratio)}%` }}>
+                <div className="w-px h-1.5 bg-muted-foreground/30 mx-auto" />
+                <span className="text-[7px] text-muted-foreground/50 block">{m.label}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Vertical gauge */}
-        <div className="relative h-24 w-6 mx-auto rounded-full overflow-hidden border border-border">
-          {/* Green zone (below CPI) */}
-          <div className="absolute bottom-0 left-0 right-0 bg-anchor-cpi/20" style={{ height: '33%' }} />
-          {/* Gold zone (between) */}
-          <div className="absolute left-0 right-0 bg-primary/20" style={{ top: '33%', height: '34%' }} />
-          {/* Blue zone (above M2) */}
-          <div className="absolute top-0 left-0 right-0 bg-anchor-m2/20" style={{ height: '33%' }} />
-          {/* Marker */}
-          <div
-            className="absolute left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-background z-10"
-            style={{ bottom: `${(belowBoth ? position * 33 : aboveBoth ? 67 + position * 33 : 33 + position * 34)}%`, transform: 'translate(-50%, 50%)' }}
-          />
+        <div className="space-y-1 text-xs font-mono">
+          <div className="flex justify-between text-foreground">
+            <span>M2/Gold</span>
+            <span className="font-semibold">{m2GoldRatio.toFixed(1)} — {zone.label}</span>
+          </div>
+          <div className="flex justify-between text-muted-foreground text-[10px]">
+            <span>At 2011 (3.5):</span>
+            <span className={pctFrom(priceAt2011) > 0 ? 'text-bullish' : 'text-bearish'}>{fmt(priceAt2011)} ({pctFrom(priceAt2011) > 0 ? '+' : ''}{pctFrom(priceAt2011).toFixed(0)}%)</span>
+          </div>
+          <div className="flex justify-between text-muted-foreground text-[10px]">
+            <span>At 2015 (13):</span>
+            <span className={pctFrom(priceAt2015) > 0 ? 'text-bullish' : 'text-bearish'}>{fmt(priceAt2015)} ({pctFrom(priceAt2015).toFixed(0)}%)</span>
+          </div>
         </div>
 
-        <p className={`text-xs font-semibold text-center ${conclusion.color}`}>
-          {conclusion.text}
+        <p className={`text-[10px] font-semibold text-center ${conclusionColor}`}>
+          {conclusion}
         </p>
       </div>
     </CardShell>

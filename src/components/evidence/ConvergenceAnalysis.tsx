@@ -24,31 +24,35 @@ interface Props {
   projections: ProjectionRow[];
 }
 
-function derivePositioning(anchorStatus: string, gdiSignal: string, minerPercentile: number) {
+function derivePositioning(anchorZone: string, gdiSignal: string, minerPercentile: number) {
   const minersUndervalued = minerPercentile < 25;
   const minersFairValue = minerPercentile >= 25 && minerPercentile <= 75;
 
-  if (anchorStatus === 'below_both' && gdiSignal === 'bullish' && minersUndervalued)
+  if ((anchorZone === 'complacency' || anchorZone === 'extreme_complacency') && gdiSignal === 'bullish' && minersUndervalued)
     return { text: 'STRONG BUY MINERS', color: 'bullish' };
-  if (anchorStatus === 'between' && gdiSignal === 'bullish' && minersUndervalued)
+  if ((anchorZone === 'complacency' || anchorZone === 'extreme_complacency') && gdiSignal === 'bearish')
+    return { text: 'ACCUMULATE ON WEAKNESS', color: 'neutral' };
+  if (anchorZone === 'transition' && gdiSignal === 'bullish' && minersUndervalued)
     return { text: 'ACCUMULATE MINERS', color: 'bullish' };
-  if (anchorStatus === 'between' && gdiSignal === 'bullish' && minersFairValue)
+  if (anchorZone === 'transition' && gdiSignal === 'bullish' && minersFairValue)
     return { text: 'HOLD / ADD GOLD', color: 'primary' };
-  if (anchorStatus === 'below_both' && gdiSignal === 'bearish')
-    return { text: 'TACTICAL PATIENCE', color: 'neutral' };
-  if (anchorStatus === 'between' && gdiSignal === 'bearish')
+  if (anchorZone === 'transition' && gdiSignal === 'bearish')
     return { text: 'HOLD', color: 'neutral' };
-  if (anchorStatus === 'above_both' && gdiSignal === 'bearish')
+  if (anchorZone === 'elevated_fear' && gdiSignal === 'bullish' && minersUndervalued)
+    return { text: 'HOLD / ADD SELECTIVELY', color: 'primary' };
+  if (anchorZone === 'elevated_fear' && gdiSignal === 'bearish')
+    return { text: 'TAKE PROFITS', color: 'destructive' };
+  if (anchorZone === 'extreme_fear')
     return { text: 'REDUCE', color: 'destructive' };
-  if (anchorStatus === 'above_both' && gdiSignal === 'bullish')
-    return { text: 'HOLD CAUTIOUSLY', color: 'neutral' };
   return { text: 'HOLD', color: 'neutral' };
 }
 
 const MATRIX_ROWS = [
-  { anchor: 'below_both', label: 'Below both FVs' },
-  { anchor: 'between', label: 'Between corridors' },
-  { anchor: 'above_both', label: 'Above both FVs' },
+  { anchor: 'extreme_complacency', label: 'Extreme Complacency (>15)' },
+  { anchor: 'complacency', label: 'Complacency (10-15)' },
+  { anchor: 'transition', label: 'Transition (5-10)' },
+  { anchor: 'elevated_fear', label: 'Elevated Fear (3-5)' },
+  { anchor: 'extreme_fear', label: 'Extreme Fear (<3)' },
 ];
 const MATRIX_COLS = ['bullish', 'neutral', 'bearish'];
 const MINER_STATES = [
@@ -132,8 +136,9 @@ export default function ConvergenceAnalysis({
         <div className="grid grid-cols-4 gap-3 mb-6">
           <div className="bg-secondary/20 rounded-lg p-3 text-center">
             <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">The Anchor</p>
-            <p className={`text-sm font-semibold ${anchorStatus === 'below_both' ? 'text-bullish' : anchorStatus === 'above_both' ? 'text-destructive' : 'text-primary'}`}>
-              {anchorStatus === 'below_both' ? 'Below both' : anchorStatus === 'above_both' ? 'Above both' : 'Between corridors'}
+            <p className={`text-sm font-semibold ${anchorStatus === 'complacency' || anchorStatus === 'extreme_complacency' ? 'text-bullish' : anchorStatus === 'extreme_fear' ? 'text-destructive' : 'text-primary'}`}>
+              {anchorStatus === 'complacency' ? 'Complacency' : anchorStatus === 'extreme_complacency' ? 'Extreme Complacency' : anchorStatus === 'elevated_fear' ? 'Elevated Fear' : anchorStatus === 'extreme_fear' ? 'Extreme Fear' : 'Transition'}
+              {anchorResult && ` (${anchorResult.m2GoldRatio.toFixed(1)})`}
             </p>
           </div>
           <div className="bg-secondary/20 rounded-lg p-3 text-center">
