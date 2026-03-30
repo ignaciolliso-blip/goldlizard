@@ -67,7 +67,8 @@ export default function ConvergenceAnalysis({
 }: Props) {
   // Current states
   const anchorStatus = anchorResult
-    ? anchorResult.m2GoldRatio > 10 ? 'complacency'
+    ? anchorResult.m2GoldRatio > 15 ? 'extreme_complacency'
+    : anchorResult.m2GoldRatio > 10 ? 'complacency'
     : anchorResult.m2GoldRatio > 5 ? 'transition'
     : anchorResult.m2GoldRatio > 3 ? 'elevated_fear' : 'extreme_fear'
     : 'transition';
