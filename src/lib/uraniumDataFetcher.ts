@@ -78,13 +78,39 @@ export async function fetchMinerValuations(): Promise<MinerValuation[]> {
   }));
 }
 
+export interface SectorPNAVHistoryRow {
+  date: string;
+  sector_avg_pnav: number;
+  uranium_spot: number;
+  uranium_lt_contract: number | null;
+  source: string;
+  notes: string;
+}
+
+export async function fetchSectorPNAVHistory(): Promise<SectorPNAVHistoryRow[]> {
+  const { data, error } = await supabase
+    .from('sector_pnav_history')
+    .select('*')
+    .order('date', { ascending: true });
+  if (error) throw new Error('Failed to fetch sector P/NAV history: ' + error.message);
+  return (data || []).map(r => ({
+    date: r.date,
+    sector_avg_pnav: Number(r.sector_avg_pnav),
+    uranium_spot: Number(r.uranium_spot),
+    uranium_lt_contract: r.uranium_lt_contract ? Number(r.uranium_lt_contract) : null,
+    source: r.source,
+    notes: r.notes,
+  }));
+}
+
 export async function fetchAllUraniumData() {
-  const [prices, supplyDemand, reactors, minerPrices, valuations] = await Promise.all([
+  const [prices, supplyDemand, reactors, minerPrices, valuations, pnavHistory] = await Promise.all([
     fetchUraniumPrices(),
     fetchUraniumSupplyDemand(),
     fetchUraniumReactors(),
     fetchUraniumMinerPrices(),
     fetchMinerValuations(),
+    fetchSectorPNAVHistory(),
   ]);
-  return { prices, supplyDemand, reactors, minerPrices, valuations };
+  return { prices, supplyDemand, reactors, minerPrices, valuations, pnavHistory };
 }
