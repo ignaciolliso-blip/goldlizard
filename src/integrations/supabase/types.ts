@@ -218,6 +218,39 @@ export type Database = {
         }
         Relationships: []
       }
+      sector_pnav_history: {
+        Row: {
+          created_at: string
+          date: string
+          id: number
+          notes: string
+          sector_avg_pnav: number
+          source: string
+          uranium_lt_contract: number | null
+          uranium_spot: number
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: never
+          notes?: string
+          sector_avg_pnav?: number
+          source?: string
+          uranium_lt_contract?: number | null
+          uranium_spot?: number
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: never
+          notes?: string
+          sector_avg_pnav?: number
+          source?: string
+          uranium_lt_contract?: number | null
+          uranium_spot?: number
+        }
+        Relationships: []
+      }
       uranium_prices: {
         Row: {
           created_at: string
