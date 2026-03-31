@@ -50,6 +50,13 @@
     --forces-gdi: 43 50% 54%;
     --leverage-miner: 258 91% 76%;
 
+    /* Uranium tokens */
+    --uranium: 142 71% 65%;
+    --uranium-light: 142 76% 73%;
+    --uranium-contract: 187 92% 69%;
+    --uranium-demand: 24 95% 53%;
+    --uranium-supply: 217 91% 60%;
+
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
