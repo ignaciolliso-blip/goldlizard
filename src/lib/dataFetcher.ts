@@ -15,12 +15,6 @@ export interface SeriesData {
   observations: Observation[];
 }
 
-function isCacheFresh(lastFetched: string): boolean {
-  const fetched = new Date(lastFetched).getTime();
-  const now = Date.now();
-  return (now - fetched) < CACHE_TTL_HOURS * 60 * 60 * 1000;
-}
-
 function parseObservations(rawObs: any[]): Observation[] {
   return rawObs
     .filter((o: any) => o.value !== '.' && !isNaN(parseFloat(o.value)))
@@ -31,21 +25,12 @@ export async function fetchFredSeries(
   seriesId: string,
   onStatus?: (msg: string) => void
 ): Promise<Observation[]> {
-  const { data: cached } = await supabase
-    .from('data_cache')
-    .select('*')
-    .eq('series_id', seriesId)
-    .maybeSingle();
-
-  if (cached && isCacheFresh(cached.last_fetched)) {
-    return cached.data_json as unknown as Observation[];
-  }
-
   const seriesInfo = FRED_SERIES.find(s => s.id === seriesId);
   onStatus?.(`Fetching ${seriesInfo?.name || seriesId}...`);
 
+  // Edge function now handles caching server-side with service role
   const { data, error } = await supabase.functions.invoke('fred-proxy', {
-    body: { series_id: seriesId, observation_start: '2005-01-01' },
+    body: { series_id: seriesId, observation_start: '2005-01-01', cache_key: seriesId },
   });
 
   if (error) {
@@ -53,31 +38,32 @@ export async function fetchFredSeries(
     throw new Error(`Failed to fetch ${seriesId}`);
   }
 
+  // If returned from cache, observations are already parsed
+  if (data?.fromCache && Array.isArray(data.observations)) {
+    return data.observations as Observation[];
+  }
+
   if (!data?.observations) {
     console.error(`No observations for ${seriesId}:`, data);
     throw new Error(`Failed to fetch ${seriesId}: ${data?.error_message || 'no data'}`);
   }
 
-  const observations = parseObservations(data.observations);
-
-  await supabase.from('data_cache').upsert({
-    series_id: seriesId,
-    data_json: observations as any,
-    last_fetched: new Date().toISOString(),
-  });
-
-  return observations;
+  return parseObservations(data.observations);
 }
 
 export async function fetchGoldSpot(onStatus?: (msg: string) => void): Promise<Observation[]> {
+  // Check cache via public SELECT (still allowed)
   const { data: cached } = await supabase
     .from('data_cache')
     .select('*')
     .eq('series_id', 'GOLD_SPOT')
     .maybeSingle();
 
-  if (cached && isCacheFresh(cached.last_fetched)) {
-    return cached.data_json as unknown as Observation[];
+  if (cached && cached.last_fetched) {
+    const fetched = new Date(cached.last_fetched).getTime();
+    if ((Date.now() - fetched) < CACHE_TTL_HOURS * 60 * 60 * 1000) {
+      return cached.data_json as unknown as Observation[];
+    }
   }
 
   onStatus?.('Fetching Gold Spot Price...');
@@ -86,11 +72,10 @@ export async function fetchGoldSpot(onStatus?: (msg: string) => void): Promise<O
     const res = await fetch('/data/gold-historical.json');
     if (res.ok) {
       const observations: Observation[] = await res.json();
+      // Cache via edge function (service role)
       if (observations.length > 0) {
-        await supabase.from('data_cache').upsert({
-          series_id: 'GOLD_SPOT',
-          data_json: observations as any,
-          last_fetched: new Date().toISOString(),
+        await supabase.functions.invoke('fred-proxy', {
+          body: { action: 'cache_gold', cache_key: 'GOLD_SPOT', observations },
         });
       }
       return observations;

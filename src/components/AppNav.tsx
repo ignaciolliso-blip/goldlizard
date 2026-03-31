@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate, Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useGuideMode } from '@/components/GuideMode';
-import { Menu, X } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { Menu, X, LogIn, LogOut } from 'lucide-react';
 
 // Asset definitions with their base routes
 const assets = [
@@ -37,6 +38,7 @@ function getLayerTabs(asset: string) {
 
 const AppNav = () => {
   const { isGuideMode, toggleGuideMode } = useGuideMode();
+  const { user, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -107,6 +109,25 @@ const AppNav = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            {user ? (
+              <button
+                onClick={() => signOut()}
+                className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground rounded-sm transition-colors"
+                title="Sign out"
+              >
+                <LogOut size={14} />
+                <span className="hidden sm:inline">Sign Out</span>
+              </button>
+            ) : (
+              <Link
+                to="/login"
+                className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground rounded-sm transition-colors"
+              >
+                <LogIn size={14} />
+                <span className="hidden sm:inline">Sign In</span>
+              </Link>
+            )}
+
             <button
               onClick={toggleGuideMode}
               className={cn(

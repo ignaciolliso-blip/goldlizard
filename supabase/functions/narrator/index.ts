@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,8 +10,38 @@ const corsHeaders = {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, serviceRoleKey);
+
   try {
-    const { dashboardData } = await req.json();
+    const { dashboardData, dataHash, checkCacheOnly } = await req.json();
+
+    // Cache check (using service role so RLS doesn't block)
+    if (dataHash) {
+      const { data: cached } = await supabase
+        .from("narrator_cache")
+        .select("*")
+        .eq("id", 1)
+        .single();
+
+      if (cached && cached.data_hash === dataHash && cached.briefing_text) {
+        return new Response(JSON.stringify({
+          briefing: cached.briefing_text,
+          generated_at: cached.generated_at,
+          fromCache: true,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (checkCacheOnly) {
+        return new Response(JSON.stringify({ briefing: null, fromCache: false }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -44,28 +75,35 @@ When discussing specific variables, explain them the way you would across a desk
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limited, please try again later." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "Credits exhausted. Add funds at Settings > Workspace > Usage." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const t = await response.text();
       console.error("AI gateway error:", response.status, t);
       return new Response(JSON.stringify({ error: "AI gateway error" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const data = await response.json();
     const briefing = data.choices?.[0]?.message?.content || "";
+    const now = new Date().toISOString();
 
-    return new Response(JSON.stringify({ briefing }), {
+    // Cache result server-side
+    if (dataHash) {
+      await supabase.from("narrator_cache").update({
+        briefing_text: briefing,
+        data_hash: dataHash,
+        generated_at: now,
+      }).eq("id", 1);
+    }
+
+    return new Response(JSON.stringify({ briefing, generated_at: now }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

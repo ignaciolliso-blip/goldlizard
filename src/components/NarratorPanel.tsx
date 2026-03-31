@@ -1,19 +1,19 @@
-import { useState, useEffect, useCallback } from 'react';
-import { ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
-import type { GDIResult } from '@/lib/gdiEngine';
-import type { Observation } from '@/lib/dataFetcher';
-import type { ScenarioProbabilities, ScenarioConfig } from '@/lib/scenarioEngine';
-import type { AnchorResult } from '@/lib/anchorEngine';
-import type { LeverageResult } from '@/lib/leverageEngine';
-import { projectGDXGoldRatio } from '@/lib/leverageEngine';
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { ChevronDown, RefreshCw, Sparkles, FileText } from 'lucide-react';
+import type { GDIResult } from '@/lib/gdiEngine';
+import type { Observation } from '@/lib/dataFetcher';
+import type { ScenarioConfig, ScenarioProbabilities } from '@/lib/scenarioEngine';
+import type { AnchorResult } from '@/lib/anchorEngine';
+import type { LeverageResult } from '@/lib/leverageEngine';
 
-interface NarratorPanelProps {
+export interface NarratorPanelProps {
   gdiResult: GDIResult;
   goldSpot: Observation[];
   currentGDI: number;
-  probs: ScenarioProbabilities;
+  Probable?: ScenarioProbabilities;
+  probs?: ScenarioProbabilities;
   scenarioConfig: ScenarioConfig | null;
   currentGoldPrice: number;
   weightMode: 'fixed' | 'rolling';
@@ -23,90 +23,48 @@ interface NarratorPanelProps {
 }
 
 function computeDataHash(gdiResult: GDIResult, currentGDI: number): string {
-  const top3 = gdiResult.variableDetails
+  const top3 = [...gdiResult.variableDetails]
+    .sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))
     .slice(0, 3)
     .map(v => `${v.id}:${v.contribution.toFixed(2)}`)
     .join('|');
-  return `${currentGDI.toFixed(1)}|${top3}`;
+  return `${top3}|gdi:${currentGDI.toFixed(2)}`;
 }
 
 function buildDashboardDataString(props: NarratorPanelProps): string {
-  const { gdiResult, goldSpot, currentGDI, probs, scenarioConfig, currentGoldPrice, weightMode,
-    anchorResult, leverageResult, currentGDXPrice } = props;
+  const { gdiResult, goldSpot, currentGDI, currentGoldPrice, weightMode, anchorResult, leverageResult, currentGDXPrice } = props;
+  const probs = props.probs || props.Probable;
 
-  const lastGold = goldSpot.length > 0 ? goldSpot[goldSpot.length - 1].value : 0;
-  const gold30dAgo = goldSpot.length > 30 ? goldSpot[goldSpot.length - 31].value : lastGold;
-  const ret30d = gold30dAgo > 0 ? ((lastGold - gold30dAgo) / gold30dAgo * 100) : 0;
+  const sorted = [...gdiResult.variableDetails].sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution));
+  const varLines = sorted.map(v =>
+    `${v.name}: z=${v.adjustedZScore.toFixed(2)}, weight=${(v.weight * 100).toFixed(1)}%, contribution=${v.contribution.toFixed(3)}`
+  ).join('\n');
 
-  const signal = currentGDI > 0.5 ? 'BULLISH' : currentGDI < -0.5 ? 'BEARISH' : 'NEUTRAL';
+  const gold30d = goldSpot.length >= 22
+    ? ((goldSpot[goldSpot.length - 1].value / goldSpot[goldSpot.length - 22].value - 1) * 100).toFixed(1)
+    : 'N/A';
 
-  const components = gdiResult.variableDetails.map((v, i) => {
-    return `${i + 1}. ${v.name}: raw=${v.currentValue.toFixed(2)}, z-score=${v.adjustedZScore.toFixed(2)}, weight=${(v.weight * 100).toFixed(0)}%, contribution=${v.contribution > 0 ? '+' : ''}${v.contribution.toFixed(3)}, 30d change=est`;
-  }).join('\n');
+  let text = `Gold: $${currentGoldPrice.toFixed(0)} (30d: ${gold30d}%)\nGDI: ${currentGDI.toFixed(2)} (${weightMode} weights)\n\nComponents:\n${varLines}`;
 
-  // EV calculations
-  const bull = scenarioConfig?.scenarios.find(s => s.name === 'Bull');
-  const base = scenarioConfig?.scenarios.find(s => s.name === 'Base');
-  const bear = scenarioConfig?.scenarios.find(s => s.name === 'Bear');
-  const ev1y = bull && base && bear ? (probs.bull * bull.targets['1y'] + probs.base * base.targets['1y'] + probs.bear * bear.targets['1y']) : 0;
-  const ev3y = bull && base && bear ? (probs.bull * bull.targets['3y'] + probs.base * base.targets['3y'] + probs.bear * bear.targets['3y']) : 0;
-  const ev5y = bull && base && bear ? (probs.bull * bull.targets['5y'] + probs.base * base.targets['5y'] + probs.bear * bear.targets['5y']) : 0;
-  const cagr5y = currentGoldPrice > 0 && ev5y > 0 ? ((Math.pow(ev5y / currentGoldPrice, 1 / 5) - 1) * 100) : 0;
-
-  // Divergence
-  let divStatus = 'No divergence — GDI and price are aligned';
-  if (currentGDI > 0.5 && ret30d < -5) {
-    divStatus = `BULLISH DIVERGENCE: GDI reads +${currentGDI.toFixed(2)} but gold is down ${ret30d.toFixed(1)}%`;
-  } else if (currentGDI < -0.5 && ret30d > 5) {
-    divStatus = `BEARISH DIVERGENCE: GDI reads ${currentGDI.toFixed(2)} but gold is up +${ret30d.toFixed(1)}%`;
+  if (probs) {
+    text += `\n\nScenario probs: bull=${(probs.bull * 100).toFixed(0)}%, base=${(probs.base * 100).toFixed(0)}%, bear=${(probs.bear * 100).toFixed(0)}%`;
   }
 
-  // Anchor data
-  const anchorStr = anchorResult
-    ? `\nAnchor:\n- % of Investable Parity: ${anchorResult.pctOfInvestableParity.toFixed(0)}%\n- Zone: ${anchorResult.zoneLabel}\n- Total Parity: $${Math.round(anchorResult.totalParity).toLocaleString()}\n- Investable Parity: $${Math.round(anchorResult.investableParity).toLocaleString()}\n- M2: $${(anchorResult.currentM2 / 1000).toFixed(1)}T\n- Gold: $${Math.round(anchorResult.currentGoldPrice).toLocaleString()}`
-    : '';
+  if (anchorResult) {
+    text += `\n\nAnchor: ${anchorResult.pctOfInvestableParity.toFixed(1)}% of investable parity, zone=${anchorResult.zoneLabel}`;
+  }
 
-  // Leverage data
-  const gdxPrice = currentGDXPrice || 0;
-  const leverageStr = leverageResult
-    ? `\nLeverage:\n- GDX: $${gdxPrice.toFixed(2)}\n- GDX/Gold ratio: ${leverageResult.currentGDXGoldRatio.toFixed(4)}\n- Percentile: ${leverageResult.currentPercentile.toFixed(0)}th\n- 5Y GDX CAGR: ${(() => {
-        if (!scenarioConfig?.scenarios?.length || !gdxPrice) return 'N/A';
-        const bull = scenarioConfig.scenarios.find(s => s.name === 'Bull');
-        const base = scenarioConfig.scenarios.find(s => s.name === 'Base');
-        const bear = scenarioConfig.scenarios.find(s => s.name === 'Bear');
-        if (!bull || !base || !bear) return 'N/A';
-        const ev5y = probs.bull * bull.targets['5y'] + probs.base * base.targets['5y'] + probs.bear * bear.targets['5y'];
-        const projRatio = projectGDXGoldRatio(leverageResult.currentGDXGoldRatio, leverageResult.medianRatio, 5);
-        const gdx5y = ev5y * projRatio;
-        return ((Math.pow(gdx5y / gdxPrice, 1 / 5) - 1) * 100).toFixed(1) + '%';
-      })()}`
-    : '';
+  if (leverageResult && currentGDXPrice) {
+    text += `\nLeverage: GDX/Gold ratio ${leverageResult.currentGDXGoldRatio.toFixed(4)}, percentile ${leverageResult.currentPercentile.toFixed(0)}%`;
+  }
 
-  return `Gold spot: $${lastGold.toLocaleString()} (30d return: ${ret30d > 0 ? '+' : ''}${ret30d.toFixed(1)}%)
-GDI composite: ${currentGDI > 0 ? '+' : ''}${currentGDI.toFixed(3)} (${signal})
-Active weights: ${weightMode === 'fixed' ? 'Fixed' : 'Rolling'}
-
-Component breakdown (sorted by absolute contribution):
-${components}
-
-Scenario probabilities: Bull ${(probs.bull * 100).toFixed(0)}%, Base ${(probs.base * 100).toFixed(0)}%, Bear ${(probs.bear * 100).toFixed(0)}%
-Expected values: 1Y=$${Math.round(ev1y).toLocaleString()}, 3Y=$${Math.round(ev3y).toLocaleString()}, 5Y=$${Math.round(ev5y).toLocaleString()}
-Implied 5Y CAGR: ${cagr5y.toFixed(1)}%
-
-Divergence status: ${divStatus}${anchorStr}${leverageStr}`;
+  return text;
 }
 
 function buildFallbackBriefing(props: NarratorPanelProps): string {
-  const { gdiResult, currentGDI, currentGoldPrice, probs, scenarioConfig } = props;
-  const signal = currentGDI > 0.5 ? 'BULLISH' : currentGDI < -0.5 ? 'BEARISH' : 'NEUTRAL';
-  const topVar = gdiResult.variableDetails[0];
-  const bull = scenarioConfig?.scenarios.find(s => s.name === 'Bull');
-  const base = scenarioConfig?.scenarios.find(s => s.name === 'Base');
-  const bear = scenarioConfig?.scenarios.find(s => s.name === 'Bear');
-  const ev5y = bull && base && bear ? (probs.bull * bull.targets['5y'] + probs.base * base.targets['5y'] + probs.bear * bear.targets['5y']) : 0;
-  const cagr5y = currentGoldPrice > 0 && ev5y > 0 ? ((Math.pow(ev5y / currentGoldPrice, 1 / 5) - 1) * 100) : 0;
-
-  return `GDI reads ${currentGDI > 0 ? '+' : ''}${currentGDI.toFixed(2)} (${signal}). Top driver: ${topVar?.name || 'N/A'} contributing ${topVar ? (topVar.contribution > 0 ? '+' : '') + topVar.contribution.toFixed(3) : 'N/A'}. Current 5Y implied CAGR: ${cagr5y.toFixed(1)}%.`;
+  const { currentGDI, currentGoldPrice } = props;
+  const signal = currentGDI > 0.3 ? 'bullish' : currentGDI < -0.3 ? 'bearish' : 'neutral';
+  return `The GDI currently reads ${currentGDI.toFixed(2)}, signaling a ${signal} macro environment for gold at $${currentGoldPrice.toFixed(0)}. This is an auto-generated summary — regenerate for AI analysis.`;
 }
 
 const STORAGE_KEY = 'narrator_expanded';
@@ -134,28 +92,15 @@ const NarratorPanel = (props: NarratorPanelProps) => {
   const generateBriefing = useCallback(async (force: boolean = false) => {
     setLoading(true);
     try {
-      // Check cache first
-      if (!force) {
-        const { data: cached } = await supabase
-          .from('narrator_cache')
-          .select('*')
-          .eq('id', 1)
-          .single();
-
-        if (cached && cached.data_hash === dataHash && cached.briefing_text) {
-          setBriefing(cached.briefing_text);
-          setLastGenerated(new Date(cached.generated_at).toLocaleString('en-US', {
-            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-          }));
-          setIsAI(true);
-          setLoading(false);
-          return;
-        }
-      }
-
       const dashboardData = buildDashboardDataString(props);
+
+      // Edge function handles cache check + generation + cache write (all server-side)
       const { data, error } = await supabase.functions.invoke('narrator', {
-        body: { dashboardData },
+        body: {
+          dashboardData,
+          dataHash,
+          checkCacheOnly: !force ? false : undefined,
+        },
       });
 
       if (error || data?.error) {
@@ -165,20 +110,10 @@ const NarratorPanel = (props: NarratorPanelProps) => {
       const text = data.briefing;
       setBriefing(text);
       setIsAI(true);
-      const now = new Date();
-      setLastGenerated(now.toLocaleString('en-US', {
+      const genAt = data.generated_at || new Date().toISOString();
+      setLastGenerated(new Date(genAt).toLocaleString('en-US', {
         month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
       }));
-
-      // Save to cache
-      await supabase
-        .from('narrator_cache')
-        .update({
-          briefing_text: text,
-          data_hash: dataHash,
-          generated_at: now.toISOString(),
-        })
-        .eq('id', 1);
     } catch (e: any) {
       console.error('Narrator error:', e);
       setBriefing(buildFallbackBriefing(props));
@@ -198,61 +133,46 @@ const NarratorPanel = (props: NarratorPanelProps) => {
 
   return (
     <div className="rounded-xl border border-border overflow-hidden bg-card" style={{ borderLeft: '3px solid hsl(var(--primary))' }}>
-      {/* Header */}
       <button
         onClick={toggleExpanded}
-        className="w-full flex items-center justify-between px-5 py-4 hover:bg-secondary/10 transition-colors"
+        className="w-full flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <span className="text-lg">📊</span>
-          <h2 className="font-display text-foreground">Market Briefing</h2>
-          {!isAI && briefing && (
-            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">Template</span>
+          <Sparkles size={16} className="text-primary" />
+          <span className="font-display text-foreground">Market Briefing</span>
+          {!isAI && (
+            <span className="text-[11px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Template</span>
           )}
         </div>
-        <div className="flex items-center gap-3">
-          {lastGenerated && (
-            <span className="text-xs text-muted-foreground hidden sm:inline">
-              Last generated: {lastGenerated}
-            </span>
-          )}
-          {expanded ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
-        </div>
+        <ChevronDown size={16} className={`text-muted-foreground transition-transform ${expanded ? 'rotate-180' : ''}`} />
       </button>
 
-      {/* Body */}
       {expanded && (
-        <div className="px-5 pb-5">
-          <div className="flex justify-end mb-3">
-            <button
-              onClick={() => generateBriefing(true)}
-              disabled={loading}
-              className="flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 disabled:opacity-50 transition-colors"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              Regenerate
-            </button>
-          </div>
-
-          {loading && !briefing ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="h-5 rounded-lg animate-pulse bg-muted" style={{ width: `${100 - i * 10}%` }} />
-              ))}
+        <div className="px-4 pb-4 space-y-3">
+          {loading ? (
+            <div className="space-y-2">
+              <div className="h-4 bg-muted/50 rounded animate-pulse w-full" />
+              <div className="h-4 bg-muted/50 rounded animate-pulse w-5/6" />
+              <div className="h-4 bg-muted/50 rounded animate-pulse w-4/6" />
             </div>
           ) : (
-            <div className="space-y-4">
-              {briefing.split('\n\n').filter(Boolean).map((paragraph, i) => (
-                <p key={i} className="text-foreground leading-relaxed">
-                  {paragraph}
-                </p>
-              ))}
-              {!isAI && (
-                <p className="text-xs text-muted-foreground/60 italic mt-2">
-                  AI briefing unavailable — showing template summary
-                </p>
-              )}
-            </div>
+            <>
+              <div className="text-muted-foreground text-[15px] leading-relaxed whitespace-pre-line">
+                {briefing}
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-border">
+                <span className="text-muted-foreground text-xs">
+                  {lastGenerated && `Generated ${lastGenerated}`}
+                </span>
+                <button
+                  onClick={() => generateBriefing(true)}
+                  className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors"
+                >
+                  <RefreshCw size={12} />
+                  Regenerate
+                </button>
+              </div>
+            </>
           )}
         </div>
       )}
