@@ -109,6 +109,25 @@ const AppNav = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            {user ? (
+              <button
+                onClick={() => signOut()}
+                className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground rounded-sm transition-colors"
+                title="Sign out"
+              >
+                <LogOut size={14} />
+                <span className="hidden sm:inline">Sign Out</span>
+              </button>
+            ) : (
+              <Link
+                to="/login"
+                className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground rounded-sm transition-colors"
+              >
+                <LogIn size={14} />
+                <span className="hidden sm:inline">Sign In</span>
+              </Link>
+            )}
+
             <button
               onClick={toggleGuideMode}
               className={cn(
