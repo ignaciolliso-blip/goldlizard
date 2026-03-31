@@ -37,7 +37,7 @@ function buildDashboardDataString(props: NarratorPanelProps): string {
 
   const sorted = [...gdiResult.variableDetails].sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution));
   const varLines = sorted.map(v =>
-    `${v.name}: z=${v.adjustedZScore.toFixed(2)}, weight=${(v.weight * 100).toFixed(1)}%, contribution=${v.contribution.toFixed(3)}, direction=${v.direction}`
+    `${v.name}: z=${v.adjustedZScore.toFixed(2)}, weight=${(v.weight * 100).toFixed(1)}%, contribution=${v.contribution.toFixed(3)}`
   ).join('\n');
 
   const gold30d = goldSpot.length >= 22
