@@ -35,7 +35,7 @@ const UraniumSignal = () => {
 
         setAnchorResult(computeUraniumAnchor(data.prices));
         setForcesResult(computeUraniumForces(data.supplyDemand));
-        setLeverageResult(computeUraniumLeverage(data.prices, data.minerPrices));
+        setLeverageResult(computeUraniumLeverage(data.prices, data.minerPrices, data.valuations));
       } catch (e: any) {
         setError(e.message || 'Failed to load uranium data');
       } finally {

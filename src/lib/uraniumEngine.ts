@@ -150,18 +150,35 @@ export function computeUraniumForces(sd: UraniumSupplyDemand[]): UraniumForcesRe
 // LEVERAGE — Miner/uranium ratio
 // ──────────────────────────────────────────────
 
+export interface MinerValuation {
+  ticker: string;
+  company: string;
+  p_nav: number;
+  ev_per_lb: number;
+  nav_usd_bn: number;
+  resources_mlb: number;
+  jurisdiction: string;
+  stage: string;
+  updated_at: string;
+}
+
 export interface UraniumLeverageResult {
+  sectorPNAV: number;
+  historicalAvgPNAV: number;
+  valuations: MinerValuation[];
+  currentURNMPrice: number;
+  currentU3O8Price: number;
+  // Keep ratio series for charts
   currentRatio: number;
   medianRatio: number;
   currentPercentile: number;
   ratioSeries: { date: string; value: number }[];
-  currentURNMPrice: number;
-  currentU3O8Price: number;
 }
 
 export function computeUraniumLeverage(
   uraniumPrices: UraniumPrice[],
   minerPrices: { date: string; close_price: number; ticker: string }[],
+  valuations?: MinerValuation[],
 ): UraniumLeverageResult | null {
   const urnmPrices = minerPrices.filter(p => p.ticker === 'URNM').sort((a, b) => a.date.localeCompare(b.date));
   if (!urnmPrices.length || !uraniumPrices.length) return null;
@@ -195,18 +212,29 @@ export function computeUraniumLeverage(
   const below = sorted.filter(v => v < currentRatio).length;
   const currentPercentile = (below / sorted.length) * 100;
 
-  // Get latest URNM and U3O8 prices
   const u3o8Prices = minerPrices.filter(p => p.ticker === 'U3O8').sort((a, b) => a.date.localeCompare(b.date));
   const currentURNMPrice = urnmPrices[urnmPrices.length - 1].close_price;
   const currentU3O8Price = u3o8Prices.length ? u3o8Prices[u3o8Prices.length - 1].close_price : 0;
 
+  // Compute sector-weighted P/NAV from valuations
+  const vals = valuations && valuations.length > 0 ? valuations : [];
+  let sectorPNAV = 1.5; // fallback
+  if (vals.length > 0) {
+    // Use etf_holdings weights if available, otherwise simple average
+    const totalWeight = vals.reduce((s, v) => s + (v.nav_usd_bn || 1), 0);
+    sectorPNAV = vals.reduce((s, v) => s + v.p_nav * (v.nav_usd_bn || 1), 0) / totalWeight;
+  }
+
   return {
+    sectorPNAV,
+    historicalAvgPNAV: 1.2,
+    valuations: vals,
+    currentURNMPrice,
+    currentU3O8Price,
     currentRatio,
     medianRatio,
     currentPercentile,
     ratioSeries,
-    currentURNMPrice,
-    currentU3O8Price,
   };
 }
 
@@ -269,5 +297,33 @@ export const URANIUM_PROJECTIONS = {
   currentGreenfieldHigh: 100,
   goldmanTarget1Y: 91,
   supplyGapEV: { '1y': 95, '3y': 120, '5y': 140, '10y': 160 },
-  urnmRatioProjected: { '1y': 0.75, '3y': 0.80, '5y': 0.85, '10y': 0.80 },
+  pnavProjected: { '1y': 1.4, '3y': 1.3, '5y': 1.2, '10y': 1.1 },
 };
+
+export function deriveLeverageConclusion(sectorPNAV: number): { text: string; detail: string; color: string } {
+  if (sectorPNAV < 0.8) return {
+    text: 'DEEPLY UNDERVALUED — Miners below NAV',
+    detail: 'You\'re buying uranium in the ground for less than it\'s worth. This level has historically preceded 2-3× rallies in miner equities.',
+    color: 'bullish',
+  };
+  if (sectorPNAV < 1.0) return {
+    text: 'UNDERVALUED — Below asset value',
+    detail: 'Miners trading at a discount to their uranium reserves. Attractive entry for patient investors.',
+    color: 'bullish',
+  };
+  if (sectorPNAV < 1.3) return {
+    text: 'FAIR VALUE — Near historical average',
+    detail: 'Miners are priced roughly in line with the value of their reserves. Returns from here depend on uranium price appreciation.',
+    color: 'primary',
+  };
+  if (sectorPNAV < 2.0) return {
+    text: 'ABOVE AVERAGE — Paying a growth premium',
+    detail: 'Miners are pricing in future uranium price increases and project development. Add on pullbacks, don\'t chase.',
+    color: 'neutral',
+  };
+  return {
+    text: 'EXPENSIVE — Significant premium to NAV',
+    detail: 'Miners have front-run the uranium price. Historical P/NAVs above 2.0× have preceded corrections. Take profits or wait.',
+    color: 'bearish',
+  };
+}

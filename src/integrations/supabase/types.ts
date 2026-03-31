@@ -140,6 +140,45 @@ export type Database = {
         }
         Relationships: []
       }
+      miner_valuations: {
+        Row: {
+          company: string
+          ev_per_lb: number
+          id: number
+          jurisdiction: string
+          nav_usd_bn: number
+          p_nav: number
+          resources_mlb: number
+          stage: string
+          ticker: string
+          updated_at: string
+        }
+        Insert: {
+          company: string
+          ev_per_lb?: number
+          id?: never
+          jurisdiction?: string
+          nav_usd_bn?: number
+          p_nav?: number
+          resources_mlb?: number
+          stage?: string
+          ticker: string
+          updated_at?: string
+        }
+        Update: {
+          company?: string
+          ev_per_lb?: number
+          id?: never
+          jurisdiction?: string
+          nav_usd_bn?: number
+          p_nav?: number
+          resources_mlb?: number
+          stage?: string
+          ticker?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       narrator_cache: {
         Row: {
           briefing_text: string

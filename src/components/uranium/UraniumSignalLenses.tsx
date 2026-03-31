@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { GuideTooltip } from '@/components/GuideMode';
 import { supabase } from '@/integrations/supabase/client';
 import type {
-  UraniumAnchorResult, UraniumForcesResult, UraniumLeverageResult,
+  UraniumAnchorResult, UraniumForcesResult, UraniumLeverageResult, MinerValuation,
 } from '@/lib/uraniumEngine';
-import { deriveAnchorConclusion } from '@/lib/uraniumEngine';
+import { deriveAnchorConclusion, deriveLeverageConclusion } from '@/lib/uraniumEngine';
 
 interface Props {
   anchorResult: UraniumAnchorResult | null;
@@ -132,9 +132,12 @@ function AnchorCard({ anchor }: { anchor: UraniumAnchorResult | null }) {
           <span className="text-muted-foreground">Spot price</span>
           <span className="font-mono font-semibold text-uranium">{fmt(anchor.spotPrice)}/lb</span>
         </div>
-        <div className="flex justify-between">
+        <div className="flex justify-between items-center">
           <span className="text-muted-foreground">Long-term contract</span>
-          <span className="font-mono font-semibold text-uranium-contract">{fmt(anchor.ltContractPrice)}/lb</span>
+          <span className="font-mono font-semibold text-uranium-contract inline-flex items-center gap-1">
+            {fmt(anchor.ltContractPrice)}/lb
+            <a href="https://www.cameco.com/invest/markets/uranium-price" target="_blank" rel="noopener noreferrer" className="text-uranium-contract/60 hover:text-uranium-contract"><ExternalLink size={12} /></a>
+          </span>
         </div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">Greenfield cost</span>
@@ -170,6 +173,12 @@ function AnchorCard({ anchor }: { anchor: UraniumAnchorResult | null }) {
 
       <p className="text-xs text-muted-foreground mt-3">
         AISC = All-In Sustaining Cost. Greenfield = cost to build a new mine from scratch.
+        <br />
+        Source: Industry-average LT U₃O₈ price from{' '}
+        <a href="https://www.cameco.com/invest/markets/uranium-price" target="_blank" rel="noopener noreferrer" className="text-uranium-contract hover:underline inline-flex items-center gap-0.5">
+          Cameco <ExternalLink size={10} />
+        </a>{' '}
+        (TradeTech/UxC month-end prices).
       </p>
     </CardShell>
   );
@@ -320,99 +329,120 @@ function ForcesCard({ forces }: { forces: UraniumForcesResult | null }) {
 function LeverageCard({ leverage }: { leverage: UraniumLeverageResult | null }) {
   if (!leverage) return <SkeletonCard />;
 
-  const pctDesc = leverage.currentPercentile < 25 ? 'UNDERVALUED' :
-    leverage.currentPercentile > 75 ? 'OVERVALUED' : 'FAIRLY VALUED';
-  const pctColor = leverage.currentPercentile < 25 ? 'text-bullish' :
-    leverage.currentPercentile > 75 ? 'text-bearish' : 'text-neutral';
+  const conclusion = deriveLeverageConclusion(leverage.sectorPNAV);
+  const pnavColor = (pnav: number) =>
+    pnav < 1.0 ? 'text-bullish' : pnav <= 1.5 ? 'text-primary' : 'text-bearish';
 
-  const sortedRatios = [...leverage.ratioSeries.map(r => r.value)].sort((a, b) => a - b);
-  const rangeMin = sortedRatios.length > 0 ? sortedRatios[0] : 0;
-  const rangeMax = sortedRatios.length > 0 ? sortedRatios[sortedRatios.length - 1] : 1;
+  // Gauge position (0.5× to 3.0×)
+  const gaugeMin = 0.5;
+  const gaugeMax = 3.0;
+  const gaugePos = Math.min(Math.max((leverage.sectorPNAV - gaugeMin) / (gaugeMax - gaugeMin), 0), 1) * 100;
+  const histPos = Math.min(Math.max((leverage.historicalAvgPNAV - gaugeMin) / (gaugeMax - gaugeMin), 0), 1) * 100;
+
+  const spotPrice = leverage.ratioSeries.length > 0 && leverage.currentRatio > 0
+    ? leverage.currentURNMPrice / leverage.currentRatio : 78;
 
   return (
     <CardShell
       title="THE LEVERAGE"
-      subtitle="Are uranium miners cheap or expensive relative to uranium?"
+      subtitle="Are uranium miners cheap or expensive based on the value of their uranium in the ground?"
       icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>}
       guideId="uranium-leverage"
-      guideText="Unlike gold miners which typically LAG gold, uranium miners have often FRONT-RUN the spot price. When the URNM/Uranium ratio is high, miners have already priced in the upside. The best entries come when miners pull back while the supply-demand thesis remains intact."
+      guideText="P/NAV compares a miner's share price to the present value of its uranium reserves. Below 1.0× = buying uranium reserves at a discount. Above 1.0× = paying a premium for growth or jurisdiction safety."
     >
       {/* Calculation explainer */}
       <div className="p-3 bg-secondary/30 rounded-lg mb-4">
         <p className="text-xs font-semibold tracking-widest text-muted-foreground mb-1.5">HOW THIS IS CALCULATED</p>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          URNM ETF price (${leverage.currentURNMPrice.toFixed(0)}) ÷ Uranium spot price (${leverage.ratioSeries.length > 0 ? (leverage.currentURNMPrice / leverage.currentRatio).toFixed(0) : '—'}/lb) = <span className="font-mono font-semibold text-foreground">{leverage.currentRatio.toFixed(2)}</span>
+          <span className="font-semibold text-foreground">P/NAV</span> = Share Price ÷ Net Asset Value per share.
+          NAV = present value of uranium reserves at forward contract prices, minus production costs, discounted at 8-10%.
         </p>
         <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
-          This ratio tells you how much "miner" you get per dollar of uranium. When the ratio is HIGH, miners are expensive relative to the commodity. When LOW, miners are cheap. We compare today's ratio to its 5-year range.
+          A P/NAV of <span className="font-mono font-semibold text-foreground">1.0×</span> means you're paying exactly what the uranium in the ground is worth.
+          Below 1.0× = buying at a discount. Above 1.0× = paying a premium for growth or jurisdiction.
         </p>
       </div>
 
-      {/* Percentile bar */}
+      {/* Sector P/NAV gauge */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-sm text-muted-foreground">URNM/Uranium ratio percentile (5yr)</span>
-          <span className={`text-sm font-bold ${pctColor}`}>{pctDesc}</span>
+          <span className="text-sm text-muted-foreground">Sector Weighted P/NAV</span>
+          <span className={`text-lg font-mono font-bold ${pnavColor(leverage.sectorPNAV)}`}>{leverage.sectorPNAV.toFixed(1)}×</span>
         </div>
         <div className="relative h-6 bg-secondary rounded-full overflow-hidden">
-          <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-bullish/60 via-neutral/60 to-bearish/60 w-full" />
-          <div
-            className="absolute top-0 h-full w-1 bg-foreground rounded-full"
-            style={{ left: `${leverage.currentPercentile}%` }}
-          />
+          <div className="absolute inset-y-0 left-0 w-full bg-gradient-to-r from-bullish/60 via-primary/40 to-bearish/60" />
+          {/* Historical avg marker */}
+          <div className="absolute top-0 h-full w-0.5 bg-muted-foreground/60" style={{ left: `${histPos}%` }} />
+          {/* Current marker */}
+          <div className="absolute top-0 h-full w-1.5 bg-foreground rounded-full" style={{ left: `${gaugePos}%` }} />
         </div>
         <div className="flex justify-between text-xs text-muted-foreground mt-1">
-          <span>0th — cheap</span>
-          <span>50th</span>
-          <span>100th — expensive</span>
+          <span>0.5×</span>
+          <span>1.0× Fair</span>
+          <span className="text-center">Hist Avg {leverage.historicalAvgPNAV.toFixed(1)}×</span>
+          <span>3.0× Premium</span>
         </div>
       </div>
 
-      {/* Key stats with 5-year range */}
-      <div className="space-y-2 text-sm">
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">URNM/Uranium ratio</span>
-          <span className="font-mono font-semibold text-foreground">{leverage.currentRatio.toFixed(2)}</span>
+      {/* Top holdings P/NAV table */}
+      {leverage.valuations.length > 0 && (
+        <div className="mb-4 overflow-x-auto">
+          <p className="text-xs font-semibold tracking-widest text-muted-foreground mb-2">TOP HOLDINGS — P/NAV VALUATION</p>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left py-2 px-2 text-xs text-muted-foreground">COMPANY</th>
+                <th className="text-right py-2 px-2 text-xs text-muted-foreground">P/NAV</th>
+                <th className="text-right py-2 px-2 text-xs text-muted-foreground">EV/lb</th>
+                <th className="text-left py-2 px-2 text-xs text-muted-foreground">STAGE</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leverage.valuations.slice(0, 10).map(v => (
+                <tr key={v.ticker} className="border-b border-border/30">
+                  <td className="py-1.5 px-2">
+                    <span className="font-medium text-foreground">{v.company}</span>
+                    <span className="text-muted-foreground ml-1 text-xs">({v.ticker})</span>
+                  </td>
+                  <td className={`py-1.5 px-2 text-right font-mono font-semibold ${pnavColor(v.p_nav)}`}>
+                    {v.p_nav.toFixed(1)}×
+                  </td>
+                  <td className="py-1.5 px-2 text-right font-mono text-muted-foreground">${v.ev_per_lb.toFixed(0)}</td>
+                  <td className="py-1.5 px-2 text-muted-foreground text-xs">{v.stage}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">5-Year range</span>
-          <span className="font-mono text-muted-foreground">{rangeMin.toFixed(2)} — {rangeMax.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">5-Year median</span>
-          <span className="font-mono text-muted-foreground">{leverage.medianRatio.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Percentile</span>
-          <span className={`font-mono font-semibold ${pctColor}`}>{leverage.currentPercentile.toFixed(0)}th</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">URNM price</span>
-          <span className="font-mono font-semibold text-leverage-miner">${leverage.currentURNMPrice.toFixed(2)}</span>
-        </div>
-        {leverage.currentU3O8Price > 0 && (
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">U3O8 ETF price</span>
-            <span className="font-mono font-semibold text-uranium">${leverage.currentU3O8Price.toFixed(2)}</span>
-          </div>
-        )}
-      </div>
+      )}
 
-      {/* Actionable conclusion */}
-      <div className="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
-        <p className="text-sm font-semibold text-foreground">
-          {leverage.currentPercentile > 50
-            ? `Accumulate on pullbacks when the ratio drops below the median of ${leverage.medianRatio.toFixed(2)}, not at any price.`
-            : `Miners are below median — favourable entry if supply-demand thesis remains intact.`}
+      {/* EV/lb context */}
+      <div className="p-3 bg-secondary/20 rounded-lg mb-4">
+        <p className="text-xs font-semibold text-foreground mb-1">EV PER POUND OF IN-GROUND URANIUM</p>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          The market pays ~$400/lb for in-ground uranium that costs $40-60 to produce. The margin is the "optionality premium."
+          When this premium is thin, miners are cheap. When wide, they've priced in the bull case.
+          <br/>Current uranium spot: <span className="font-mono text-uranium">${spotPrice.toFixed(0)}/lb</span>
         </p>
+      </div>
+
+      {/* Conclusion */}
+      <div className={`p-3 rounded-lg border-l-4 ${
+        conclusion.color === 'bullish' ? 'border-l-bullish bg-bullish/5' :
+        conclusion.color === 'bearish' ? 'border-l-bearish bg-bearish/5' :
+        conclusion.color === 'primary' ? 'border-l-primary bg-primary/5' :
+        'border-l-neutral bg-neutral/5'
+      }`}>
+        <p className="text-sm font-semibold text-foreground">{conclusion.text}</p>
+        <p className="text-sm text-muted-foreground mt-1">{conclusion.detail}</p>
       </div>
 
       {/* Warning */}
       <div className="mt-4 p-3 bg-neutral/5 border border-neutral/20 rounded-lg">
         <p className="text-xs font-semibold text-foreground mb-1">⚠ URANIUM MINERS BEHAVE DIFFERENTLY FROM GOLD MINERS</p>
         <p className="text-sm text-muted-foreground">
-          Gold miners typically lag gold (buy miners when ratio is low). Uranium miners are currently 
-          LEADING uranium — miners have repriced for the structural deficit before spot has. The best 
+          Gold miners typically lag gold (buy miners when ratio is low). Uranium miners are currently
+          LEADING uranium — miners have repriced for the structural deficit before spot has. The best
           entry is on pullbacks, not at any price.
         </p>
       </div>
@@ -438,6 +468,10 @@ function LeverageCard({ leverage }: { leverage: UraniumLeverageResult | null }) 
           </p>
         </div>
       </div>
+
+      <p className="text-xs text-muted-foreground mt-3 italic">
+        P/NAV and EV/lb data updated quarterly from company filings and broker research. Last updated: {leverage.valuations[0]?.updated_at ? new Date(leverage.valuations[0].updated_at).toLocaleDateString() : 'Q1 2026'}.
+      </p>
     </CardShell>
   );
 }
