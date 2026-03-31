@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate, Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useGuideMode } from '@/components/GuideMode';
-import { Menu, X } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { Menu, X, LogIn, LogOut } from 'lucide-react';
 
 // Asset definitions with their base routes
 const assets = [
