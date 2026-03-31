@@ -22,7 +22,19 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 
   try {
-    const { series_id, observation_start, action, cache_key } = await req.json();
+    const { series_id, observation_start, action, cache_key, observations: goldObs } = await req.json();
+
+    // Cache gold data from frontend (service role write)
+    if (action === 'cache_gold' && cache_key && goldObs) {
+      await supabase.from('data_cache').upsert({
+        series_id: cache_key,
+        data_json: goldObs,
+        last_fetched: new Date().toISOString(),
+      });
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Gold price proxy
     if (action === 'gold_price') {
