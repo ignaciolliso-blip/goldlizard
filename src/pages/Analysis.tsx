@@ -7,6 +7,7 @@ import { fetchScenarioTargets } from '@/lib/scenarioFetcher';
 import { computeScenarioProbabilities, type ScenarioConfig, type ScenarioProbabilities } from '@/lib/scenarioEngine';
 import { computeAnchor, type AnchorResult } from '@/lib/anchorEngine';
 import { computeLeverage, type LeverageResult } from '@/lib/leverageEngine';
+import { fetchGoldMinerValuations, fetchGoldPNAVHistory } from '@/lib/goldDataFetcher';
 import LoadingProgress from '@/components/LoadingProgress';
 import AnchorChartPanel from '@/components/analysis/AnchorChartPanel';
 import ForcesPanel from '@/components/analysis/ForcesPanel';
