@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { GuideTooltip } from '@/components/GuideMode';
 import { supabase } from '@/integrations/supabase/client';
 import type {
-  UraniumAnchorResult, UraniumForcesResult, UraniumLeverageResult,
+  UraniumAnchorResult, UraniumForcesResult, UraniumLeverageResult, MinerValuation,
 } from '@/lib/uraniumEngine';
-import { deriveAnchorConclusion } from '@/lib/uraniumEngine';
+import { deriveAnchorConclusion, deriveLeverageConclusion } from '@/lib/uraniumEngine';
 
 interface Props {
   anchorResult: UraniumAnchorResult | null;
