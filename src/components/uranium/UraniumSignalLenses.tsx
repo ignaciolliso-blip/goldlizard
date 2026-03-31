@@ -132,9 +132,12 @@ function AnchorCard({ anchor }: { anchor: UraniumAnchorResult | null }) {
           <span className="text-muted-foreground">Spot price</span>
           <span className="font-mono font-semibold text-uranium">{fmt(anchor.spotPrice)}/lb</span>
         </div>
-        <div className="flex justify-between">
+        <div className="flex justify-between items-center">
           <span className="text-muted-foreground">Long-term contract</span>
-          <span className="font-mono font-semibold text-uranium-contract">{fmt(anchor.ltContractPrice)}/lb</span>
+          <span className="font-mono font-semibold text-uranium-contract inline-flex items-center gap-1">
+            {fmt(anchor.ltContractPrice)}/lb
+            <a href="https://www.cameco.com/invest/markets/uranium-price" target="_blank" rel="noopener noreferrer" className="text-uranium-contract/60 hover:text-uranium-contract"><ExternalLink size={12} /></a>
+          </span>
         </div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">Greenfield cost</span>
