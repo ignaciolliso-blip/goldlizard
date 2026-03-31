@@ -47,16 +47,15 @@ function buildDashboardDataString(props: NarratorPanelProps): string {
   let text = `Gold: $${currentGoldPrice.toFixed(0)} (30d: ${gold30d}%)\nGDI: ${currentGDI.toFixed(2)} (${weightMode} weights)\n\nComponents:\n${varLines}`;
 
   if (probs) {
-    const ev = probs.scenarios.reduce((sum, s) => sum + s.probability * s.target, 0);
-    text += `\n\nScenario EV: $${ev.toFixed(0)}`;
+    text += `\n\nScenario probs: bull=${(probs.bull * 100).toFixed(0)}%, base=${(probs.base * 100).toFixed(0)}%, bear=${(probs.bear * 100).toFixed(0)}%`;
   }
 
   if (anchorResult) {
-    text += `\n\nAnchor: Gold/M2 ratio ${anchorResult.currentRatio.toFixed(4)}, parity $${anchorResult.parityPrice.toFixed(0)}, divergence ${anchorResult.divergencePct.toFixed(1)}%`;
+    text += `\n\nAnchor: ${anchorResult.pctOfInvestableParity.toFixed(1)}% of investable parity, zone=${anchorResult.zoneLabel}`;
   }
 
   if (leverageResult && currentGDXPrice) {
-    text += `\nLeverage: GDX/Gold ratio ${leverageResult.currentRatio.toFixed(4)}, percentile ${leverageResult.percentile.toFixed(0)}%`;
+    text += `\nLeverage: GDX/Gold ratio ${leverageResult.currentGDXGoldRatio.toFixed(4)}, percentile ${leverageResult.currentPercentile.toFixed(0)}%`;
   }
 
   return text;

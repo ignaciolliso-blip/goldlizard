@@ -6,7 +6,7 @@ import type { Observation } from '@/lib/dataFetcher';
 import { VARIABLE_METADATA } from '@/lib/variableMetadata';
 
 interface VariableExplanationProps {
-  variable: { id: string; name: string; adjustedZScore: number; contribution: number; weight: number; direction: string };
+  variable: { id: string; name: string; adjustedZScore: number; contribution: number; weight: number };
   gdiResult: GDIResult;
   goldSpot: Observation[];
   stats: { mean: number; std: number; percentile: number } | null;
