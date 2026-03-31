@@ -80,6 +80,42 @@ export type Database = {
         }
         Relationships: []
       }
+      etf_holdings: {
+        Row: {
+          company: string
+          etf_ticker: string
+          id: number
+          jurisdiction: string
+          market_cap_usd: string
+          stage: string
+          ticker: string
+          updated_at: string
+          weight_pct: number
+        }
+        Insert: {
+          company: string
+          etf_ticker?: string
+          id?: never
+          jurisdiction?: string
+          market_cap_usd?: string
+          stage?: string
+          ticker: string
+          updated_at?: string
+          weight_pct?: number
+        }
+        Update: {
+          company?: string
+          etf_ticker?: string
+          id?: never
+          jurisdiction?: string
+          market_cap_usd?: string
+          stage?: string
+          ticker?: string
+          updated_at?: string
+          weight_pct?: number
+        }
+        Relationships: []
+      }
       miner_prices: {
         Row: {
           close_price: number
