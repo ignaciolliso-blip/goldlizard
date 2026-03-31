@@ -8,6 +8,7 @@ import { fetchScenarioTargets } from '@/lib/scenarioFetcher';
 import { computeScenarioProbabilities, computeForwardGDI, computeHorizonProbabilities, type ScenarioConfig } from '@/lib/scenarioEngine';
 import { computeAnchor, type AnchorResult } from '@/lib/anchorEngine';
 import { computeLeverage, type LeverageResult } from '@/lib/leverageEngine';
+import { fetchGoldMinerValuations, fetchGoldPNAVHistory } from '@/lib/goldDataFetcher';
 import { VARIABLE_CONFIG, DEFAULT_PROJECTIONS, type ProjectionRow } from '@/lib/constants';
 import LoadingProgress from '@/components/LoadingProgress';
 import VariableDrillDowns from '@/components/evidence/VariableDrillDowns';
