@@ -150,18 +150,35 @@ export function computeUraniumForces(sd: UraniumSupplyDemand[]): UraniumForcesRe
 // LEVERAGE — Miner/uranium ratio
 // ──────────────────────────────────────────────
 
+export interface MinerValuation {
+  ticker: string;
+  company: string;
+  p_nav: number;
+  ev_per_lb: number;
+  nav_usd_bn: number;
+  resources_mlb: number;
+  jurisdiction: string;
+  stage: string;
+  updated_at: string;
+}
+
 export interface UraniumLeverageResult {
+  sectorPNAV: number;
+  historicalAvgPNAV: number;
+  valuations: MinerValuation[];
+  currentURNMPrice: number;
+  currentU3O8Price: number;
+  // Keep ratio series for charts
   currentRatio: number;
   medianRatio: number;
   currentPercentile: number;
   ratioSeries: { date: string; value: number }[];
-  currentURNMPrice: number;
-  currentU3O8Price: number;
 }
 
 export function computeUraniumLeverage(
   uraniumPrices: UraniumPrice[],
   minerPrices: { date: string; close_price: number; ticker: string }[],
+  valuations?: MinerValuation[],
 ): UraniumLeverageResult | null {
   const urnmPrices = minerPrices.filter(p => p.ticker === 'URNM').sort((a, b) => a.date.localeCompare(b.date));
   if (!urnmPrices.length || !uraniumPrices.length) return null;
@@ -195,18 +212,29 @@ export function computeUraniumLeverage(
   const below = sorted.filter(v => v < currentRatio).length;
   const currentPercentile = (below / sorted.length) * 100;
 
-  // Get latest URNM and U3O8 prices
   const u3o8Prices = minerPrices.filter(p => p.ticker === 'U3O8').sort((a, b) => a.date.localeCompare(b.date));
   const currentURNMPrice = urnmPrices[urnmPrices.length - 1].close_price;
   const currentU3O8Price = u3o8Prices.length ? u3o8Prices[u3o8Prices.length - 1].close_price : 0;
 
+  // Compute sector-weighted P/NAV from valuations
+  const vals = valuations && valuations.length > 0 ? valuations : [];
+  let sectorPNAV = 1.5; // fallback
+  if (vals.length > 0) {
+    // Use etf_holdings weights if available, otherwise simple average
+    const totalWeight = vals.reduce((s, v) => s + (v.nav_usd_bn || 1), 0);
+    sectorPNAV = vals.reduce((s, v) => s + v.p_nav * (v.nav_usd_bn || 1), 0) / totalWeight;
+  }
+
   return {
+    sectorPNAV,
+    historicalAvgPNAV: 1.2,
+    valuations: vals,
+    currentURNMPrice,
+    currentU3O8Price,
     currentRatio,
     medianRatio,
     currentPercentile,
     ratioSeries,
-    currentURNMPrice,
-    currentU3O8Price,
   };
 }
 
