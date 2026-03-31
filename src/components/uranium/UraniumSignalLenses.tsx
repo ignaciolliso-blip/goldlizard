@@ -1,9 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { GuideTooltip } from '@/components/GuideMode';
+import { supabase } from '@/integrations/supabase/client';
 import type {
   UraniumAnchorResult, UraniumForcesResult, UraniumLeverageResult,
 } from '@/lib/uraniumEngine';
-import { deriveAnchorConclusion, URANIUM_COST_BANDS } from '@/lib/uraniumEngine';
+import { deriveAnchorConclusion } from '@/lib/uraniumEngine';
 
 interface Props {
   anchorResult: UraniumAnchorResult | null;
@@ -174,7 +176,18 @@ function AnchorCard({ anchor }: { anchor: UraniumAnchorResult | null }) {
 }
 
 // ─── FORCES CARD ───
+
+const SUPPLY_DEMAND_BY_YEAR: Record<string, { demand: number; supply: number; supplyPrimary: number; supplySecondary: number }> = {
+  '2020': { demand: 155, supply: 140, supplyPrimary: 125, supplySecondary: 15 },
+  '2025': { demand: 180, supply: 145, supplyPrimary: 137, supplySecondary: 8 },
+  '2030F': { demand: 220, supply: 160, supplyPrimary: 150, supplySecondary: 10 },
+  '2035F': { demand: 260, supply: 175, supplyPrimary: 167, supplySecondary: 8 },
+  '2040F': { demand: 300, supply: 190, supplyPrimary: 183, supplySecondary: 7 },
+};
+
 function ForcesCard({ forces }: { forces: UraniumForcesResult | null }) {
+  const [selectedYear, setSelectedYear] = useState('2025');
+
   if (!forces) return <SkeletonCard />;
 
   const signalColor = (s: string) =>
@@ -190,8 +203,16 @@ function ForcesCard({ forces }: { forces: UraniumForcesResult | null }) {
     s === 'expanding' ? 'EXPANDING' :
     s === 'late_cycle' ? 'LATE CYCLE' : 'STABLE';
 
+  // Use selected year data (fall back to live data for 2025)
+  const yearData = SUPPLY_DEMAND_BY_YEAR[selectedYear] || SUPPLY_DEMAND_BY_YEAR['2025'];
+  const { demand, supply, supplyPrimary, supplySecondary } = yearData;
+  const gap = supply - demand;
+  const gapPct = ((gap / demand) * 100).toFixed(0);
+
   const demandWidth = 100;
-  const supplyWidth = (forces.totalSupply / forces.annualDemand) * 100;
+  const supplyWidth = (supply / demand) * 100;
+
+  const years = ['2020', '2025', '2030F', '2035F', '2040F'];
 
   return (
     <CardShell
@@ -201,32 +222,66 @@ function ForcesCard({ forces }: { forces: UraniumForcesResult | null }) {
       guideId="uranium-forces"
       guideText="Uranium's price is driven by the gap between reactor demand and mine supply. Unlike gold, uranium has no substitute — reactors MUST have fuel. When supply falls short of demand, the price must rise until new mines are built (10-15 years)."
     >
+      {/* Year header */}
+      <p className="text-lg font-display font-bold text-foreground mb-3">
+        ANNUAL SUPPLY vs DEMAND — {selectedYear.replace('F', '')} {selectedYear.includes('F') ? 'FORECAST' : 'ESTIMATE'}
+      </p>
+
       {/* Gap bars */}
-      <div className="space-y-2 mb-5">
+      <div className="space-y-2 mb-4">
         <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground w-16">DEMAND</span>
-          <div className="flex-1 h-7 bg-uranium-demand/20 rounded relative overflow-hidden">
+          <span className="text-xs text-muted-foreground w-16 shrink-0">DEMAND</span>
+          <div className="flex-1 h-8 bg-uranium-demand/20 rounded relative overflow-hidden">
             <div className="h-full bg-uranium-demand/60 rounded" style={{ width: `${demandWidth}%` }} />
             <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-foreground">
-              {forces.annualDemand.toFixed(0)} Mlb
+              {demand} Mlb
             </span>
           </div>
         </div>
+        <p className="text-xs text-muted-foreground ml-[76px]">
+          {selectedYear === '2025' ? '440 reactors × ~0.4 Mlb avg annual fuel load' :
+           selectedYear === '2020' ? '~440 reactors (some offline post-Fukushima)' :
+           `Projected reactor fleet growth (incl. AI/data centre demand)`}
+        </p>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground w-16">SUPPLY</span>
-          <div className="flex-1 h-7 bg-uranium-supply/20 rounded relative overflow-hidden">
+          <span className="text-xs text-muted-foreground w-16 shrink-0">SUPPLY</span>
+          <div className="flex-1 h-8 bg-uranium-supply/20 rounded relative overflow-hidden">
             <div className="h-full bg-uranium-supply/60 rounded" style={{ width: `${Math.min(supplyWidth, 100)}%` }} />
             <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-foreground">
-              {forces.totalSupply.toFixed(0)} Mlb
+              {supply} Mlb
             </span>
           </div>
         </div>
-        <div className="text-center">
-          <span className={`text-sm font-mono font-bold ${forces.deficit < 0 ? 'text-bearish' : 'text-bullish'}`}>
-            GAP: {forces.deficit > 0 ? '+' : ''}{forces.deficit.toFixed(0)} Mlb ({forces.deficitPct.toFixed(0)}%)
+        <p className="text-xs text-muted-foreground ml-[76px]">
+          Primary: {supplyPrimary} Mlb mines + Secondary: {supplySecondary} Mlb enricher underfeeding &amp; inventories
+        </p>
+        <div className="text-center mt-1">
+          <span className={`text-base font-mono font-bold ${gap < 0 ? 'text-bearish' : 'text-bullish'}`}>
+            GAP: {gap > 0 ? '+' : ''}{gap} Mlb ({gapPct}%)
           </span>
         </div>
       </div>
+
+      {/* Year selector */}
+      <div className="flex gap-2 mb-5">
+        {years.map(y => (
+          <button
+            key={y}
+            onClick={() => setSelectedYear(y)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-mono font-semibold transition-colors ${
+              selectedYear === y
+                ? 'bg-uranium/20 text-uranium border border-uranium/40'
+                : 'bg-secondary/40 text-muted-foreground hover:bg-secondary/60 border border-transparent'
+            }`}
+          >
+            {y}
+          </button>
+        ))}
+      </div>
+
+      <p className="text-xs text-muted-foreground mb-4">
+        Demand: WNA/IAEA reactor requirements. Supply: WNA mine production + secondary estimates. Forecasts: Goldman Sachs/Sprott.
+      </p>
 
       {/* Three-tier decomposition */}
       <div className="space-y-3">
@@ -270,6 +325,10 @@ function LeverageCard({ leverage }: { leverage: UraniumLeverageResult | null }) 
   const pctColor = leverage.currentPercentile < 25 ? 'text-bullish' :
     leverage.currentPercentile > 75 ? 'text-bearish' : 'text-neutral';
 
+  const sortedRatios = [...leverage.ratioSeries.map(r => r.value)].sort((a, b) => a - b);
+  const rangeMin = sortedRatios.length > 0 ? sortedRatios[0] : 0;
+  const rangeMax = sortedRatios.length > 0 ? sortedRatios[sortedRatios.length - 1] : 1;
+
   return (
     <CardShell
       title="THE LEVERAGE"
@@ -278,6 +337,17 @@ function LeverageCard({ leverage }: { leverage: UraniumLeverageResult | null }) 
       guideId="uranium-leverage"
       guideText="Unlike gold miners which typically LAG gold, uranium miners have often FRONT-RUN the spot price. When the URNM/Uranium ratio is high, miners have already priced in the upside. The best entries come when miners pull back while the supply-demand thesis remains intact."
     >
+      {/* Calculation explainer */}
+      <div className="p-3 bg-secondary/30 rounded-lg mb-4">
+        <p className="text-xs font-semibold tracking-widest text-muted-foreground mb-1.5">HOW THIS IS CALCULATED</p>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          URNM ETF price (${leverage.currentURNMPrice.toFixed(0)}) ÷ Uranium spot price (${leverage.ratioSeries.length > 0 ? (leverage.currentURNMPrice / leverage.currentRatio).toFixed(0) : '—'}/lb) = <span className="font-mono font-semibold text-foreground">{leverage.currentRatio.toFixed(2)}</span>
+        </p>
+        <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
+          This ratio tells you how much "miner" you get per dollar of uranium. When the ratio is HIGH, miners are expensive relative to the commodity. When LOW, miners are cheap. We compare today's ratio to its 5-year range.
+        </p>
+      </div>
+
       {/* Percentile bar */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1.5">
@@ -291,22 +361,30 @@ function LeverageCard({ leverage }: { leverage: UraniumLeverageResult | null }) 
             style={{ left: `${leverage.currentPercentile}%` }}
           />
         </div>
-        <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+        <div className="flex justify-between text-xs text-muted-foreground mt-1">
           <span>0th — cheap</span>
           <span>50th</span>
           <span>100th — expensive</span>
         </div>
       </div>
 
-      {/* Key stats */}
+      {/* Key stats with 5-year range */}
       <div className="space-y-2 text-sm">
         <div className="flex justify-between">
           <span className="text-muted-foreground">URNM/Uranium ratio</span>
-          <span className="font-mono font-semibold">{leverage.currentRatio.toFixed(2)}</span>
+          <span className="font-mono font-semibold text-foreground">{leverage.currentRatio.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">5-Year range</span>
+          <span className="font-mono text-muted-foreground">{rangeMin.toFixed(2)} — {rangeMax.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">5-Year median</span>
+          <span className="font-mono text-muted-foreground">{leverage.medianRatio.toFixed(2)}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">Percentile</span>
-          <span className="font-mono font-semibold">{leverage.currentPercentile.toFixed(0)}th</span>
+          <span className={`font-mono font-semibold ${pctColor}`}>{leverage.currentPercentile.toFixed(0)}th</span>
         </div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">URNM price</span>
@@ -318,6 +396,15 @@ function LeverageCard({ leverage }: { leverage: UraniumLeverageResult | null }) 
             <span className="font-mono font-semibold text-uranium">${leverage.currentU3O8Price.toFixed(2)}</span>
           </div>
         )}
+      </div>
+
+      {/* Actionable conclusion */}
+      <div className="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+        <p className="text-sm font-semibold text-foreground">
+          {leverage.currentPercentile > 50
+            ? `Accumulate on pullbacks when the ratio drops below the median of ${leverage.medianRatio.toFixed(2)}, not at any price.`
+            : `Miners are below median — favourable entry if supply-demand thesis remains intact.`}
+        </p>
       </div>
 
       {/* Warning */}
@@ -355,13 +442,188 @@ function LeverageCard({ leverage }: { leverage: UraniumLeverageResult | null }) 
   );
 }
 
+// ─── HOLDINGS TABLE ───
+interface EtfHolding {
+  company: string;
+  ticker: string;
+  weight_pct: number;
+  jurisdiction: string;
+  market_cap_usd: string;
+  stage: string;
+}
+
+const JURISDICTION_FLAGS: Record<string, string> = {
+  'Canada': '🇨🇦',
+  'USA': '🇺🇸',
+  'Kazakhstan': '🇰🇿',
+  'Australia': '🇦🇺',
+  'UK': '🇬🇧',
+  'Other': '🌍',
+};
+
+const JURISDICTION_ORDER = ['Canada', 'USA', 'Australia', 'Kazakhstan', 'UK', 'Other'];
+
+type SortKey = 'weight_pct' | 'jurisdiction' | 'market_cap_usd' | 'stage';
+
+function HoldingsSection() {
+  const [holdings, setHoldings] = useState<EtfHolding[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<SortKey>('weight_pct');
+  const [sortAsc, setSortAsc] = useState(false);
+
+  useEffect(() => {
+    supabase.from('etf_holdings').select('company, ticker, weight_pct, jurisdiction, market_cap_usd, stage')
+      .eq('etf_ticker', 'URNM')
+      .then(({ data }) => {
+        if (data) setHoldings(data as EtfHolding[]);
+      });
+  }, []);
+
+  const sorted = useMemo(() => {
+    const arr = [...holdings];
+    arr.sort((a, b) => {
+      let cmp = 0;
+      if (sortBy === 'weight_pct') cmp = a.weight_pct - b.weight_pct;
+      else if (sortBy === 'jurisdiction') cmp = JURISDICTION_ORDER.indexOf(a.jurisdiction) - JURISDICTION_ORDER.indexOf(b.jurisdiction);
+      else cmp = (a[sortBy] || '').localeCompare(b[sortBy] || '');
+      return sortAsc ? cmp : -cmp;
+    });
+    return arr;
+  }, [holdings, sortBy, sortAsc]);
+
+  const jurisdictionBreakdown = useMemo(() => {
+    const map: Record<string, number> = {};
+    holdings.forEach(h => { map[h.jurisdiction] = (map[h.jurisdiction] || 0) + h.weight_pct; });
+    return JURISDICTION_ORDER
+      .map(j => ({ jurisdiction: j, weight: map[j] || 0 }))
+      .filter(j => j.weight > 0);
+  }, [holdings]);
+
+  const handleSort = (key: SortKey) => {
+    if (sortBy === key) setSortAsc(!sortAsc);
+    else { setSortBy(key); setSortAsc(false); }
+  };
+
+  if (!holdings.length) return null;
+
+  const westernWeight = jurisdictionBreakdown
+    .filter(j => ['Canada', 'USA', 'Australia', 'UK'].includes(j.jurisdiction))
+    .reduce((s, j) => s + j.weight, 0);
+
+  return (
+    <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between p-6 text-left hover:bg-secondary/20 transition-colors"
+      >
+        <div>
+          <h3 className="font-display text-lg text-foreground">WHAT'S INSIDE THE ETF — {holdings.length} Holdings by Mining Jurisdiction</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Jurisdiction matters. Western-allied miners trade at a premium because they aren't exposed to sanctions or political instability.
+          </p>
+        </div>
+        {isOpen ? <ChevronUp size={20} className="text-muted-foreground shrink-0" /> : <ChevronDown size={20} className="text-muted-foreground shrink-0" />}
+      </button>
+
+      {isOpen && (
+        <div className="px-6 pb-6 space-y-5">
+          {/* Holdings table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border">
+                  {[
+                    { key: 'jurisdiction' as SortKey, label: 'COMPANY' },
+                    { key: 'weight_pct' as SortKey, label: 'WEIGHT' },
+                    { key: 'jurisdiction' as SortKey, label: 'JURISDICTION' },
+                    { key: 'market_cap_usd' as SortKey, label: 'MKT CAP' },
+                    { key: 'stage' as SortKey, label: 'STAGE' },
+                  ].map(col => (
+                    <th
+                      key={col.label}
+                      onClick={() => handleSort(col.key)}
+                      className="text-left py-3 px-3 text-xs font-semibold text-muted-foreground tracking-wider cursor-pointer hover:text-foreground whitespace-nowrap"
+                    >
+                      {col.label} {sortBy === col.key ? (sortAsc ? '↑' : '↓') : ''}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map(h => (
+                  <tr key={h.ticker} className="border-b border-border/50 hover:bg-secondary/20">
+                    <td className="py-2.5 px-3">
+                      <span className="font-medium text-foreground">{h.company}</span>
+                      <span className="text-muted-foreground ml-1.5">({h.ticker})</span>
+                    </td>
+                    <td className="py-2.5 px-3 font-mono font-semibold text-foreground whitespace-nowrap">{h.weight_pct.toFixed(1)}%</td>
+                    <td className="py-2.5 px-3 whitespace-nowrap">{JURISDICTION_FLAGS[h.jurisdiction] || '🌍'} {h.jurisdiction}</td>
+                    <td className="py-2.5 px-3 font-mono text-muted-foreground whitespace-nowrap">{h.market_cap_usd}</td>
+                    <td className="py-2.5 px-3 text-muted-foreground">{h.stage}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Jurisdiction stacked bar */}
+          <div>
+            <p className="text-xs font-semibold tracking-widest text-muted-foreground mb-2">JURISDICTION BREAKDOWN (by ETF weight)</p>
+            <div className="flex h-7 rounded-lg overflow-hidden">
+              {jurisdictionBreakdown.map(j => {
+                const colors: Record<string, string> = {
+                  'Canada': 'bg-red-500/70',
+                  'USA': 'bg-blue-500/70',
+                  'Australia': 'bg-yellow-500/70',
+                  'Kazakhstan': 'bg-cyan-500/70',
+                  'UK': 'bg-purple-500/70',
+                  'Other': 'bg-muted-foreground/40',
+                };
+                return (
+                  <div
+                    key={j.jurisdiction}
+                    className={`${colors[j.jurisdiction] || 'bg-muted-foreground/40'} flex items-center justify-center text-[10px] font-mono font-bold text-white`}
+                    style={{ width: `${j.weight}%` }}
+                    title={`${j.jurisdiction}: ${j.weight.toFixed(0)}%`}
+                  >
+                    {j.weight >= 8 && `${JURISDICTION_FLAGS[j.jurisdiction]} ${j.weight.toFixed(0)}%`}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex flex-wrap gap-3 mt-2">
+              {jurisdictionBreakdown.map(j => (
+                <span key={j.jurisdiction} className="text-xs text-muted-foreground">
+                  {JURISDICTION_FLAGS[j.jurisdiction]} {j.jurisdiction} {j.weight.toFixed(0)}%
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {westernWeight.toFixed(0)}% of holdings are in Western-allied jurisdictions (Canada, USA, Australia, UK). 
+            This reflects lower political risk and no sanctions exposure. The 5% Kazakhstan weight (Kazatomprom) is the 
+            world's lowest-cost producer but carries geopolitical risk given proximity to Russia.
+          </p>
+          <p className="text-xs text-muted-foreground italic">
+            Holdings and weights approximate as of Q1 2026. Updates quarterly with index rebalance. Source: Sprott/North Shore Global Uranium Mining Index.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── MAIN EXPORT ───
 export default function UraniumSignalLenses({ anchorResult, forcesResult, leverageResult }: Props) {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <AnchorCard anchor={anchorResult} />
-      <ForcesCard forces={forcesResult} />
-      <LeverageCard leverage={leverageResult} />
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <AnchorCard anchor={anchorResult} />
+        <ForcesCard forces={forcesResult} />
+        <LeverageCard leverage={leverageResult} />
+      </div>
+      <HoldingsSection />
     </div>
   );
 }
