@@ -36,7 +36,7 @@ function buildPromptData(
 Z-score: ${variable.adjustedZScore.toFixed(2)}
 Contribution to GDI: ${variable.contribution.toFixed(3)} (rank ${rank} of ${sorted.length})
 Weight: ${(variable.weight * 100).toFixed(1)}%
-Direction: ${variable.direction}
+Contribution sign: ${variable.contribution > 0 ? 'positive (bullish)' : 'negative (bearish)'}
 Top 3 contributors: ${top3}
 Gold price: $${goldPrice.toFixed(0)} (30d return: ${gold30d}%)
 GDI: ${gdiResult.gdiValues[gdiResult.gdiValues.length - 1]?.toFixed(2) || 'N/A'}`;
