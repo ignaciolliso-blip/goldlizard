@@ -12,6 +12,9 @@ import NotFound from "./pages/NotFound.tsx";
 import LoadingProgress from "@/components/LoadingProgress";
 
 const Evidence = lazy(() => import("./pages/Evidence.tsx"));
+const UraniumSignal = lazy(() => import("./pages/UraniumSignal.tsx"));
+const UraniumAnalysis = lazy(() => import("./pages/UraniumAnalysis.tsx"));
+const UraniumEvidence = lazy(() => import("./pages/UraniumEvidence.tsx"));
 
 const queryClient = new QueryClient();
 
@@ -32,6 +35,30 @@ const App = () => (
                 element={
                   <Suspense fallback={<LoadingProgress message="Loading Evidence..." />}>
                     <Evidence />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/uranium"
+                element={
+                  <Suspense fallback={<LoadingProgress message="Loading Uranium..." />}>
+                    <UraniumSignal />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/uranium/analysis"
+                element={
+                  <Suspense fallback={<LoadingProgress message="Loading Uranium Analysis..." />}>
+                    <UraniumAnalysis />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/uranium/evidence"
+                element={
+                  <Suspense fallback={<LoadingProgress message="Loading Uranium Evidence..." />}>
+                    <UraniumEvidence />
                   </Suspense>
                 }
               />
