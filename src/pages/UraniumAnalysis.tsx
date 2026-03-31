@@ -26,6 +26,7 @@ const UraniumAnalysis = () => {
   const [forcesResult, setForcesResult] = useState<UraniumForcesResult | null>(null);
   const [leverageResult, setLeverageResult] = useState<UraniumLeverageResult | null>(null);
   const [rawData, setRawData] = useState<any>(null);
+  const [pnavHistory, setPnavHistory] = useState<SectorPNAVHistoryRow[]>([]);
 
   useEffect(() => {
     async function load() {
