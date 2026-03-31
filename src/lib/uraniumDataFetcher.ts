@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { UraniumPrice, UraniumSupplyDemand, UraniumReactor } from './uraniumEngine';
+import type { UraniumPrice, UraniumSupplyDemand, UraniumReactor, MinerValuation } from './uraniumEngine';
 import type { MinerPrice } from './leverageEngine';
 
 export async function fetchUraniumPrices(): Promise<UraniumPrice[]> {
@@ -59,12 +59,32 @@ export async function fetchUraniumMinerPrices(): Promise<MinerPrice[]> {
   }));
 }
 
+export async function fetchMinerValuations(): Promise<MinerValuation[]> {
+  const { data, error } = await supabase
+    .from('miner_valuations')
+    .select('*')
+    .order('p_nav', { ascending: false });
+  if (error) throw new Error('Failed to fetch miner valuations: ' + error.message);
+  return (data || []).map(r => ({
+    ticker: r.ticker,
+    company: r.company,
+    p_nav: Number(r.p_nav),
+    ev_per_lb: Number(r.ev_per_lb),
+    nav_usd_bn: Number(r.nav_usd_bn),
+    resources_mlb: Number(r.resources_mlb),
+    jurisdiction: r.jurisdiction,
+    stage: r.stage,
+    updated_at: r.updated_at,
+  }));
+}
+
 export async function fetchAllUraniumData() {
-  const [prices, supplyDemand, reactors, minerPrices] = await Promise.all([
+  const [prices, supplyDemand, reactors, minerPrices, valuations] = await Promise.all([
     fetchUraniumPrices(),
     fetchUraniumSupplyDemand(),
     fetchUraniumReactors(),
     fetchUraniumMinerPrices(),
+    fetchMinerValuations(),
   ]);
-  return { prices, supplyDemand, reactors, minerPrices };
+  return { prices, supplyDemand, reactors, minerPrices, valuations };
 }
