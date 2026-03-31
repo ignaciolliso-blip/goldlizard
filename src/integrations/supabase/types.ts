@@ -142,6 +142,8 @@ export type Database = {
       }
       miner_valuations: {
         Row: {
+          aisc_per_oz: number | null
+          commodity: string
           company: string
           ev_per_lb: number
           id: number
@@ -154,6 +156,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          aisc_per_oz?: number | null
+          commodity?: string
           company: string
           ev_per_lb?: number
           id?: never
@@ -166,6 +170,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          aisc_per_oz?: number | null
+          commodity?: string
           company?: string
           ev_per_lb?: number
           id?: never
@@ -220,6 +226,8 @@ export type Database = {
       }
       sector_pnav_history: {
         Row: {
+          commodity: string
+          commodity_price: number | null
           created_at: string
           date: string
           id: number
@@ -230,6 +238,8 @@ export type Database = {
           uranium_spot: number
         }
         Insert: {
+          commodity?: string
+          commodity_price?: number | null
           created_at?: string
           date: string
           id?: never
@@ -240,6 +250,8 @@ export type Database = {
           uranium_spot?: number
         }
         Update: {
+          commodity?: string
+          commodity_price?: number | null
           created_at?: string
           date?: string
           id?: never
