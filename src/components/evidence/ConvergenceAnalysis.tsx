@@ -69,18 +69,15 @@ export default function ConvergenceAnalysis({
   const pctParity = anchorResult?.pctOfInvestableParity ?? 50;
 
   const gdiSignal = currentGDI > 0.5 ? 'bullish' : currentGDI < -0.5 ? 'bearish' : 'neutral';
-  const minerPctile = leverageResult?.currentPercentile ?? 50;
+  const sectorPNAV = leverageResult?.sectorPNAV ?? 1.1;
+  const minerPctile = sectorPNAV < 0.8 ? 15 : sectorPNAV > 1.5 ? 80 : 50;
   const currentPositioning = derivePositioning(pctParity, gdiSignal, minerPctile);
 
   const ratioChartData = useMemo(() => {
-    if (!leverageResult) return [];
-    const { ratioSeries, medianRatio } = leverageResult;
-    const values = ratioSeries.map(r => r.value).sort((a, b) => a - b);
-    const p25 = values[Math.floor(values.length * 0.25)] || 0;
-    const p75 = values[Math.floor(values.length * 0.75)] || 0;
-    return ratioSeries.map(r => ({
+    if (!leverageResult?.pnavHistory?.length) return [];
+    return leverageResult.pnavHistory.map(r => ({
       date: r.date, ts: new Date(r.date).getTime(),
-      ratio: r.value, p25, p75, median: medianRatio,
+      ratio: r.pnav, p25: 0.8, p75: 1.5, median: leverageResult.historicalAvgPNAV,
     }));
   }, [leverageResult]);
 
@@ -217,7 +214,7 @@ export default function ConvergenceAnalysis({
               }} />
               <Area dataKey="p75" stroke="none" fill="hsl(270 95% 75%)" fillOpacity={0.06} />
               <Area dataKey="p25" stroke="none" fill="hsl(var(--background))" fillOpacity={1} />
-              <ReferenceLine y={leverageResult.medianRatio} stroke="hsl(var(--muted-foreground))" strokeDasharray="6 3" opacity={0.5} label={{ value: 'Median', fill: 'hsl(var(--muted-foreground))', fontSize: 9, position: 'right' }} />
+              <ReferenceLine y={leverageResult.historicalAvgPNAV} stroke="hsl(var(--muted-foreground))" strokeDasharray="6 3" opacity={0.5} label={{ value: 'Avg', fill: 'hsl(var(--muted-foreground))', fontSize: 9, position: 'right' }} />
               <Line dataKey="ratio" stroke="hsl(270 95% 75%)" strokeWidth={2} dot={false} connectNulls />
             </ComposedChart>
           </ResponsiveContainer>

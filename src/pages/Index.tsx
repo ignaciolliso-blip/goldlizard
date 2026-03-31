@@ -6,7 +6,8 @@ import {
   computeScenarioProbabilities, type ScenarioConfig, type ScenarioProbabilities,
 } from '@/lib/scenarioEngine';
 import { computeAnchor, type AnchorResult } from '@/lib/anchorEngine';
-import { computeLeverage, type LeverageResult, projectGDXGoldRatio } from '@/lib/leverageEngine';
+import { computeLeverage, type LeverageResult } from '@/lib/leverageEngine';
+import { fetchGoldMinerValuations, fetchGoldPNAVHistory } from '@/lib/goldDataFetcher';
 import LoadingProgress from '@/components/LoadingProgress';
 import SignalLenses from '@/components/signal/SignalLenses';
 import SignalProjectionTable from '@/components/signal/SignalProjectionTable';
@@ -70,7 +71,11 @@ const Index = () => {
         const anchor = computeAnchor(data.goldSpot, m2Data);
         setAnchorResult(anchor);
 
-        const leverage = computeLeverage(data.goldSpot, data.minerPrices);
+        const [goldMiners, goldPNAVHistory] = await Promise.all([
+          fetchGoldMinerValuations(),
+          fetchGoldPNAVHistory(),
+        ]);
+        const leverage = computeLeverage(goldMiners, goldPNAVHistory);
         setLeverageResult(leverage);
       } catch (e: any) {
         setError(e.message || 'Failed to load data');

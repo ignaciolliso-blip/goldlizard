@@ -84,8 +84,8 @@ export default function VariableDrillDowns({ gdiResult, goldSpot, anchorResult, 
     }
     if (varId === 'GDX_GOLD_RATIO' && leverageResult) {
       return {
-        id: 'GDX_GOLD_RATIO', name: 'GDX / Gold Ratio', tier: 'conditions',
-        currentValue: leverageResult.currentGDXGoldRatio, zScore: 0, adjustedZScore: 0, weight: 0, contribution: 0,
+        id: 'GDX_GOLD_RATIO', name: 'Sector P/NAV', tier: 'conditions',
+        currentValue: leverageResult.sectorPNAV, zScore: 0, adjustedZScore: 0, weight: 0, contribution: 0,
       };
     }
     return null;
@@ -110,7 +110,7 @@ export default function VariableDrillDowns({ gdiResult, goldSpot, anchorResult, 
     if (varId === 'GDX_GOLD_RATIO' && leverageResult) {
       const alignedData = new Map(gdiResult.alignedData);
       const seriesMap = new Map<string, number>();
-      leverageResult.ratioSeries.forEach(o => seriesMap.set(o.date, o.value));
+      leverageResult.pnavHistory.forEach(o => seriesMap.set(o.date, o.pnav));
       alignedData.set('GDX_GOLD_RATIO', seriesMap);
       return { ...gdiResult, alignedData };
     }

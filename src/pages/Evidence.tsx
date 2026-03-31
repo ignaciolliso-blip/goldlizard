@@ -8,6 +8,7 @@ import { fetchScenarioTargets } from '@/lib/scenarioFetcher';
 import { computeScenarioProbabilities, computeForwardGDI, computeHorizonProbabilities, type ScenarioConfig } from '@/lib/scenarioEngine';
 import { computeAnchor, type AnchorResult } from '@/lib/anchorEngine';
 import { computeLeverage, type LeverageResult } from '@/lib/leverageEngine';
+import { fetchGoldMinerValuations, fetchGoldPNAVHistory } from '@/lib/goldDataFetcher';
 import { VARIABLE_CONFIG, DEFAULT_PROJECTIONS, type ProjectionRow } from '@/lib/constants';
 import LoadingProgress from '@/components/LoadingProgress';
 import VariableDrillDowns from '@/components/evidence/VariableDrillDowns';
@@ -59,7 +60,11 @@ const Evidence = () => {
         const cpiData = data.fredResults['CPIAUCSL'] || [];
         const m2Data = data.fredResults['WM2NS'] || [];
         setAnchorResult(computeAnchor(data.goldSpot, m2Data));
-        setLeverageResult(computeLeverage(data.goldSpot, data.minerPrices));
+        const [goldMiners, goldPNAVHistory] = await Promise.all([
+          fetchGoldMinerValuations(),
+          fetchGoldPNAVHistory(),
+        ]);
+        setLeverageResult(computeLeverage(goldMiners, goldPNAVHistory));
 
         // Init projections with current values
         const projs: ProjectionRow[] = DEFAULT_PROJECTIONS.map(dp => {

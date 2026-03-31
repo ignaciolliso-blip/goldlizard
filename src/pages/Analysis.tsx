@@ -7,10 +7,12 @@ import { fetchScenarioTargets } from '@/lib/scenarioFetcher';
 import { computeScenarioProbabilities, type ScenarioConfig, type ScenarioProbabilities } from '@/lib/scenarioEngine';
 import { computeAnchor, type AnchorResult } from '@/lib/anchorEngine';
 import { computeLeverage, type LeverageResult } from '@/lib/leverageEngine';
+import { fetchGoldMinerValuations, fetchGoldPNAVHistory } from '@/lib/goldDataFetcher';
 import LoadingProgress from '@/components/LoadingProgress';
 import AnchorChartPanel from '@/components/analysis/AnchorChartPanel';
 import ForcesPanel from '@/components/analysis/ForcesPanel';
 import LeveragePanel from '@/components/analysis/LeveragePanel';
+import GoldHistoricalPNAVChart from '@/components/gold/GoldHistoricalPNAVChart';
 import PageIntro from '@/components/PageIntro';
 import Footer from '@/components/Footer';
 
@@ -53,7 +55,11 @@ const Analysis = () => {
         const anchor = computeAnchor(data.goldSpot, m2Data);
         setAnchorResult(anchor);
 
-        const leverage = computeLeverage(data.goldSpot, data.minerPrices);
+        const [goldMiners, goldPNAVHistory] = await Promise.all([
+          fetchGoldMinerValuations(),
+          fetchGoldPNAVHistory(),
+        ]);
+        const leverage = computeLeverage(goldMiners, goldPNAVHistory);
         setLeverageResult(leverage);
       } catch (e: any) {
         setError(e.message || 'Failed to load data');
@@ -155,6 +161,14 @@ const Analysis = () => {
             />
           )}
         </div>
+
+        {/* Historical P/NAV Chart */}
+        {leverageResult && (
+          <GoldHistoricalPNAVChart
+            data={leverageResult.pnavHistory}
+            currentPNAV={leverageResult.sectorPNAV}
+          />
+        )}
 
         <Footer />
       </div>

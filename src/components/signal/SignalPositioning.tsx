@@ -2,7 +2,7 @@ import type { AnchorResult } from '@/lib/anchorEngine';
 import { getZone, getZoneConclusion } from '@/lib/anchorEngine';
 import type { GDIResult } from '@/lib/gdiEngine';
 import type { LeverageResult } from '@/lib/leverageEngine';
-import { projectGDXGoldRatio } from '@/lib/leverageEngine';
+import { projectGoldPNAV, deriveLeverageConclusion, HISTORICAL_AVG_PNAV } from '@/lib/leverageEngine';
 import type { ScenarioConfig, ScenarioProbabilities } from '@/lib/scenarioEngine';
 import { GuideTooltip } from '@/components/GuideMode';
 
@@ -17,22 +17,22 @@ interface Props {
   scenarioConfig: ScenarioConfig | null;
 }
 
-function derivePositioning(pctParity: number, gdiSignal: string, minerPercentile: number) {
-  const minersUndervalued = minerPercentile < 25;
-  const minersFairValue = minerPercentile >= 25 && minerPercentile <= 75;
+function derivePositioning(pctParity: number, gdiSignal: string, sectorPNAV: number) {
+  const minersUndervalued = sectorPNAV < 0.8;
+  const minersFairValue = sectorPNAV >= 0.8 && sectorPNAV <= 1.5;
 
   if (pctParity < 30 && gdiSignal === 'bullish' && minersUndervalued)
-    return { text: 'STRONG BUY MINERS', color: 'bullish', detail: 'Gold cheap relative to M2, forces turning, miners doubly discounted' };
+    return { text: 'STRONG BUY MINERS', color: 'bullish', detail: 'Gold cheap relative to M2, forces turning, miners at deep discount to NAV' };
   if (pctParity < 30 && gdiSignal === 'bearish')
     return { text: 'ACCUMULATE ON WEAKNESS', color: 'neutral', detail: 'Gold cheap but headwinds present — be patient' };
   if (pctParity >= 30 && pctParity < 60 && gdiSignal === 'bullish' && minersUndervalued)
-    return { text: 'ACCUMULATE MINERS', color: 'bullish', detail: 'Gold fairly priced with bullish forces and miner discount' };
+    return { text: 'ACCUMULATE MINERS', color: 'bullish', detail: 'Gold fairly priced with bullish forces and miners below NAV' };
   if (pctParity >= 30 && pctParity < 60 && gdiSignal === 'bullish' && minersFairValue)
-    return { text: 'HOLD / ADD GOLD', color: 'primary', detail: 'Forces positive but miner premium already captured' };
+    return { text: 'HOLD / ADD GOLD', color: 'primary', detail: 'Forces positive but miner P/NAV already at fair value' };
   if (pctParity >= 30 && pctParity < 60 && gdiSignal === 'bearish')
     return { text: 'HOLD', color: 'neutral', detail: 'Mixed signals — maintain current allocation' };
   if (pctParity >= 60 && pctParity < 100 && gdiSignal === 'bullish' && minersUndervalued)
-    return { text: 'HOLD / ADD SELECTIVELY', color: 'primary', detail: 'Gold elevated but momentum strong and miners still cheap' };
+    return { text: 'HOLD / ADD SELECTIVELY', color: 'primary', detail: 'Gold elevated but momentum strong and miners still below NAV' };
   if (pctParity >= 60 && pctParity < 100 && gdiSignal === 'bearish')
     return { text: 'TAKE PROFITS', color: 'bearish', detail: 'Gold expensive and forces turning — trim positions' };
   if (pctParity >= 100)
@@ -49,9 +49,9 @@ export default function SignalPositioning({
 }: Props) {
   const pctParity = anchorResult?.pctOfInvestableParity ?? 50;
   const gdiSignal = currentGDI > 0.5 ? 'bullish' : currentGDI < -0.5 ? 'bearish' : 'neutral';
-  const minerPercentile = leverageResult?.currentPercentile ?? 50;
+  const sectorPNAV = leverageResult?.sectorPNAV ?? 1.1;
 
-  const positioning = derivePositioning(pctParity, gdiSignal, minerPercentile);
+  const positioning = derivePositioning(pctParity, gdiSignal, sectorPNAV);
 
   const borderColorMap: Record<string, string> = {
     bullish: 'border-l-bullish',
@@ -70,8 +70,9 @@ export default function SignalPositioning({
     Math.abs(v.contribution) > Math.abs(best.contribution) ? v : best
   );
 
-  const percentileDesc = minerPercentile < 25 ? 'undervalued' : minerPercentile > 75 ? 'overvalued' : 'fairly valued';
+  const pnavDesc = sectorPNAV < 0.8 ? 'below NAV' : sectorPNAV > 1.5 ? 'at a premium' : 'fair value';
   const zoneInfo = anchorResult ? getZone(pctParity) : null;
+  const conclusion = deriveLeverageConclusion(sectorPNAV);
 
   let goldCagr5y = '—';
   let gdxCagr5y = '—';
@@ -83,19 +84,19 @@ export default function SignalPositioning({
       const ev5y = probs.bull * bull.targets['5y'] + probs.base * base.targets['5y'] + probs.bear * bear.targets['5y'];
       goldCagr5y = ((Math.pow(ev5y / currentGoldPrice, 1 / 5) - 1) * 100).toFixed(1) + '%';
       if (leverageResult) {
-        const projRatio = projectGDXGoldRatio(leverageResult.currentGDXGoldRatio, leverageResult.medianRatio, 5);
-        const gdx5y = ev5y * projRatio;
+        const projPNAV = projectGoldPNAV(sectorPNAV, HISTORICAL_AVG_PNAV, 5);
+        const gdx5y = currentGDXPrice * (ev5y / currentGoldPrice) * (projPNAV / sectorPNAV);
         gdxCagr5y = ((Math.pow(gdx5y / currentGDXPrice, 1 / 5) - 1) * 100).toFixed(1) + '%';
       }
     }
   }
 
-  const narrative = `Gold at ${pctParity.toFixed(0)}% of investable parity (${zoneInfo?.label || '—'}). The GDI reads ${currentGDI >= 0 ? '+' : ''}${currentGDI.toFixed(1)} / ${gdiSignal.toUpperCase()}, driven primarily by ${keyDriver?.name || 'multiple factors'}. Miners (GDX) at the ${minerPercentile.toFixed(0)}th percentile — ${percentileDesc}. 5-year expected CAGR: ${goldCagr5y} gold, ${gdxCagr5y} GDX.`;
+  const narrative = `Gold at ${pctParity.toFixed(0)}% of investable parity (${zoneInfo?.label || '—'}). The GDI reads ${currentGDI >= 0 ? '+' : ''}${currentGDI.toFixed(1)} / ${gdiSignal.toUpperCase()}, driven primarily by ${keyDriver?.name || 'multiple factors'}. Miners at ${sectorPNAV.toFixed(2)}× P/NAV — ${pnavDesc} (hist. avg ${HISTORICAL_AVG_PNAV}×). 5-year expected CAGR: ${goldCagr5y} gold, ${gdxCagr5y} GDX.`;
 
   return (
     <div className={`bg-card border border-border ${borderColorMap[positioning.color]} border-l-4 rounded-xl p-6 sm:p-7 space-y-4`}>
       <div>
-        <GuideTooltip id="positioning-call" text="This recommendation comes from the three-lens convergence: gold's position vs investable parity (Anchor), macro force direction (GDI), and miner leverage (GDX/Gold ratio). When all three agree, conviction is highest.">
+        <GuideTooltip id="positioning-call" text="This recommendation comes from the three-lens convergence: gold's position vs investable parity (Anchor), macro force direction (GDI), and miner P/NAV valuation (Leverage). When all three agree, conviction is highest.">
           <h2 className={`font-display text-2xl ${textColorMap[positioning.color]}`}>
             {positioning.text}
           </h2>
