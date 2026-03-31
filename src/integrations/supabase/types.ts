@@ -143,6 +143,90 @@ export type Database = {
         }
         Relationships: []
       }
+      uranium_prices: {
+        Row: {
+          created_at: string
+          date: string
+          id: number
+          lt_contract_price: number | null
+          spot_price: number
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: never
+          lt_contract_price?: number | null
+          spot_price: number
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: never
+          lt_contract_price?: number | null
+          spot_price?: number
+        }
+        Relationships: []
+      }
+      uranium_reactors: {
+        Row: {
+          capacity_gw: number
+          created_at: string
+          id: number
+          operating: number
+          planned: number
+          under_construction: number
+          year: number
+        }
+        Insert: {
+          capacity_gw?: number
+          created_at?: string
+          id?: never
+          operating?: number
+          planned?: number
+          under_construction?: number
+          year: number
+        }
+        Update: {
+          capacity_gw?: number
+          created_at?: string
+          id?: never
+          operating?: number
+          planned?: number
+          under_construction?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      uranium_supply_demand: {
+        Row: {
+          contracting_mlb: number
+          created_at: string
+          id: number
+          mine_production_mlb: number
+          quarter: string
+          reactor_demand_mlb: number
+          secondary_supply_mlb: number
+        }
+        Insert: {
+          contracting_mlb?: number
+          created_at?: string
+          id?: never
+          mine_production_mlb?: number
+          quarter: string
+          reactor_demand_mlb?: number
+          secondary_supply_mlb?: number
+        }
+        Update: {
+          contracting_mlb?: number
+          created_at?: string
+          id?: never
+          mine_production_mlb?: number
+          quarter?: string
+          reactor_demand_mlb?: number
+          secondary_supply_mlb?: number
+        }
+        Relationships: []
+      }
       variable_explanations: {
         Row: {
           data_hash: string
