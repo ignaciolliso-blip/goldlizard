@@ -66,6 +66,13 @@ export default {
         "anchor-m2": "hsl(var(--anchor-m2))",
         "forces-gdi": "hsl(var(--forces-gdi))",
         "leverage-miner": "hsl(var(--leverage-miner))",
+        uranium: {
+          DEFAULT: "hsl(var(--uranium))",
+          light: "hsl(var(--uranium-light))",
+          contract: "hsl(var(--uranium-contract))",
+          demand: "hsl(var(--uranium-demand))",
+          supply: "hsl(var(--uranium-supply))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
