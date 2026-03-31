@@ -173,6 +173,12 @@ function AnchorCard({ anchor }: { anchor: UraniumAnchorResult | null }) {
 
       <p className="text-xs text-muted-foreground mt-3">
         AISC = All-In Sustaining Cost. Greenfield = cost to build a new mine from scratch.
+        <br />
+        Source: Industry-average LT U₃O₈ price from{' '}
+        <a href="https://www.cameco.com/invest/markets/uranium-price" target="_blank" rel="noopener noreferrer" className="text-uranium-contract hover:underline inline-flex items-center gap-0.5">
+          Cameco <ExternalLink size={10} />
+        </a>{' '}
+        (TradeTech/UxC month-end prices).
       </p>
     </CardShell>
   );
