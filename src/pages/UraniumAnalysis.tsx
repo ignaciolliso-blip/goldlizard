@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { fetchAllUraniumData } from '@/lib/uraniumDataFetcher';
+import type { SectorPNAVHistoryRow } from '@/lib/uraniumDataFetcher';
 import {
   computeUraniumAnchor, computeUraniumForces, computeUraniumLeverage,
   type UraniumAnchorResult, type UraniumForcesResult, type UraniumLeverageResult,
@@ -11,6 +12,7 @@ import type { MinerPrice } from '@/lib/leverageEngine';
 import LoadingProgress from '@/components/LoadingProgress';
 import PageIntro from '@/components/PageIntro';
 import Footer from '@/components/Footer';
+import HistoricalPNAVChart from '@/components/uranium/HistoricalPNAVChart';
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea } from 'recharts';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -24,12 +26,14 @@ const UraniumAnalysis = () => {
   const [forcesResult, setForcesResult] = useState<UraniumForcesResult | null>(null);
   const [leverageResult, setLeverageResult] = useState<UraniumLeverageResult | null>(null);
   const [rawData, setRawData] = useState<any>(null);
+  const [pnavHistory, setPnavHistory] = useState<SectorPNAVHistoryRow[]>([]);
 
   useEffect(() => {
     async function load() {
       try {
         const data = await fetchAllUraniumData();
         setRawData(data);
+        setPnavHistory(data.pnavHistory || []);
         setAnchorResult(computeUraniumAnchor(data.prices));
         setForcesResult(computeUraniumForces(data.supplyDemand));
         setLeverageResult(computeUraniumLeverage(data.prices, data.minerPrices, data.valuations));
@@ -268,6 +272,21 @@ const UraniumAnalysis = () => {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Historical P/NAV Through the Cycles */}
+        <div className="bg-card border border-border rounded-xl p-5">
+          <HistoricalPNAVChart
+            data={pnavHistory.map(p => ({
+              date: p.date,
+              sector_avg_pnav: p.sector_avg_pnav,
+              uranium_spot: p.uranium_spot,
+              uranium_lt_contract: p.uranium_lt_contract,
+              source: p.source,
+              notes: p.notes,
+            }))}
+            currentPNAV={leverageResult?.sectorPNAV ?? 1.5}
+          />
         </div>
 
         <Footer />
