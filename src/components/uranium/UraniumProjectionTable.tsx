@@ -23,11 +23,6 @@ export default function UraniumProjectionTable({ anchorResult, forcesResult, lev
     { key: '10y', label: '10 Yr', years: 10 },
   ] as const;
 
-  const greenfieldProj = horizons.map(h => {
-    const val = proj.currentGreenfieldMidpoint * Math.pow(1 + proj.greenfieldInflation, h.years);
-    return { key: h.key, value: val };
-  });
-  // Patch: use midpoint of greenfield range
   const greenfieldMidpoint = (proj.currentGreenfieldLow + proj.currentGreenfieldHigh) / 2;
 
   const urnmPrice = leverageResult?.currentURNMPrice ?? 60;
