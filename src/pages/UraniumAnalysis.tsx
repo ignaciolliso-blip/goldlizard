@@ -33,6 +33,7 @@ const UraniumAnalysis = () => {
       try {
         const data = await fetchAllUraniumData();
         setRawData(data);
+        setPnavHistory(data.pnavHistory || []);
         setAnchorResult(computeUraniumAnchor(data.prices));
         setForcesResult(computeUraniumForces(data.supplyDemand));
         setLeverageResult(computeUraniumLeverage(data.prices, data.minerPrices, data.valuations));
