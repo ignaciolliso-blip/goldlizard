@@ -76,6 +76,7 @@ const Index = () => {
           fetchGoldPNAVHistory(),
         ]);
         const leverage = computeLeverage(goldMiners, goldPNAVHistory);
+        setLeverageResult(leverage);
       } catch (e: any) {
         setError(e.message || 'Failed to load data');
       } finally {
