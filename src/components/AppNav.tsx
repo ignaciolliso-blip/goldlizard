@@ -38,6 +38,7 @@ function getLayerTabs(asset: string) {
 
 const AppNav = () => {
   const { isGuideMode, toggleGuideMode } = useGuideMode();
+  const { user, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
