@@ -6,7 +6,8 @@ import {
   computeScenarioProbabilities, type ScenarioConfig, type ScenarioProbabilities,
 } from '@/lib/scenarioEngine';
 import { computeAnchor, type AnchorResult } from '@/lib/anchorEngine';
-import { computeLeverage, type LeverageResult, projectGDXGoldRatio } from '@/lib/leverageEngine';
+import { computeLeverage, type LeverageResult } from '@/lib/leverageEngine';
+import { fetchGoldMinerValuations, fetchGoldPNAVHistory } from '@/lib/goldDataFetcher';
 import LoadingProgress from '@/components/LoadingProgress';
 import SignalLenses from '@/components/signal/SignalLenses';
 import SignalProjectionTable from '@/components/signal/SignalProjectionTable';
