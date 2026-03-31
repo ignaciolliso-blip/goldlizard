@@ -274,6 +274,21 @@ const UraniumAnalysis = () => {
           </div>
         </div>
 
+        {/* Historical P/NAV Through the Cycles */}
+        <div className="bg-card border border-border rounded-xl p-5">
+          <HistoricalPNAVChart
+            data={pnavHistory.map(p => ({
+              date: p.date,
+              sector_avg_pnav: p.sector_avg_pnav,
+              uranium_spot: p.uranium_spot,
+              uranium_lt_contract: p.uranium_lt_contract,
+              source: p.source,
+              notes: p.notes,
+            }))}
+            currentPNAV={leverageResult?.sectorPNAV ?? 1.5}
+          />
+        </div>
+
         <Footer />
       </div>
     </div>
