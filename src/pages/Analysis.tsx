@@ -162,6 +162,14 @@ const Analysis = () => {
           )}
         </div>
 
+        {/* Historical P/NAV Chart */}
+        {leverageResult && (
+          <GoldHistoricalPNAVChart
+            data={leverageResult.pnavHistory}
+            currentPNAV={leverageResult.sectorPNAV}
+          />
+        )}
+
         <Footer />
       </div>
     </div>
