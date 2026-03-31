@@ -60,7 +60,11 @@ const Evidence = () => {
         const cpiData = data.fredResults['CPIAUCSL'] || [];
         const m2Data = data.fredResults['WM2NS'] || [];
         setAnchorResult(computeAnchor(data.goldSpot, m2Data));
-        setLeverageResult(computeLeverage(data.goldSpot, data.minerPrices));
+        const [goldMiners, goldPNAVHistory] = await Promise.all([
+          fetchGoldMinerValuations(),
+          fetchGoldPNAVHistory(),
+        ]);
+        setLeverageResult(computeLeverage(goldMiners, goldPNAVHistory));
 
         // Init projections with current values
         const projs: ProjectionRow[] = DEFAULT_PROJECTIONS.map(dp => {

@@ -71,8 +71,11 @@ const Index = () => {
         const anchor = computeAnchor(data.goldSpot, m2Data);
         setAnchorResult(anchor);
 
-        const leverage = computeLeverage(data.goldSpot, data.minerPrices);
-        setLeverageResult(leverage);
+        const [goldMiners, goldPNAVHistory] = await Promise.all([
+          fetchGoldMinerValuations(),
+          fetchGoldPNAVHistory(),
+        ]);
+        const leverage = computeLeverage(goldMiners, goldPNAVHistory);
       } catch (e: any) {
         setError(e.message || 'Failed to load data');
       } finally {
