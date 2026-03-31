@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { fetchAllUraniumData } from '@/lib/uraniumDataFetcher';
+import type { SectorPNAVHistoryRow } from '@/lib/uraniumDataFetcher';
 import {
   computeUraniumAnchor, computeUraniumForces, computeUraniumLeverage,
   type UraniumAnchorResult, type UraniumForcesResult, type UraniumLeverageResult,
@@ -11,6 +12,7 @@ import type { MinerPrice } from '@/lib/leverageEngine';
 import LoadingProgress from '@/components/LoadingProgress';
 import PageIntro from '@/components/PageIntro';
 import Footer from '@/components/Footer';
+import HistoricalPNAVChart from '@/components/uranium/HistoricalPNAVChart';
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea } from 'recharts';
 import { useIsMobile } from '@/hooks/use-mobile';
 
