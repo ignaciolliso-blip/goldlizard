@@ -12,6 +12,7 @@ import LoadingProgress from '@/components/LoadingProgress';
 import AnchorChartPanel from '@/components/analysis/AnchorChartPanel';
 import ForcesPanel from '@/components/analysis/ForcesPanel';
 import LeveragePanel from '@/components/analysis/LeveragePanel';
+import GoldHistoricalPNAVChart from '@/components/gold/GoldHistoricalPNAVChart';
 import PageIntro from '@/components/PageIntro';
 import Footer from '@/components/Footer';
 
