@@ -55,7 +55,7 @@ function buildDashboardDataString(props: NarratorPanelProps): string {
   }
 
   if (leverageResult && currentGDXPrice) {
-    text += `\nLeverage: GDX/Gold ratio ${leverageResult.currentGDXGoldRatio.toFixed(4)}, percentile ${leverageResult.currentPercentile.toFixed(0)}%`;
+    text += `\nLeverage: Sector P/NAV ${leverageResult.sectorPNAV.toFixed(2)}× (hist. avg ${leverageResult.historicalAvgPNAV.toFixed(2)}×)`;
   }
 
   return text;

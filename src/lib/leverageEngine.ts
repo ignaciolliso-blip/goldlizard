@@ -1,3 +1,10 @@
+// Legacy type still used by miner_prices table fetchers
+export interface MinerPrice {
+  date: string;
+  ticker: string;
+  close_price: number;
+}
+
 export interface GoldMinerValuation {
   ticker: string;
   company: string;

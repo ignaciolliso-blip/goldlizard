@@ -214,7 +214,7 @@ export default function ConvergenceAnalysis({
               }} />
               <Area dataKey="p75" stroke="none" fill="hsl(270 95% 75%)" fillOpacity={0.06} />
               <Area dataKey="p25" stroke="none" fill="hsl(var(--background))" fillOpacity={1} />
-              <ReferenceLine y={leverageResult.medianRatio} stroke="hsl(var(--muted-foreground))" strokeDasharray="6 3" opacity={0.5} label={{ value: 'Median', fill: 'hsl(var(--muted-foreground))', fontSize: 9, position: 'right' }} />
+              <ReferenceLine y={leverageResult.historicalAvgPNAV} stroke="hsl(var(--muted-foreground))" strokeDasharray="6 3" opacity={0.5} label={{ value: 'Avg', fill: 'hsl(var(--muted-foreground))', fontSize: 9, position: 'right' }} />
               <Line dataKey="ratio" stroke="hsl(270 95% 75%)" strokeWidth={2} dot={false} connectNulls />
             </ComposedChart>
           </ResponsiveContainer>

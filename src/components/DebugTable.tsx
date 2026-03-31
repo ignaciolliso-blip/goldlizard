@@ -159,19 +159,19 @@ const DebugTable = ({ rawData, gdiResult, anchorResult, leverageResult, currentG
           {/* Leverage Metrics */}
           {leverageResult && (
             <div>
-              <h3 className="text-xs font-mono text-gold mb-2">Lens 3: The Leverage — GDX/Gold Ratio</h3>
+              <h3 className="text-xs font-mono text-gold mb-2">Lens 3: The Leverage — P/NAV</h3>
               <div className="grid grid-cols-3 gap-3 text-xs font-mono">
                 <div className="rounded border border-border p-2">
-                  <div className="text-muted-foreground text-[10px]">GDX/Gold Ratio</div>
-                  <div className="text-leverage-miner">{(leverageResult.currentGDXGoldRatio * 100).toFixed(3)}%</div>
+                  <div className="text-muted-foreground text-[10px]">Sector P/NAV</div>
+                  <div className="text-leverage-miner">{leverageResult.sectorPNAV.toFixed(2)}×</div>
                 </div>
                 <div className="rounded border border-border p-2">
-                  <div className="text-muted-foreground text-[10px]">Median (10yr)</div>
-                  <div className="text-foreground">{(leverageResult.medianRatio * 100).toFixed(3)}%</div>
+                  <div className="text-muted-foreground text-[10px]">Hist. Avg</div>
+                  <div className="text-foreground">{leverageResult.historicalAvgPNAV.toFixed(2)}×</div>
                 </div>
                 <div className="rounded border border-border p-2">
-                  <div className="text-muted-foreground text-[10px]">Percentile</div>
-                  <div className="text-foreground">{leverageResult.currentPercentile.toFixed(0)}th</div>
+                  <div className="text-muted-foreground text-[10px]">Miners</div>
+                  <div className="text-foreground">{leverageResult.miners.length}</div>
                 </div>
               </div>
             </div>

@@ -3,6 +3,7 @@ import type { AnchorResult } from '@/lib/anchorEngine';
 import { getZoneConclusion, HISTORICAL_MEDIAN_PCT, HISTORICAL_MEAN_PCT } from '@/lib/anchorEngine';
 import type { GDIResult } from '@/lib/gdiEngine';
 import type { LeverageResult } from '@/lib/leverageEngine';
+import { deriveLeverageConclusion, HISTORICAL_AVG_PNAV } from '@/lib/leverageEngine';
 import { GuideTooltip } from '@/components/GuideMode';
 
 interface Props {
@@ -43,36 +44,24 @@ function AnchorCard({ anchor }: { anchor: AnchorResult | null }) {
     <CardShell title="THE ANCHOR" subtitle="Is gold cheap or expensive relative to the money supply?" icon={<Compass size={16} />} guideId="lens-anchor" guideText={`This gauge shows what percentage of 'investable parity' gold has captured. At 100%, gold fully repriced to match money supply — only happened once in 1980. Historical average ~35%. Today: ${pctOfInvestableParity.toFixed(0)}%, which is above average.`}>
       <div className="space-y-4">
         <p className="text-xs text-muted-foreground text-center uppercase tracking-wider">% of Investable Parity</p>
-
-        {/* Vertical gauge */}
         <div className="flex items-stretch gap-4">
           <div className="relative w-6 flex-shrink-0" style={{ height: '220px' }}>
             <div className="absolute inset-0 rounded-full overflow-hidden border border-border">
               <div className="absolute inset-0 bg-gradient-to-t from-bullish/30 via-primary/20 to-bearish/30" />
             </div>
-            <div
-              className="absolute inset-x-0 bottom-0 rounded-b-full bg-gradient-to-t from-bullish/50 via-primary/40 to-primary/20"
-              style={{ height: `${clamp(pctOfInvestableParity)}%` }}
-            />
+            <div className="absolute inset-x-0 bottom-0 rounded-b-full bg-gradient-to-t from-bullish/50 via-primary/40 to-primary/20" style={{ height: `${clamp(pctOfInvestableParity)}%` }} />
             <div className="absolute left-0 right-0" style={{ bottom: `${clamp(pctOfInvestableParity)}%`, transform: 'translateY(50%)' }}>
               <div className="w-full h-2 bg-primary rounded-full shadow-[0_0_10px_hsl(var(--primary)/0.6)]" />
             </div>
           </div>
-
           <div className="flex-1 relative" style={{ height: '220px' }}>
             {levels.map((l, i) => (
-              <div
-                key={i}
-                className={`absolute text-xs font-mono leading-tight ${l.color} ${l.highlight ? 'font-bold' : ''}`}
-                style={{ bottom: `${clamp(l.pct)}%`, transform: 'translateY(50%)' }}
-              >
+              <div key={i} className={`absolute text-xs font-mono leading-tight ${l.color} ${l.highlight ? 'font-bold' : ''}`} style={{ bottom: `${clamp(l.pct)}%`, transform: 'translateY(50%)' }}>
                 {l.label}{l.price && <span className="ml-1.5 text-muted-foreground/60">{l.price}</span>}
               </div>
             ))}
           </div>
         </div>
-
-        {/* Key numbers */}
         <div className="space-y-1 text-sm font-mono border-t border-border pt-3">
           <div className="flex justify-between">
             <span className="text-blue-400">{fmt(investableParity)}</span>
@@ -91,15 +80,8 @@ function AnchorCard({ anchor }: { anchor: AnchorResult | null }) {
             <span className="text-muted-foreground">At hist. median ({HISTORICAL_MEDIAN_PCT}%)</span>
           </div>
         </div>
-
-        {/* Conclusion */}
-        <p className={`text-sm font-semibold text-center ${conclusion.color}`}>
-          {conclusion.text}
-        </p>
-        <p className="text-xs text-muted-foreground text-center leading-relaxed">
-          {conclusion.detail}
-        </p>
-
+        <p className={`text-sm font-semibold text-center ${conclusion.color}`}>{conclusion.text}</p>
+        <p className="text-xs text-muted-foreground text-center leading-relaxed">{conclusion.detail}</p>
         <p className="text-xs text-muted-foreground/70 text-center">
           Parity rises ~4.5%/yr as M2 grows 6% and gold supply grows only 1.5%.
         </p>
@@ -136,7 +118,6 @@ function ForcesCard({ gdiResult, currentGDI }: { gdiResult: GDIResult | null; cu
           </span>
           <p className={`text-sm font-semibold mt-1 ${signalColor}`}>{signal}</p>
         </div>
-
         <div className="space-y-3">
           {tiers.map(t => (
             <div key={t.label} className="space-y-1">
@@ -158,7 +139,6 @@ function ForcesCard({ gdiResult, currentGDI }: { gdiResult: GDIResult | null; cu
             </div>
           ))}
         </div>
-
         <p className="text-sm text-muted-foreground text-center">
           Key driver: {keyDriver.name} ({keyDriver.contribution >= 0 ? '+' : ''}{keyDriver.contribution.toFixed(2)})
         </p>
@@ -168,42 +148,42 @@ function ForcesCard({ gdiResult, currentGDI }: { gdiResult: GDIResult | null; cu
 }
 
 function LeverageCard({ leverage, currentGDXPrice }: { leverage: LeverageResult | null; currentGDXPrice: number }) {
-  if (!leverage) return <CardShell title="THE LEVERAGE" subtitle="Are gold miners cheap or expensive relative to gold?" icon={<Pickaxe size={16} />}><SkeletonCard /></CardShell>;
+  if (!leverage) return <CardShell title="THE LEVERAGE" subtitle="Are gold miners cheap or expensive based on the value of their gold in the ground?" icon={<Pickaxe size={16} />}><SkeletonCard /></CardShell>;
 
-  const { currentGDXGoldRatio, currentPercentile } = leverage;
-  const pctColor = currentPercentile < 25 ? 'text-bullish' : currentPercentile > 75 ? 'text-bearish' : 'text-neutral';
+  const { sectorPNAV } = leverage;
+  const conclusion = deriveLeverageConclusion(sectorPNAV);
+  const pnavColor = sectorPNAV < 0.8 ? 'text-bullish' : sectorPNAV > 1.5 ? 'text-bearish' : 'text-neutral';
 
-  let conclusion: { text: string; color: string };
-  if (currentPercentile < 25) {
-    conclusion = { text: 'UNDERVALUED vs gold — catch-up potential HIGH', color: 'text-bullish' };
-  } else if (currentPercentile > 75) {
-    conclusion = { text: 'OVERVALUED — miners have front-run gold', color: 'text-bearish' };
-  } else {
-    conclusion = { text: 'FAIRLY VALUED — in line with gold', color: 'text-neutral' };
-  }
+  const gaugeMin = 0.3;
+  const gaugeMax = 2.5;
+  const clampPct = (v: number) => Math.max(0, Math.min(100, ((v - gaugeMin) / (gaugeMax - gaugeMin)) * 100));
 
   return (
-    <CardShell title="THE LEVERAGE" subtitle="Are gold miners cheap or expensive relative to gold?" icon={<Pickaxe size={16} />} guideId="lens-leverage" guideText="The Leverage lens measures whether gold miners (GDX) are cheap or expensive relative to gold itself. When the ratio is below the 25th percentile, miners have historically delivered outsized returns as the ratio mean-reverts.">
+    <CardShell title="THE LEVERAGE" subtitle="Are gold miners cheap or expensive based on the value of their gold in the ground?" icon={<Pickaxe size={16} />} guideId="lens-leverage" guideText="The Leverage lens measures P/NAV — whether you're paying a premium or discount for the gold in the ground. Below 0.8× = discount. 0.8-1.5× = fair value. Above 1.5× = premium.">
       <div className="space-y-4">
         <div className="text-center space-y-1">
-          <p className="text-sm text-muted-foreground">GDX/Gold Ratio</p>
-          <p className="font-mono text-xl text-leverage-miner font-semibold">{currentGDXGoldRatio.toFixed(4)}</p>
-          <p className={`font-mono text-sm ${pctColor}`}>
-            {currentPercentile.toFixed(0)}th percentile (10yr)
+          <p className="text-sm text-muted-foreground">Sector P/NAV</p>
+          <p className={`font-mono text-xl font-semibold ${pnavColor}`}>{sectorPNAV.toFixed(2)}×</p>
+          <p className="font-mono text-xs text-muted-foreground">
+            Hist. avg: {HISTORICAL_AVG_PNAV}×
           </p>
         </div>
 
-        <div className="relative h-3 bg-muted rounded-full">
+        {/* P/NAV Gauge */}
+        <div className="relative h-3 rounded-full overflow-hidden bg-gradient-to-r from-bullish/20 via-neutral/10 to-bearish/20">
           <div
-            className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-leverage-miner border-2 border-background z-10"
-            style={{ left: `${Math.min(100, Math.max(0, currentPercentile))}%`, transform: 'translate(-50%, -50%)' }}
+            className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-primary border-2 border-background shadow-[0_0_8px_hsl(var(--primary)/0.5)] z-10"
+            style={{ left: `${clampPct(sectorPNAV)}%`, transform: 'translate(-50%, -50%)' }}
           />
-          <div className="absolute inset-y-0 left-0 w-1/4 bg-bullish/20 rounded-l-full" />
-          <div className="absolute inset-y-0 right-0 w-1/4 bg-bearish/20 rounded-r-full" />
+          <div
+            className="absolute top-0 bottom-0 w-px bg-muted-foreground/40"
+            style={{ left: `${clampPct(HISTORICAL_AVG_PNAV)}%` }}
+          />
         </div>
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>Cheap</span>
-          <span>Expensive</span>
+        <div className="flex justify-between text-xs text-muted-foreground font-mono">
+          <span>0.3×</span>
+          <span>1.0×</span>
+          <span>2.5×</span>
         </div>
 
         <p className={`text-sm font-semibold text-center ${conclusion.color}`}>
@@ -211,7 +191,7 @@ function LeverageCard({ leverage, currentGDXPrice }: { leverage: LeverageResult 
         </p>
 
         <p className="text-sm text-muted-foreground text-center">
-          Current GDX: ${currentGDXPrice.toFixed(2)}
+          GDX: ${currentGDXPrice.toFixed(2)}
         </p>
       </div>
     </CardShell>
