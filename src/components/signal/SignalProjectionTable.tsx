@@ -1,7 +1,7 @@
 import type { AnchorResult } from '@/lib/anchorEngine';
-import { projectParity, M2_GROWTH, NET_PARITY_GROWTH } from '@/lib/anchorEngine';
+import { projectParity } from '@/lib/anchorEngine';
 import type { LeverageResult } from '@/lib/leverageEngine';
-import { projectGDXGoldRatio } from '@/lib/leverageEngine';
+import { projectGoldPNAV, HISTORICAL_AVG_PNAV } from '@/lib/leverageEngine';
 import type { ScenarioConfig, ScenarioProbabilities } from '@/lib/scenarioEngine';
 import { BANK_CONSENSUS } from '@/lib/scenarioEngine';
 import { GuideTooltip } from '@/components/GuideMode';
@@ -63,12 +63,16 @@ export default function SignalProjectionTable({ anchorResult, leverageResult, sc
     return (Math.pow(ev / currentGoldPrice, 1 / h.years) - 1) * 100;
   });
 
-  const gdxRatioRow = SHORT_HORIZONS.map(h => {
-    if (!leverageResult) return 0;
-    return projectGDXGoldRatio(leverageResult.currentGDXGoldRatio, leverageResult.medianRatio, h.years);
-  });
+  // P/NAV-based miner projections
+  const currentPNAV = leverageResult?.sectorPNAV ?? 1.1;
 
-  const gdxProjRow = SHORT_HORIZONS.map((h, i) => evRowFull[i] * gdxRatioRow[i]);
+  const pnavProjRow = SHORT_HORIZONS.map(h =>
+    projectGoldPNAV(currentPNAV, HISTORICAL_AVG_PNAV, h.years)
+  );
+
+  const gdxProjRow = SHORT_HORIZONS.map((h, i) =>
+    currentGDXPrice * (evRowFull[i] / currentGoldPrice) * (pnavProjRow[i] / currentPNAV)
+  );
 
   const gdxCagrRow = SHORT_HORIZONS.map((h, i) => {
     if (h.years < 1) return null;
@@ -144,7 +148,7 @@ export default function SignalProjectionTable({ anchorResult, leverageResult, sc
                   Gold Impl. CAGR
                 </GuideTooltip>
               </td>
-              {SHORT_HORIZONS.map((h, i) => {
+              {SHORT_HORIZONS.map((h) => {
                 if (h.years < 1) return <td key={h.key} className="text-right px-4 py-3 font-mono text-sm text-muted-foreground">—</td>;
                 const goldIdx = HORIZONS.findIndex(hh => hh.key === h.key);
                 const v = goldIdx >= 0 ? goldCagrRow[goldIdx] : null;
@@ -162,7 +166,11 @@ export default function SignalProjectionTable({ anchorResult, leverageResult, sc
               </td>
             </tr>
 
-            <Row label="GDX/Gold Ratio" values={gdxRatioRow.map(v => v.toFixed(4))} colorClass="text-leverage-miner" />
+            <Row
+              label="Sector P/NAV (proj)"
+              values={pnavProjRow.map(v => v.toFixed(2) + '×')}
+              colorClass="text-leverage-miner"
+            />
             <Row label="GDX Projected" values={gdxProjRow.map(v => fmt(v))} colorClass="text-leverage-miner" />
             <tr className="border-b border-border">
               <td className="px-4 py-3 text-sm text-muted-foreground">GDX Impl. CAGR</td>
@@ -174,7 +182,7 @@ export default function SignalProjectionTable({ anchorResult, leverageResult, sc
             </tr>
             <tr>
               <td className="px-4 py-3 text-sm text-muted-foreground">
-                <GuideTooltip id="proj-vs-gold" text="How much extra return miners deliver over gold. The premium comes from gold appreciation plus miner re-rating toward historical norms.">
+                <GuideTooltip id="proj-vs-gold" text="How much extra return miners deliver over gold. The premium comes from gold appreciation plus P/NAV expansion toward the historical average.">
                   vs. Gold CAGR
                 </GuideTooltip>
               </td>
@@ -191,12 +199,13 @@ export default function SignalProjectionTable({ anchorResult, leverageResult, sc
       <div className="px-4 py-3 border-t border-border">
         <p className="text-xs text-muted-foreground font-mono text-center">
           Gold: {fmt(currentGoldPrice)} | GDX: ${currentGDXPrice.toFixed(2)}
-          {leverageResult && ` | GDX/Gold: ${leverageResult.currentGDXGoldRatio.toFixed(4)}`}
+          {leverageResult && ` | Sector P/NAV: ${leverageResult.sectorPNAV.toFixed(2)}× (hist. avg ${HISTORICAL_AVG_PNAV}×)`}
           {anchorResult && ` | ${anchorResult.pctOfInvestableParity.toFixed(0)}% of inv. parity`}
           {bankMin > 0 && ` | Bank YE2026: ${fmt(bankMin)}–${fmt(bankMax)}`}
         </p>
         <p className="text-xs text-muted-foreground/60 text-center mt-1">
-          Total gold: 216,265t (WGC). Investable: 86,389t. M2 from FRED WM2NS. Parities grow ~4.5%/yr.
+          P/NAV projection assumes mean reversion toward {HISTORICAL_AVG_PNAV}× with 2.5yr half-life.
+          Projected GDX = Current GDX × (proj. gold / current gold) × (proj. P/NAV / current P/NAV).
         </p>
       </div>
     </div>

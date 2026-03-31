@@ -1,12 +1,9 @@
 import { useMemo } from 'react';
-import {
-  ComposedChart, Line, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  CartesianGrid, ReferenceLine,
-} from 'recharts';
-import type { LeverageResult } from '@/lib/leverageEngine';
-import { projectGDXGoldRatio } from '@/lib/leverageEngine';
+import type { LeverageResult, GoldMinerValuation } from '@/lib/leverageEngine';
+import { projectGoldPNAV, deriveLeverageConclusion, HISTORICAL_AVG_PNAV, HISTORICAL_PEAK_PNAV, HISTORICAL_TROUGH_PNAV } from '@/lib/leverageEngine';
 import type { Observation } from '@/lib/dataFetcher';
 import type { ScenarioConfig, ScenarioProbabilities } from '@/lib/scenarioEngine';
+import { GuideTooltip } from '@/components/GuideMode';
 
 interface Props {
   leverageResult: LeverageResult;
@@ -17,105 +14,36 @@ interface Props {
   probs: ScenarioProbabilities;
 }
 
-interface RatioPoint {
-  date: string;
-  ts: number;
-  ratio?: number;
-  projRatio?: number;
-  p25?: number;
-  p75?: number;
-  median?: number;
+function pnavColor(pnav: number): string {
+  if (pnav < 0.8) return 'text-bullish';
+  if (pnav <= 1.5) return 'text-neutral';
+  return 'text-bearish';
 }
 
-interface GDXPoint {
-  date: string;
-  ts: number;
-  gdx?: number;
-  bull?: number;
-  base?: number;
-  bear?: number;
+function fmt(n: number): string {
+  return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
 }
 
 export default function LeveragePanel({
   leverageResult, goldSpot, currentGoldPrice, currentGDXPrice, scenarioConfig, probs,
 }: Props) {
-  const { currentGDXGoldRatio, medianRatio, currentPercentile, ratioSeries } = leverageResult;
+  const { sectorPNAV, miners } = leverageResult;
+  const conclusion = deriveLeverageConclusion(sectorPNAV);
 
-  const bands = useMemo(() => {
-    const values = ratioSeries.map(r => r.value).sort((a, b) => a - b);
-    const p25 = values[Math.floor(values.length * 0.25)] || 0;
-    const p75 = values[Math.floor(values.length * 0.75)] || 0;
-    return { p25, p75 };
-  }, [ratioSeries]);
-
-  const ratioChartData = useMemo(() => {
-    const now = new Date();
-    const tenYearsAgo = new Date(now);
-    tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
-    const cutoff = tenYearsAgo.toISOString().split('T')[0];
-
-    const points: RatioPoint[] = ratioSeries
-      .filter(r => r.date >= cutoff)
-      .map(r => ({
-        date: r.date, ts: new Date(r.date).getTime(), ratio: r.value,
-        p25: bands.p25, p75: bands.p75, median: medianRatio,
-      }));
-
+  // Projected P/NAV
+  const projected = useMemo(() => {
     const horizons = [
-      { years: 0.25 }, { years: 0.5 }, { years: 1 }, { years: 3 }, { years: 5 },
+      { key: '1y', years: 1 },
+      { key: '3y', years: 3 },
+      { key: '5y', years: 5 },
     ];
-    for (const h of horizons) {
-      const d = new Date(now);
-      d.setMonth(d.getMonth() + Math.round(h.years * 12));
-      points.push({
-        date: d.toISOString().split('T')[0], ts: d.getTime(),
-        projRatio: projectGDXGoldRatio(currentGDXGoldRatio, medianRatio, h.years),
-        p25: bands.p25, p75: bands.p75, median: medianRatio,
-      });
-    }
-    return points;
-  }, [ratioSeries, bands, medianRatio, currentGDXGoldRatio]);
+    return horizons.map(h => ({
+      ...h,
+      pnav: projectGoldPNAV(sectorPNAV, HISTORICAL_AVG_PNAV, h.years),
+    }));
+  }, [sectorPNAV]);
 
-  const gdxChartData = useMemo(() => {
-    if (!scenarioConfig?.scenarios?.length) return [];
-    const bull = scenarioConfig.scenarios.find(s => s.name === 'Bull');
-    const base = scenarioConfig.scenarios.find(s => s.name === 'Base');
-    const bear = scenarioConfig.scenarios.find(s => s.name === 'Bear');
-    if (!bull || !base || !bear) return [];
-
-    const now = new Date();
-    const goldMap = new Map<string, number>();
-    goldSpot.forEach(o => goldMap.set(o.date.substring(0, 7), o.value));
-
-    const tenYearsAgo = new Date(now);
-    tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
-    const cutoff = tenYearsAgo.toISOString().split('T')[0];
-
-    const points: GDXPoint[] = ratioSeries
-      .filter(r => r.date >= cutoff)
-      .map(r => {
-        const gp = goldMap.get(r.date.substring(0, 7));
-        return { date: r.date, ts: new Date(r.date).getTime(), gdx: gp ? r.value * gp : undefined };
-      });
-
-    const horizons: { key: keyof typeof bull.targets; years: number }[] = [
-      { key: '3m', years: 0.25 }, { key: '6m', years: 0.5 }, { key: '1y', years: 1 },
-      { key: '3y', years: 3 }, { key: '5y', years: 5 },
-    ];
-    for (const h of horizons) {
-      const d = new Date(now);
-      d.setMonth(d.getMonth() + Math.round(h.years * 12));
-      const projRatio = projectGDXGoldRatio(currentGDXGoldRatio, medianRatio, h.years);
-      points.push({
-        date: d.toISOString().split('T')[0], ts: d.getTime(),
-        bull: bull.targets[h.key] * projRatio * 1.15,
-        base: base.targets[h.key] * projRatio,
-        bear: bear.targets[h.key] * projRatio * 0.85,
-      });
-    }
-    return points;
-  }, [scenarioConfig, ratioSeries, goldSpot, currentGDXGoldRatio, medianRatio]);
-
+  // Projected GDX prices
   const projectedGDX = useMemo(() => {
     if (!scenarioConfig?.scenarios?.length) return {};
     const bull = scenarioConfig.scenarios.find(s => s.name === 'Bull');
@@ -124,131 +52,155 @@ export default function LeveragePanel({
     if (!bull || !base || !bear) return {};
 
     const result: Record<string, number> = {};
-    for (const h of [{ key: '1y' as const, years: 1 }, { key: '3y' as const, years: 3 }, { key: '5y' as const, years: 5 }]) {
-      const projRatio = projectGDXGoldRatio(currentGDXGoldRatio, medianRatio, h.years);
-      const goldEV = probs.bull * bull.targets[h.key] + probs.base * base.targets[h.key] + probs.bear * bear.targets[h.key];
-      result[h.key] = goldEV * projRatio;
+    for (const p of projected) {
+      const goldEV = probs.bull * bull.targets[p.key as keyof typeof bull.targets]
+        + probs.base * base.targets[p.key as keyof typeof base.targets]
+        + probs.bear * bear.targets[p.key as keyof typeof bear.targets];
+      result[p.key] = currentGDXPrice * (goldEV / currentGoldPrice) * (p.pnav / sectorPNAV);
     }
     return result;
-  }, [scenarioConfig, probs, currentGDXGoldRatio, medianRatio]);
-
-  const pctileColor = currentPercentile < 25 ? 'text-bullish' : currentPercentile > 75 ? 'text-bearish' : 'text-neutral';
-  const todayTs = new Date().getTime();
+  }, [scenarioConfig, probs, projected, sectorPNAV, currentGDXPrice, currentGoldPrice]);
 
   const gdxCagr5y = projectedGDX['5y'] ? (Math.pow(projectedGDX['5y'] / currentGDXPrice, 1 / 5) - 1) * 100 : 0;
-  const goldEV5y = (() => {
-    if (!scenarioConfig?.scenarios?.length) return currentGoldPrice;
-    const bull = scenarioConfig.scenarios.find(s => s.name === 'Bull');
-    const base = scenarioConfig.scenarios.find(s => s.name === 'Base');
-    const bear = scenarioConfig.scenarios.find(s => s.name === 'Bear');
-    if (!bull || !base || !bear) return currentGoldPrice;
-    return probs.bull * bull.targets['5y'] + probs.base * base.targets['5y'] + probs.bear * bear.targets['5y'];
-  })();
-  const goldCagr5y = (Math.pow(goldEV5y / currentGoldPrice, 1 / 5) - 1) * 100;
-  const premium = gdxCagr5y - goldCagr5y;
+
+  // P/NAV gauge position
+  const gaugeMin = 0.3;
+  const gaugeMax = 2.5;
+  const clampPct = (v: number) => Math.max(0, Math.min(100, ((v - gaugeMin) / (gaugeMax - gaugeMin)) * 100));
+
+  // Sort miners: producers first (by p_nav), then royalty/streaming
+  const sortedMiners = useMemo(() =>
+    [...miners].sort((a, b) => {
+      const aIsRoyalty = a.stage.includes('Royalty') || a.stage.includes('Stream');
+      const bIsRoyalty = b.stage.includes('Royalty') || b.stage.includes('Stream');
+      if (aIsRoyalty !== bIsRoyalty) return aIsRoyalty ? 1 : -1;
+      return b.nav_usd_bn - a.nav_usd_bn;
+    }),
+  [miners]);
+
+  const avgAISC = useMemo(() => {
+    const producers = miners.filter(m => m.aisc_per_oz > 0);
+    if (!producers.length) return 1400;
+    return producers.reduce((s, m) => s + m.aisc_per_oz, 0) / producers.length;
+  }, [miners]);
+
+  const margin = currentGoldPrice - avgAISC;
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="font-display text-xl text-foreground">The Leverage</h2>
-        <span className={`text-sm font-semibold ${pctileColor}`}>
-          {Math.round(currentPercentile)}th percentile
-        </span>
+      <div>
+        <h2 className="text-sm font-semibold tracking-widest text-muted-foreground uppercase">THE LEVERAGE</h2>
+        <p className="text-[15px] text-muted-foreground/70 italic mt-1">
+          Are gold miners cheap or expensive based on the value of their gold in the ground?
+        </p>
       </div>
 
       <div className="bg-card border border-border rounded-xl p-4 sm:p-5 space-y-5">
-        {/* Ratio chart */}
-        <div>
-          <p className="text-xs text-muted-foreground tracking-widest mb-2">GDX / GOLD RATIO</p>
-          <ResponsiveContainer width="100%" height={220}>
-            <ComposedChart data={ratioChartData} margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-              <XAxis dataKey="ts" type="number" domain={['dataMin', 'dataMax']}
-                tickFormatter={(ts) => new Date(ts).getFullYear().toString()}
-                stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false}
-              />
-              <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false}
-                tickFormatter={(v) => v.toFixed(3)}
-              />
-              <Tooltip
-                content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-                  const d = payload[0]?.payload as RatioPoint;
-                  return (
-                    <div className="bg-card border border-border rounded-xl p-3 text-sm shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
-                      <p className="text-muted-foreground">{d.date}</p>
-                      {d.ratio != null && <p className="text-leverage-miner font-mono">Ratio: {d.ratio.toFixed(4)}</p>}
-                      {d.projRatio != null && <p className="text-leverage-miner font-mono">Proj: {d.projRatio.toFixed(4)}</p>}
-                    </div>
-                  );
-                }}
-              />
-              <ReferenceLine x={todayTs} stroke="hsl(var(--muted-foreground))" strokeDasharray="4 4" opacity={0.5} />
-              <Area dataKey="p75" stroke="none" fill="hsl(270 95% 75%)" fillOpacity={0.06} />
-              <Area dataKey="p25" stroke="none" fill="hsl(var(--background))" fillOpacity={1} />
-              <ReferenceLine y={medianRatio} stroke="hsl(var(--muted-foreground))" strokeDasharray="6 3" opacity={0.5} />
-              <Line dataKey="ratio" stroke="hsl(270 95% 75%)" strokeWidth={2} dot={false} connectNulls />
-              <Line dataKey="projRatio" stroke="hsl(270 95% 75%)" strokeWidth={2} strokeDasharray="4 4" dot={{ r: 3, fill: 'hsl(270 95% 75%)' }} connectNulls />
-            </ComposedChart>
-          </ResponsiveContainer>
+        {/* Calculation explanation */}
+        <div className="text-[15px] text-muted-foreground space-y-2">
+          <p className="text-xs tracking-widest uppercase text-muted-foreground/80 font-semibold">How This Is Calculated</p>
+          <div className="font-mono text-xs leading-relaxed bg-muted/30 rounded-lg p-3 space-y-1">
+            <p><span className="text-foreground">P/NAV</span> = Share Price ÷ Net Asset Value per share</p>
+            <p><span className="text-foreground">NAV</span> = present value of gold reserves at forward prices,</p>
+            <p className="ml-4">minus extraction costs (AISC), discounted at 5–8%.</p>
+            <p className="mt-2">A P/NAV of <span className="text-foreground">1.0×</span> means you're paying exactly what the gold in the ground is worth.</p>
+            <p>Below 1.0× = buying gold reserves <span className="text-bullish">at a discount</span>.</p>
+            <p>Above 1.0× = paying a <span className="text-bearish">premium</span> for growth or quality.</p>
+          </div>
         </div>
 
-        {/* GDX price chart */}
+        {/* Miner valuations table */}
         <div>
-          <p className="text-xs text-muted-foreground tracking-widest mb-2">GDX PRICE SCENARIOS</p>
-          <ResponsiveContainer width="100%" height={220}>
-            <ComposedChart data={gdxChartData} margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-              <XAxis dataKey="ts" type="number" domain={['dataMin', 'dataMax']}
-                tickFormatter={(ts) => new Date(ts).getFullYear().toString()}
-                stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false}
-              />
-              <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false}
-                tickFormatter={(v) => `$${v?.toFixed(0) ?? ''}`}
-              />
-              <Tooltip
-                content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-                  const d = payload[0]?.payload as GDXPoint;
+          <p className="text-xs text-muted-foreground tracking-widest uppercase mb-2">
+            GDX Top Holdings — Valuation vs Net Asset Value
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left px-3 py-2 text-muted-foreground font-medium">Company</th>
+                  <th className="text-right px-3 py-2 text-muted-foreground font-medium">P/NAV</th>
+                  <th className="text-right px-3 py-2 text-muted-foreground font-medium">AISC/oz</th>
+                  <th className="text-left px-3 py-2 text-muted-foreground font-medium">Jurisdiction</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedMiners.map((m) => {
+                  const isRoyalty = m.stage.includes('Royalty') || m.stage.includes('Stream');
                   return (
-                    <div className="bg-card border border-border rounded-xl p-3 text-sm shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
-                      <p className="text-muted-foreground">{d.date}</p>
-                      {d.gdx != null && <p className="text-leverage-miner font-mono">GDX: ${d.gdx.toFixed(2)}</p>}
-                      {d.bull != null && <p className="text-bullish font-mono">Bull: ${d.bull.toFixed(0)}</p>}
-                      {d.base != null && <p className="text-primary font-mono">Base: ${d.base.toFixed(0)}</p>}
-                      {d.bear != null && <p className="text-bearish font-mono">Bear: ${d.bear.toFixed(0)}</p>}
-                    </div>
+                    <tr key={m.ticker} className="border-b border-border">
+                      <td className="px-3 py-2">
+                        <span className="text-foreground font-mono">{m.company}</span>
+                        <span className="text-muted-foreground/60 ml-1.5 text-xs">({m.ticker})</span>
+                      </td>
+                      <td className={`text-right px-3 py-2 font-mono font-semibold ${pnavColor(m.p_nav)}`}>
+                        {m.p_nav.toFixed(1)}×
+                      </td>
+                      <td className="text-right px-3 py-2 font-mono text-muted-foreground">
+                        {isRoyalty ? 'N/A' : `$${m.aisc_per_oz.toLocaleString()}`}
+                      </td>
+                      <td className="px-3 py-2 text-muted-foreground text-xs">{m.jurisdiction}</td>
+                    </tr>
                   );
-                }}
-              />
-              <ReferenceLine x={todayTs} stroke="hsl(var(--muted-foreground))" strokeDasharray="4 4" opacity={0.5} />
-              <Line dataKey="gdx" stroke="hsl(270 95% 75%)" strokeWidth={2} dot={false} connectNulls />
-              <Line dataKey="bull" stroke="hsl(var(--bullish))" strokeWidth={1.5} strokeDasharray="4 2" dot={{ r: 3 }} connectNulls />
-              <Line dataKey="base" stroke="hsl(var(--primary))" strokeWidth={1.5} strokeDasharray="4 2" dot={{ r: 3 }} connectNulls />
-              <Line dataKey="bear" stroke="hsl(var(--bearish))" strokeWidth={1.5} strokeDasharray="4 2" dot={{ r: 3 }} connectNulls />
-            </ComposedChart>
-          </ResponsiveContainer>
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-muted-foreground/60 mt-2 italic">
+            Note: Royalty/streaming cos (FNV, WPM) always trade at higher P/NAV — no operating costs, no capex.
+            A 2.0–2.5× P/NAV for them is "fair." Producer P/NAVs tell you if the sector is cheap or expensive.
+          </p>
+        </div>
+
+        {/* P/NAV Gauge */}
+        <div>
+          <p className="text-xs text-muted-foreground tracking-widest uppercase mb-2">Sector P/NAV Gauge</p>
+          <div className="relative h-4 rounded-full overflow-hidden bg-gradient-to-r from-bullish/30 via-neutral/20 to-bearish/30">
+            <div
+              className="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-primary border-2 border-background shadow-[0_0_8px_hsl(var(--primary)/0.5)] z-10"
+              style={{ left: `${clampPct(sectorPNAV)}%`, transform: 'translate(-50%, -50%)' }}
+            />
+            {/* Historical avg marker */}
+            <div
+              className="absolute top-0 bottom-0 w-px bg-muted-foreground/40"
+              style={{ left: `${clampPct(HISTORICAL_AVG_PNAV)}%` }}
+            />
+          </div>
+          <div className="flex justify-between text-xs text-muted-foreground mt-1 font-mono">
+            <span>0.3×</span>
+            <span>0.8×</span>
+            <span>1.0×</span>
+            <span>1.3× avg</span>
+            <span>2.5×</span>
+          </div>
         </div>
 
         {/* Stats */}
         <div className="space-y-1.5 text-sm font-mono text-muted-foreground">
           <p>
+            Sector P/NAV: <span className={`font-semibold ${pnavColor(sectorPNAV)}`}>{sectorPNAV.toFixed(2)}×</span>
+            {' · '}Hist. avg: <span className="text-foreground">{HISTORICAL_AVG_PNAV}×</span>
+            {' · '}Margin: <span className="text-foreground">{fmt(margin)}/oz</span>
+          </p>
+          <p>
             GDX: <span className="text-foreground">${currentGDXPrice.toFixed(2)}</span>
-            {' · '}Ratio: <span className="text-foreground">{currentGDXGoldRatio.toFixed(4)}</span>
-            {' · '}Pctile: <span className={pctileColor}>{Math.round(currentPercentile)}th</span>
+            {' · '}Gold: <span className="text-foreground">{fmt(currentGoldPrice)}</span>
+            {' · '}Avg AISC: <span className="text-foreground">{fmt(avgAISC)}</span>
           </p>
-          <p>
-            Projected GDX — 1Y: <span className="text-foreground">${(projectedGDX['1y'] || 0).toFixed(0)}</span>
-            {' · '}3Y: <span className="text-foreground">${(projectedGDX['3y'] || 0).toFixed(0)}</span>
-            {' · '}5Y: <span className="text-foreground">${(projectedGDX['5y'] || 0).toFixed(0)}</span>
-          </p>
-          <p>
-            5Y CAGR — GDX: <span className="text-foreground">{gdxCagr5y.toFixed(1)}%</span>
-            {' · '}Gold: <span className="text-foreground">{goldCagr5y.toFixed(1)}%</span>
-            {' · '}Premium: <span className={premium >= 0 ? 'text-bullish' : 'text-bearish'}>
-              {premium >= 0 ? '+' : ''}{premium.toFixed(0)}pp
-            </span>
-          </p>
+          {projectedGDX['5y'] && (
+            <p>
+              Proj GDX 5Y: <span className="text-foreground">${(projectedGDX['5y']).toFixed(0)}</span>
+              {' · '}CAGR: <span className={gdxCagr5y >= 0 ? 'text-bullish' : 'text-bearish'}>
+                {gdxCagr5y >= 0 ? '+' : ''}{gdxCagr5y.toFixed(1)}%
+              </span>
+            </p>
+          )}
+        </div>
+
+        {/* Conclusion */}
+        <div className="border-t border-border pt-4">
+          <p className={`text-sm font-semibold ${conclusion.color}`}>{conclusion.text}</p>
+          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{conclusion.detail}</p>
         </div>
       </div>
     </div>
