@@ -9,6 +9,7 @@ import {
 import type { MinerPrice } from '@/lib/leverageEngine';
 import LoadingProgress from '@/components/LoadingProgress';
 import PageIntro from '@/components/PageIntro';
+import NarratorPanel from '@/components/NarratorPanel';
 import UraniumSignalLenses from '@/components/uranium/UraniumSignalLenses';
 import UraniumProjectionTable from '@/components/uranium/UraniumProjectionTable';
 import UraniumPositioning from '@/components/uranium/UraniumPositioning';
