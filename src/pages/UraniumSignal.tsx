@@ -62,6 +62,26 @@ const UraniumSignal = () => {
     );
   }
 
+  const spotPrice = anchorResult?.spotPrice ?? 0;
+
+  const dashboardData = useMemo(() => {
+    let text = `Uranium Spot: $${spotPrice.toFixed(0)}/lb`;
+    if (anchorResult) text += `\nAnchor zone: ${anchorResult.zoneLabel}, ${anchorResult.pctAboveIncentive.toFixed(1)}% above incentive price`;
+    if (forcesResult) text += `\nForces: score=${forcesResult.score.toFixed(2)}, signal=${forcesResult.signal}`;
+    if (leverageResult) text += `\nLeverage: Sector P/NAV ${leverageResult.sectorPNAV.toFixed(2)}× (hist. avg ${leverageResult.historicalAvgPNAV.toFixed(2)}×)`;
+    return text;
+  }, [spotPrice, anchorResult, forcesResult, leverageResult]);
+
+  const dataHash = useMemo(() => {
+    const parts = [
+      `spot:${spotPrice.toFixed(0)}`,
+      anchorResult ? `zone:${anchorResult.zoneLabel}` : '',
+      forcesResult ? `forces:${forcesResult.score.toFixed(2)}` : '',
+      leverageResult ? `pnav:${leverageResult.sectorPNAV.toFixed(2)}` : '',
+    ].filter(Boolean).join('|');
+    return parts;
+  }, [spotPrice, anchorResult, forcesResult, leverageResult]);
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 pt-6 pb-8 space-y-10">
