@@ -46,6 +46,26 @@ const UraniumSignal = () => {
     load();
   }, []);
 
+  const spotPrice = anchorResult?.spotPrice ?? 0;
+
+  const dashboardData = useMemo(() => {
+    let text = `Uranium Spot: $${spotPrice.toFixed(0)}/lb`;
+    if (anchorResult) text += `\nAnchor zone: ${anchorResult.zoneLabel}, ${anchorResult.gapToGreenfield.toFixed(1)}% gap to greenfield incentive`;
+    if (forcesResult) text += `\nForces: deficit=${forcesResult.deficit.toFixed(1)} Mlb (${forcesResult.deficitPct.toFixed(1)}%), demand=${forcesResult.demandSignal}, supply=${forcesResult.supplySignal}`;
+    if (leverageResult) text += `\nLeverage: Sector P/NAV ${leverageResult.sectorPNAV.toFixed(2)}× (hist. avg ${leverageResult.historicalAvgPNAV.toFixed(2)}×)`;
+    return text;
+  }, [spotPrice, anchorResult, forcesResult, leverageResult]);
+
+  const dataHash = useMemo(() => {
+    const parts = [
+      `spot:${spotPrice.toFixed(0)}`,
+      anchorResult ? `zone:${anchorResult.zoneLabel}` : '',
+      forcesResult ? `deficit:${forcesResult.deficit.toFixed(1)}` : '',
+      leverageResult ? `pnav:${leverageResult.sectorPNAV.toFixed(2)}` : '',
+    ].filter(Boolean).join('|');
+    return parts;
+  }, [spotPrice, anchorResult, forcesResult, leverageResult]);
+
   if (loading) return <LoadingProgress message="Loading uranium data..." />;
 
   if (error) {
@@ -61,26 +81,6 @@ const UraniumSignal = () => {
       </div>
     );
   }
-
-  const spotPrice = anchorResult?.spotPrice ?? 0;
-
-  const dashboardData = useMemo(() => {
-    let text = `Uranium Spot: $${spotPrice.toFixed(0)}/lb`;
-    if (anchorResult) text += `\nAnchor zone: ${anchorResult.zoneLabel}, ${anchorResult.pctAboveIncentive.toFixed(1)}% above incentive price`;
-    if (forcesResult) text += `\nForces: score=${forcesResult.score.toFixed(2)}, signal=${forcesResult.signal}`;
-    if (leverageResult) text += `\nLeverage: Sector P/NAV ${leverageResult.sectorPNAV.toFixed(2)}× (hist. avg ${leverageResult.historicalAvgPNAV.toFixed(2)}×)`;
-    return text;
-  }, [spotPrice, anchorResult, forcesResult, leverageResult]);
-
-  const dataHash = useMemo(() => {
-    const parts = [
-      `spot:${spotPrice.toFixed(0)}`,
-      anchorResult ? `zone:${anchorResult.zoneLabel}` : '',
-      forcesResult ? `forces:${forcesResult.score.toFixed(2)}` : '',
-      leverageResult ? `pnav:${leverageResult.sectorPNAV.toFixed(2)}` : '',
-    ].filter(Boolean).join('|');
-    return parts;
-  }, [spotPrice, anchorResult, forcesResult, leverageResult]);
 
   return (
     <div className="min-h-screen bg-background">
