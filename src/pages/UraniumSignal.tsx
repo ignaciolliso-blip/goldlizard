@@ -9,6 +9,7 @@ import {
 import type { MinerPrice } from '@/lib/leverageEngine';
 import LoadingProgress from '@/components/LoadingProgress';
 import PageIntro from '@/components/PageIntro';
+import NarratorPanel from '@/components/NarratorPanel';
 import UraniumSignalLenses from '@/components/uranium/UraniumSignalLenses';
 import UraniumProjectionTable from '@/components/uranium/UraniumProjectionTable';
 import UraniumPositioning from '@/components/uranium/UraniumPositioning';
@@ -44,6 +45,26 @@ const UraniumSignal = () => {
     }
     load();
   }, []);
+
+  const spotPrice = anchorResult?.spotPrice ?? 0;
+
+  const dashboardData = useMemo(() => {
+    let text = `Uranium Spot: $${spotPrice.toFixed(0)}/lb`;
+    if (anchorResult) text += `\nAnchor zone: ${anchorResult.zoneLabel}, ${anchorResult.gapToGreenfield.toFixed(1)}% gap to greenfield incentive`;
+    if (forcesResult) text += `\nForces: deficit=${forcesResult.deficit.toFixed(1)} Mlb (${forcesResult.deficitPct.toFixed(1)}%), demand=${forcesResult.demandSignal}, supply=${forcesResult.supplySignal}`;
+    if (leverageResult) text += `\nLeverage: Sector P/NAV ${leverageResult.sectorPNAV.toFixed(2)}× (hist. avg ${leverageResult.historicalAvgPNAV.toFixed(2)}×)`;
+    return text;
+  }, [spotPrice, anchorResult, forcesResult, leverageResult]);
+
+  const dataHash = useMemo(() => {
+    const parts = [
+      `spot:${spotPrice.toFixed(0)}`,
+      anchorResult ? `zone:${anchorResult.zoneLabel}` : '',
+      forcesResult ? `deficit:${forcesResult.deficit.toFixed(1)}` : '',
+      leverageResult ? `pnav:${leverageResult.sectorPNAV.toFixed(2)}` : '',
+    ].filter(Boolean).join('|');
+    return parts;
+  }, [spotPrice, anchorResult, forcesResult, leverageResult]);
 
   if (loading) return <LoadingProgress message="Loading uranium data..." />;
 
@@ -125,6 +146,17 @@ const UraniumSignal = () => {
             leverageResult={leverageResult}
           />
         </div>
+
+        {/* AI Narrator */}
+        {anchorResult && (
+          <NarratorPanel
+            asset="uranium"
+            currentPrice={anchorResult.spotPrice ?? 0}
+            dashboardData={dashboardData}
+            dataHash={dataHash}
+            accentColor="uranium"
+          />
+        )}
 
         {/* Navigation CTA */}
         <div className="text-center">
