@@ -127,6 +127,17 @@ const UraniumSignal = () => {
           />
         </div>
 
+        {/* AI Narrator */}
+        {anchorResult && (
+          <NarratorPanel
+            asset="uranium"
+            currentPrice={anchorResult.spotPrice ?? 0}
+            dashboardData={dashboardData}
+            dataHash={dataHash}
+            accentColor="uranium"
+          />
+        )}
+
         {/* Navigation CTA */}
         <div className="text-center">
           <Link
