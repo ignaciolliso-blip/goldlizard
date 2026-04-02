@@ -215,16 +215,10 @@ const Index = () => {
         {/* AI Narrator */}
         {gdiResult && (
           <NarratorPanel
-            gdiResult={gdiResult}
-            goldSpot={goldSpot}
-            currentGDI={currentGDI}
-            probs={probs}
-            scenarioConfig={scenarioConfig}
-            currentGoldPrice={currentGoldPrice}
-            weightMode="fixed"
-            anchorResult={anchorResult}
-            leverageResult={leverageResult}
-            currentGDXPrice={currentGDXPrice}
+            asset="gold"
+            currentPrice={currentGoldPrice}
+            dashboardData={narratorDashboardData}
+            dataHash={narratorDataHash}
           />
         )}
 
