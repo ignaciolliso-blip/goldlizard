@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      analysis_snapshots: {
+        Row: {
+          actual_price: number | null
+          asset: string
+          briefing: string
+          created_at: string
+          dashboard_data: string
+          id: string
+          period_label: string | null
+          predicted_price: number | null
+          price_at_prediction: number | null
+          target_date: string | null
+        }
+        Insert: {
+          actual_price?: number | null
+          asset: string
+          briefing: string
+          created_at?: string
+          dashboard_data: string
+          id?: string
+          period_label?: string | null
+          predicted_price?: number | null
+          price_at_prediction?: number | null
+          target_date?: string | null
+        }
+        Update: {
+          actual_price?: number | null
+          asset?: string
+          briefing?: string
+          created_at?: string
+          dashboard_data?: string
+          id?: string
+          period_label?: string | null
+          predicted_price?: number | null
+          price_at_prediction?: number | null
+          target_date?: string | null
+        }
+        Relationships: []
+      }
       central_bank_gold: {
         Row: {
           bar_coin_tonnes: number
