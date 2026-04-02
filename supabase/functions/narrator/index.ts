@@ -15,7 +15,7 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 
   try {
-    const { dashboardData, dataHash, checkCacheOnly } = await req.json();
+    const { dashboardData, dataHash, checkCacheOnly, asset = 'gold' } = await req.json();
 
     // Cache check (using service role so RLS doesn't block)
     if (dataHash) {
