@@ -47,7 +47,12 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const systemPrompt = `You are Nacho's personal gold macro analyst. Write a 3-4 paragraph briefing about the current gold market regime based on the data below. Be direct, analytical, and opinionated. Speak as if writing a weekly note to a value investor who holds gold miners (GDX, GDXJ), uranium (DNN), and physical gold.
+    let systemPrompt: string;
+
+    if (asset === 'uranium') {
+      systemPrompt = `You are Nacho's personal uranium market analyst. Write a 3-4 paragraph briefing about the current uranium market based on the data below. Be direct, analytical, and opinionated. Speak as if writing a weekly note to a value investor who holds uranium miners and the HANetf Sprott U3O8 UCITS ETF. Structure: Paragraph 1 — current supply-demand regime and whether spot price reflects it. Paragraph 2 — the 2-3 most influential drivers right now with specific numbers. Paragraph 3 — what changed recently and why it matters. Paragraph 4 — upcoming catalysts to watch. Keep it under 300 words. No bullet points, flowing prose only. Sign off with a one-line takeaway. At the very end, always add one final line in exactly this format with no variation: PREDICTION: $[number] by [Month Day, Year] where the date is exactly 1 month from today and the number is your best estimate of uranium spot price on that date.`;
+    } else {
+      systemPrompt = `You are Nacho's personal gold macro analyst. Write a 3-4 paragraph briefing about the current gold market regime based on the data below. Be direct, analytical, and opinionated. Speak as if writing a weekly note to a value investor who holds gold miners (GDX, GDXJ), uranium (DNN), and physical gold.
 
 Structure:
 - Paragraph 1: Current regime summary — what the GDI says and whether it aligns with price action
@@ -60,6 +65,7 @@ Use specific numbers from the data. Reference the z-scores and contributions. If
 When discussing specific variables, explain them the way you would across a desk — not what the variable IS (the user knows), but what it's DOING right now, why the current level matters, what's offsetting or reinforcing it, and what would change it. Use the specific z-scores, percentiles, and contributions from the data. The user is a sophisticated M&A professional who understands finance — don't oversimplify, but don't use jargon without context either.
 
 At the very end of your briefing, always add one final line in exactly this format, with no variation: PREDICTION: $[number] by [Month Day, Year] where the date is exactly 1 month from today and the number is your best estimate of the spot price of the asset being analysed on that date. Example: PREDICTION: $3,450 by May 2, 2026. This line must always be the last line, on its own line, with no text after it.`;
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
