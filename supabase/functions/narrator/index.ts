@@ -110,7 +110,7 @@ At the very end of your briefing, always add one final line in exactly this form
         briefing_text: briefing,
         data_hash: dataHash,
         generated_at: now,
-      }).eq("id", 1);
+      }).eq("id", cacheId);
     }
 
     return new Response(JSON.stringify({ briefing, generated_at: now }), {
