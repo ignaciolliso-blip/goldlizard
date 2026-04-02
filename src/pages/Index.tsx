@@ -98,6 +98,32 @@ const Index = () => {
     return sorted[sorted.length - 1].close_price;
   }, [rawData]);
 
+  const narratorDashboardData = useMemo(() => {
+    if (!gdiResult) return '';
+    const sorted = [...gdiResult.variableDetails].sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution));
+    const varLines = sorted.map(v =>
+      `${v.name}: z=${v.adjustedZScore.toFixed(2)}, weight=${(v.weight * 100).toFixed(1)}%, contribution=${v.contribution.toFixed(3)}`
+    ).join('\n');
+    const gold30d = goldSpot.length >= 22
+      ? ((goldSpot[goldSpot.length - 1].value / goldSpot[goldSpot.length - 22].value - 1) * 100).toFixed(1)
+      : 'N/A';
+    let text = `Gold: $${currentGoldPrice.toFixed(0)} (30d: ${gold30d}%)\nGDI: ${currentGDI.toFixed(2)} (fixed weights)\n\nComponents:\n${varLines}`;
+    if (probs) text += `\n\nScenario probs: bull=${(probs.bull * 100).toFixed(0)}%, base=${(probs.base * 100).toFixed(0)}%, bear=${(probs.bear * 100).toFixed(0)}%`;
+    if (anchorResult) text += `\n\nAnchor: ${anchorResult.pctOfInvestableParity.toFixed(1)}% of investable parity, zone=${anchorResult.zoneLabel}`;
+    if (leverageResult) text += `\nLeverage: Sector P/NAV ${leverageResult.sectorPNAV.toFixed(2)}× (hist. avg ${leverageResult.historicalAvgPNAV.toFixed(2)}×)`;
+    return text;
+  }, [gdiResult, goldSpot, currentGoldPrice, currentGDI, probs, anchorResult, leverageResult]);
+
+  const narratorDataHash = useMemo(() => {
+    if (!gdiResult) return '';
+    const top3 = [...gdiResult.variableDetails]
+      .sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))
+      .slice(0, 3)
+      .map(v => `${v.id}:${v.contribution.toFixed(2)}`)
+      .join('|');
+    return `${top3}|gdi:${currentGDI.toFixed(2)}`;
+  }, [gdiResult, currentGDI]);
+
   if (loading) return <LoadingProgress message={statusMsg} completedSeries={completedSeries} totalSeries={FRED_SERIES.length + 1} />;
 
   if (error) {
