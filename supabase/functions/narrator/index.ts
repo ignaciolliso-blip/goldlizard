@@ -17,12 +17,14 @@ serve(async (req) => {
   try {
     const { dashboardData, dataHash, checkCacheOnly, asset = 'gold' } = await req.json();
 
+    const cacheId = asset === 'uranium' ? 2 : 1;
+
     // Cache check (using service role so RLS doesn't block)
     if (dataHash) {
       const { data: cached } = await supabase
         .from("narrator_cache")
         .select("*")
-        .eq("id", 1)
+        .eq("id", cacheId)
         .single();
 
       if (cached && cached.data_hash === dataHash && cached.briefing_text) {
