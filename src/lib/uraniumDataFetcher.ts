@@ -63,6 +63,7 @@ export async function fetchMinerValuations(): Promise<MinerValuation[]> {
   const { data, error } = await supabase
     .from('miner_valuations')
     .select('*')
+    .eq('commodity', 'uranium')
     .order('p_nav', { ascending: false });
   if (error) throw new Error('Failed to fetch miner valuations: ' + error.message);
   return (data || []).map(r => ({
