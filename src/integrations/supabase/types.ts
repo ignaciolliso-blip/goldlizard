@@ -302,6 +302,117 @@ export type Database = {
         }
         Relationships: []
       }
+      uranium_miner_financials: {
+        Row: {
+          annual_production_mlb: number | null
+          cash_usd_bn: number | null
+          ebitda_usd_bn: number | null
+          ev_usd_bn: number | null
+          fetched_at: string
+          id: string
+          market_cap_usd_bn: number | null
+          share_price: number | null
+          shares_outstanding_bn: number | null
+          ticker: string
+          total_debt_usd_bn: number | null
+        }
+        Insert: {
+          annual_production_mlb?: number | null
+          cash_usd_bn?: number | null
+          ebitda_usd_bn?: number | null
+          ev_usd_bn?: number | null
+          fetched_at?: string
+          id?: string
+          market_cap_usd_bn?: number | null
+          share_price?: number | null
+          shares_outstanding_bn?: number | null
+          ticker: string
+          total_debt_usd_bn?: number | null
+        }
+        Update: {
+          annual_production_mlb?: number | null
+          cash_usd_bn?: number | null
+          ebitda_usd_bn?: number | null
+          ev_usd_bn?: number | null
+          fetched_at?: string
+          id?: string
+          market_cap_usd_bn?: number | null
+          share_price?: number | null
+          shares_outstanding_bn?: number | null
+          ticker?: string
+          total_debt_usd_bn?: number | null
+        }
+        Relationships: []
+      }
+      uranium_miner_universe: {
+        Row: {
+          annual_production_mlb: number | null
+          capex_source_url: string | null
+          capex_to_production_usd_m: number | null
+          company: string
+          created_at: string
+          id: string
+          jurisdiction_hq: string | null
+          jurisdiction_operations: string
+          last_ai_extraction: string | null
+          notes: string | null
+          optionality_narrative: string | null
+          optionality_source_url: string | null
+          production_source_url: string | null
+          resources_approved: boolean | null
+          resources_mlb: number | null
+          resources_source_date: string | null
+          resources_source_url: string | null
+          stage: string
+          ticker: string
+          updated_at: string
+        }
+        Insert: {
+          annual_production_mlb?: number | null
+          capex_source_url?: string | null
+          capex_to_production_usd_m?: number | null
+          company: string
+          created_at?: string
+          id?: string
+          jurisdiction_hq?: string | null
+          jurisdiction_operations: string
+          last_ai_extraction?: string | null
+          notes?: string | null
+          optionality_narrative?: string | null
+          optionality_source_url?: string | null
+          production_source_url?: string | null
+          resources_approved?: boolean | null
+          resources_mlb?: number | null
+          resources_source_date?: string | null
+          resources_source_url?: string | null
+          stage: string
+          ticker: string
+          updated_at?: string
+        }
+        Update: {
+          annual_production_mlb?: number | null
+          capex_source_url?: string | null
+          capex_to_production_usd_m?: number | null
+          company?: string
+          created_at?: string
+          id?: string
+          jurisdiction_hq?: string | null
+          jurisdiction_operations?: string
+          last_ai_extraction?: string | null
+          notes?: string | null
+          optionality_narrative?: string | null
+          optionality_source_url?: string | null
+          production_source_url?: string | null
+          resources_approved?: boolean | null
+          resources_mlb?: number | null
+          resources_source_date?: string | null
+          resources_source_url?: string | null
+          stage?: string
+          ticker?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       uranium_prices: {
         Row: {
           created_at: string
