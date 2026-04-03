@@ -85,16 +85,15 @@ serve(async (req) => {
           });
         }
 
-        const livePrice = parseFloat(rateObj['5. Exchange Rate']);
-        const today = new Date().toISOString().slice(0, 10);
-
-        // Build updated observations: existing history + today's price
-        let existingObs: { date: string; value: number }[] = [];
-        if (cached && Array.isArray(cached.data_json)) {
-          existingObs = (cached.data_json as any[]).filter((o: any) => o.date !== today);
+        // Convert AV daily series to observation array
+        const avObs: { date: string; value: number }[] = [];
+        for (const [date, ohlc] of Object.entries(timeSeries)) {
+          const close = parseFloat((ohlc as any)['4. close']);
+          if (!isNaN(close) && date >= '2005-01-01') {
+            avObs.push({ date, value: close });
+          }
         }
-        existingObs.push({ date: today, value: livePrice });
-        existingObs.sort((a, b) => a.date.localeCompare(b.date));
+        avObs.sort((a, b) => a.date.localeCompare(b.date));
 
         // Update cache
         await supabase.from('data_cache').upsert({
