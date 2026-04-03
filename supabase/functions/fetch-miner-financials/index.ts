@@ -115,6 +115,27 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Freshness check: skip if any row was fetched < 23 hours ago
+    const { data: recentRow } = await supabase
+      .from("uranium_miner_financials")
+      .select("fetched_at")
+      .order("fetched_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (recentRow) {
+      const ageMs = Date.now() - new Date(recentRow.fetched_at).getTime();
+      const ageHours = ageMs / (1000 * 60 * 60);
+      if (ageHours < 23) {
+        const msg = `Data already fresh — last updated ${ageHours.toFixed(1)} hours ago`;
+        console.log(msg);
+        return new Response(
+          JSON.stringify({ fresh: true, message: msg, last_fetched: recentRow.fetched_at, hours_ago: Math.round(ageHours * 10) / 10 }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     const { data: miners, error: minersErr } = await supabase
       .from("uranium_miner_universe")
       .select("ticker");
