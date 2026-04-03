@@ -532,9 +532,9 @@ export default function UraniumMinerValuationPanel({ uraniumSpotPrice }: Props) 
       </div>
 
       {/* Sections */}
-      <StageSection title="Producers" icon={STAGE_ICONS.Producer} results={producers} universeMap={universeMap} spotPrice={uraniumSpotPrice} />
-      <StageSection title="Developers" icon={STAGE_ICONS.Developer} results={developers} universeMap={universeMap} spotPrice={uraniumSpotPrice} />
-      <StageSection title="Explorers & Royalties" icon={STAGE_ICONS.Explorer} results={others} universeMap={universeMap} spotPrice={uraniumSpotPrice} />
+      <StageSection title="Producers" icon={STAGE_ICONS.Producer} results={producers} universeMap={universeMap} spotPrice={uraniumSpotPrice} onApprove={handleApprove} />
+      <StageSection title="Developers" icon={STAGE_ICONS.Developer} results={developers} universeMap={universeMap} spotPrice={uraniumSpotPrice} onApprove={handleApprove} />
+      <StageSection title="Explorers & Royalties" icon={STAGE_ICONS.Explorer} results={others} universeMap={universeMap} spotPrice={uraniumSpotPrice} onApprove={handleApprove} />
 
       {/* Empty state */}
       {valuations.length === 0 && (
