@@ -66,12 +66,13 @@ serve(async (req) => {
       }
 
       try {
-        const avUrl = `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=XAU&to_currency=USD&apikey=${avKey}`;
+        // Use FX_DAILY for XAU/USD — returns daily OHLC for gold in USD
+        const avUrl = `https://www.alphavantage.co/query?function=FX_DAILY&from_symbol=XAU&to_symbol=USD&outputsize=full&apikey=${avKey}`;
         const avRes = await fetch(avUrl);
         const avData = await avRes.json();
 
-        const rateObj = avData?.['Realtime Currency Exchange Rate'];
-        if (!rateObj || !rateObj['5. Exchange Rate']) {
+        const timeSeries = avData?.['Time Series FX (Daily)'];
+        if (!timeSeries || typeof timeSeries !== 'object') {
           console.error('Alpha Vantage unexpected response:', JSON.stringify(avData).slice(0, 500));
           // Rate limit or error — return stale cache if available
           if (cached) {
