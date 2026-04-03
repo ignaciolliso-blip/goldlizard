@@ -102,7 +102,8 @@ serve(async (req) => {
           last_fetched: new Date().toISOString(),
         });
 
-        return new Response(JSON.stringify({ observations: existingObs, fromCache: false, livePrice }), {
+        const latestPrice = avObs.length > 0 ? avObs[avObs.length - 1].value : null;
+        return new Response(JSON.stringify({ observations: avObs, fromCache: false, livePrice: latestPrice }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       } catch (avError) {
