@@ -148,6 +148,9 @@ const UraniumSignal = () => {
           />
         </div>
 
+        {/* Miner Valuation Panel */}
+        <UraniumMinerValuationPanel uraniumSpotPrice={anchorResult?.spotPrice ?? 78} />
+
         {/* AI Narrator */}
         {anchorResult && (
           <NarratorPanel
