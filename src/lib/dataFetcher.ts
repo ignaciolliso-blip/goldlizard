@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { FRED_SERIES, CACHE_TTL_HOURS } from './constants';
+import { FRED_SERIES } from './constants';
 import type { CentralBankEntry, EtfFlowEntry } from './gdiEngine';
 import type { MinerPrice } from './leverageEngine';
 
@@ -52,39 +52,28 @@ export async function fetchFredSeries(
 }
 
 export async function fetchGoldSpot(onStatus?: (msg: string) => void): Promise<Observation[]> {
-  // Check cache via public SELECT (still allowed)
-  const { data: cached } = await supabase
-    .from('data_cache')
-    .select('*')
-    .eq('series_id', 'GOLD_SPOT')
-    .maybeSingle();
-
-  if (cached && cached.last_fetched) {
-    const fetched = new Date(cached.last_fetched).getTime();
-    if ((Date.now() - fetched) < CACHE_TTL_HOURS * 60 * 60 * 1000) {
-      return cached.data_json as unknown as Observation[];
-    }
-  }
-
   onStatus?.('Fetching Gold Spot Price...');
 
-  try {
-    const res = await fetch('/data/gold-historical.json');
-    if (res.ok) {
-      const observations: Observation[] = await res.json();
-      // Cache via edge function (service role)
-      if (observations.length > 0) {
-        await supabase.functions.invoke('fred-proxy', {
-          body: { action: 'cache_gold', cache_key: 'GOLD_SPOT', observations },
-        });
-      }
-      return observations;
-    }
-  } catch (e) {
-    console.error('Failed to load gold data:', e);
+  // Use the same FRED proxy + cache pattern as all other series
+  const { data, error } = await supabase.functions.invoke('fred-proxy', {
+    body: { series_id: 'GOLDPMGBD228NLBM', observation_start: '2005-01-01', cache_key: 'GOLD_SPOT' },
+  });
+
+  if (error) {
+    console.error('Edge function error for GOLD_SPOT:', error);
+    throw new Error('Failed to fetch gold spot price');
   }
 
-  return [];
+  if (data?.fromCache && Array.isArray(data.observations)) {
+    return data.observations as Observation[];
+  }
+
+  if (!data?.observations) {
+    console.error('No observations for GOLD_SPOT:', data);
+    throw new Error('Failed to fetch gold spot price');
+  }
+
+  return parseObservations(data.observations);
 }
 
 export async function fetchPhysicalDemand(): Promise<CentralBankEntry[]> {
