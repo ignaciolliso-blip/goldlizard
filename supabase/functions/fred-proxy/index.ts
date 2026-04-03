@@ -58,12 +58,20 @@ serve(async (req) => {
       // Source 1: FMP historical gold price
       if (fmpKey) {
         try {
-          const fmpUrl = `https://financialmodelingprep.com/api/v3/historical-price-full/XAUUSD?from=2005-01-01&apikey=${fmpKey}`;
-          const fmpRes = await fetch(fmpUrl);
-          const fmpData = await fmpRes.json();
-
-          if (fmpData?.historical && Array.isArray(fmpData.historical)) {
-            const fmpObs = fmpData.historical
+          // Try stable API first, then legacy
+          let fmpData: any = null;
+          const stableUrl = `https://financialmodelingprep.com/stable/historical-price-full?symbol=XAUUSD&from=2005-01-01&apikey=${fmpKey}`;
+          const stableRes = await fetch(stableUrl);
+          fmpData = await stableRes.json();
+          
+          // If stable didn't work, try legacy v3
+          if (!fmpData?.historical && !Array.isArray(fmpData)) {
+            const legacyUrl = `https://financialmodelingprep.com/api/v3/historical-price-full/XAUUSD?from=2005-01-01&apikey=${fmpKey}`;
+            const legacyRes = await fetch(legacyUrl);
+            fmpData = await legacyRes.json();
+          }
+          
+          const historicals = fmpData?.historical || (Array.isArray(fmpData) ? fmpData : null);
               .map((d: any) => ({ date: d.date, value: parseFloat(d.close) }))
               .filter((o: any) => !isNaN(o.value))
               .sort((a: any, b: any) => a.date.localeCompare(b.date));
