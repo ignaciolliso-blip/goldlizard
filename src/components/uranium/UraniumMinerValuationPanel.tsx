@@ -7,7 +7,8 @@ import {
   type MinerValuationResult,
   type Signal,
 } from '@/lib/uraniumMinerValuationEngine';
-import { ChevronDown, ChevronRight, RefreshCw, ExternalLink, AlertTriangle, Pickaxe, HardHat, Search, Crown } from 'lucide-react';
+import { ChevronDown, ChevronRight, RefreshCw, ExternalLink, AlertTriangle, Pickaxe, HardHat, Search, Crown, CheckCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -74,26 +75,37 @@ interface UniverseRow extends MinerUniverse {
 
 // ── Detail Card ──────────────────────────────────────────────────────────────
 
-function DetailCard({ result, universe, spotPrice }: {
+function DetailCard({ result, universe, spotPrice, onApprove }: {
   result: MinerValuationResult;
   universe: UniverseRow;
   spotPrice: number;
+  onApprove: (ticker: string) => void;
 }) {
+  const [approved, setApproved] = useState(universe.resources_approved);
+
   return (
     <div className="bg-background/50 border border-border rounded-lg p-5 space-y-5 mt-2 mb-1">
       {/* Pending review warning */}
-      {!universe.resources_approved && universe.resources_mlb != null && (
-        <div className="flex items-start gap-2.5 bg-yellow-400/5 border border-yellow-400/20 rounded-lg px-4 py-3">
-          <AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5 shrink-0" />
-          <div className="text-sm text-yellow-300/90">
-            <span className="font-semibold">Resource data pending review</span> — extracted by AI from company filings. Verify before relying on this for investment decisions.
-            {universe.resources_source_url && (
-              <a href={universe.resources_source_url} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-uranium underline ml-1.5">
-                View source <ExternalLink className="w-3 h-3" />
-              </a>
-            )}
+      {!approved && universe.resources_mlb != null && (
+        <div className="flex items-start justify-between gap-3 bg-yellow-400/5 border border-yellow-400/20 rounded-lg px-4 py-3">
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5 shrink-0" />
+            <div className="text-sm text-yellow-300/90">
+              <span className="font-semibold">Resource data pending review</span> — extracted by AI from company filings. Verify before relying on this for investment decisions.
+              {universe.resources_source_url && (
+                <a href={universe.resources_source_url} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-uranium underline ml-1.5">
+                  View source <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
+            </div>
           </div>
+          <button
+            onClick={() => { onApprove(universe.ticker); setApproved(true); }}
+            className="flex items-center gap-1.5 text-xs font-semibold tracking-wider uppercase px-3 py-1.5 rounded-lg bg-green-400/10 text-green-400 border border-green-400/20 hover:bg-green-400/20 transition-colors shrink-0 whitespace-nowrap"
+          >
+            <CheckCircle className="w-3.5 h-3.5" /> Verify & Approve
+          </button>
         </div>
       )}
 
@@ -244,10 +256,11 @@ function SourceRow({ label, source, url, date }: {
 
 // ── Miner Row ────────────────────────────────────────────────────────────────
 
-function MinerRow({ result, universe, spotPrice }: {
+function MinerRow({ result, universe, spotPrice, onApprove }: {
   result: MinerValuationResult;
   universe: UniverseRow;
   spotPrice: number;
+  onApprove: (ticker: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -317,19 +330,20 @@ function MinerRow({ result, universe, spotPrice }: {
         </div>
       </button>
 
-      {expanded && <DetailCard result={result} universe={universe} spotPrice={spotPrice} />}
+      {expanded && <DetailCard result={result} universe={universe} spotPrice={spotPrice} onApprove={onApprove} />}
     </div>
   );
 }
 
 // ── Section ──────────────────────────────────────────────────────────────────
 
-function StageSection({ title, icon, results, universeMap, spotPrice }: {
+function StageSection({ title, icon, results, universeMap, spotPrice, onApprove }: {
   title: string;
   icon: React.ReactNode;
   results: MinerValuationResult[];
   universeMap: Map<string, UniverseRow>;
   spotPrice: number;
+  onApprove: (ticker: string) => void;
 }) {
   if (results.length === 0) return null;
 
@@ -354,7 +368,7 @@ function StageSection({ title, icon, results, universeMap, spotPrice }: {
 
       <div className="divide-y divide-border/50">
         {results.map(r => (
-          <MinerRow key={r.ticker} result={r} universe={universeMap.get(r.ticker)!} spotPrice={spotPrice} />
+          <MinerRow key={r.ticker} result={r} universe={universeMap.get(r.ticker)!} spotPrice={spotPrice} onApprove={onApprove} />
         ))}
       </div>
     </div>
@@ -466,6 +480,22 @@ export default function UraniumMinerValuationPanel({ uraniumSpotPrice }: Props) 
     }
   };
 
+  // ── Approve handler ──────────────────────────────────────────────────────
+  const handleApprove = useCallback(async (ticker: string) => {
+    const { error } = await supabase
+      .from('uranium_miner_universe')
+      .update({ resources_approved: true, updated_at: new Date().toISOString() })
+      .eq('ticker', ticker);
+
+    if (error) {
+      toast.error(`Failed to approve ${ticker}: ${error.message}`);
+      return;
+    }
+
+    toast.success(`${ticker} resource data approved`);
+    setUniverse(prev => prev.map(u => u.ticker === ticker ? { ...u, resources_approved: true } : u));
+  }, []);
+
   // ── Render ───────────────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -518,9 +548,9 @@ export default function UraniumMinerValuationPanel({ uraniumSpotPrice }: Props) 
       </div>
 
       {/* Sections */}
-      <StageSection title="Producers" icon={STAGE_ICONS.Producer} results={producers} universeMap={universeMap} spotPrice={uraniumSpotPrice} />
-      <StageSection title="Developers" icon={STAGE_ICONS.Developer} results={developers} universeMap={universeMap} spotPrice={uraniumSpotPrice} />
-      <StageSection title="Explorers & Royalties" icon={STAGE_ICONS.Explorer} results={others} universeMap={universeMap} spotPrice={uraniumSpotPrice} />
+      <StageSection title="Producers" icon={STAGE_ICONS.Producer} results={producers} universeMap={universeMap} spotPrice={uraniumSpotPrice} onApprove={handleApprove} />
+      <StageSection title="Developers" icon={STAGE_ICONS.Developer} results={developers} universeMap={universeMap} spotPrice={uraniumSpotPrice} onApprove={handleApprove} />
+      <StageSection title="Explorers & Royalties" icon={STAGE_ICONS.Explorer} results={others} universeMap={universeMap} spotPrice={uraniumSpotPrice} onApprove={handleApprove} />
 
       {/* Empty state */}
       {valuations.length === 0 && (

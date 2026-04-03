@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
+import UraniumMinerValuationPanel from '@/components/uranium/UraniumMinerValuationPanel';
 import { fetchAllUraniumData } from '@/lib/uraniumDataFetcher';
 import {
   computeUraniumAnchor, computeUraniumForces, computeUraniumLeverage,
@@ -146,6 +147,9 @@ const UraniumSignal = () => {
             leverageResult={leverageResult}
           />
         </div>
+
+        {/* Miner Valuation Panel */}
+        <UraniumMinerValuationPanel uraniumSpotPrice={anchorResult?.spotPrice ?? 78} />
 
         {/* AI Narrator */}
         {anchorResult && (
