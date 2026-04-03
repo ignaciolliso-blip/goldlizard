@@ -379,9 +379,10 @@ function StageSection({ title, icon, results, universeMap, spotPrice, onApprove 
 
 interface Props {
   uraniumSpotPrice: number;
+  onPriceUpdated?: () => void;
 }
 
-export default function UraniumMinerValuationPanel({ uraniumSpotPrice }: Props) {
+export default function UraniumMinerValuationPanel({ uraniumSpotPrice, onPriceUpdated }: Props) {
   const [universe, setUniverse] = useState<UniverseRow[]>([]);
   const [financials, setFinancials] = useState<MinerFinancials[]>([]);
   const [loading, setLoading] = useState(true);
