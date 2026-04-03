@@ -28,8 +28,16 @@ interface ProfileData {
 
 async function fmpFetch(url: string) {
   const res = await fetch(url);
-  if (!res.ok) return null;
-  return await res.json();
+  if (!res.ok) {
+    console.error(`FMP ${res.status} for ${url.replace(FMP_KEY, '***')}`);
+    return null;
+  }
+  const json = await res.json();
+  if (json && json["Error Message"]) {
+    console.error(`FMP error: ${json["Error Message"]}`);
+    return null;
+  }
+  return json;
 }
 
 async function fetchForTicker(ticker: string) {
