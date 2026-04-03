@@ -36,7 +36,87 @@ serve(async (req) => {
       });
     }
 
-    // Gold price proxy — removed, now uses standard FRED path below with GOLDPMGBD228NLBM
+    // Live gold spot price via Alpha Vantage
+    if (action === 'gold_spot_price') {
+      // Check cache first
+      const { data: cached } = await supabase
+        .from('data_cache')
+        .select('*')
+        .eq('series_id', 'GOLD_SPOT')
+        .maybeSingle();
+
+      if (cached && isCacheFresh(cached.last_fetched)) {
+        return new Response(JSON.stringify({ observations: cached.data_json, fromCache: true }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Fetch live price from Alpha Vantage
+      const avKey = Deno.env.get('ALPHA_VANTAGE_KEY')?.trim();
+      if (!avKey) {
+        // No key — return cached data if any, even if stale
+        if (cached) {
+          return new Response(JSON.stringify({ observations: cached.data_json, fromCache: true, stale: true }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        return new Response(JSON.stringify({ error: 'ALPHA_VANTAGE_KEY not configured and no cache' }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      try {
+        const avUrl = `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=XAU&to_currency=USD&apikey=${avKey}`;
+        const avRes = await fetch(avUrl);
+        const avData = await avRes.json();
+
+        const rateObj = avData?.['Realtime Currency Exchange Rate'];
+        if (!rateObj || !rateObj['5. Exchange Rate']) {
+          console.error('Alpha Vantage unexpected response:', JSON.stringify(avData).slice(0, 500));
+          // Rate limit or error — return stale cache if available
+          if (cached) {
+            return new Response(JSON.stringify({ observations: cached.data_json, fromCache: true, stale: true }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+          return new Response(JSON.stringify({ error: 'Alpha Vantage error and no cache available' }), {
+            status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        const livePrice = parseFloat(rateObj['5. Exchange Rate']);
+        const today = new Date().toISOString().slice(0, 10);
+
+        // Build updated observations: existing history + today's price
+        let existingObs: { date: string; value: number }[] = [];
+        if (cached && Array.isArray(cached.data_json)) {
+          existingObs = (cached.data_json as any[]).filter((o: any) => o.date !== today);
+        }
+        existingObs.push({ date: today, value: livePrice });
+        existingObs.sort((a, b) => a.date.localeCompare(b.date));
+
+        // Update cache
+        await supabase.from('data_cache').upsert({
+          series_id: 'GOLD_SPOT',
+          data_json: existingObs,
+          last_fetched: new Date().toISOString(),
+        });
+
+        return new Response(JSON.stringify({ observations: existingObs, fromCache: false, livePrice }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (avError) {
+        console.error('Alpha Vantage fetch failed:', avError);
+        if (cached) {
+          return new Response(JSON.stringify({ observations: cached.data_json, fromCache: true, stale: true }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        return new Response(JSON.stringify({ error: 'Alpha Vantage failed and no cache' }), {
+          status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
 
     // Check cache first (using service role)
     const cacheId = cache_key || series_id;
