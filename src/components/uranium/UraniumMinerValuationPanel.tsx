@@ -368,7 +368,7 @@ function StageSection({ title, icon, results, universeMap, spotPrice, onApprove 
 
       <div className="divide-y divide-border/50">
         {results.map(r => (
-          <MinerRow key={r.ticker} result={r} universe={universeMap.get(r.ticker)!} spotPrice={spotPrice} />
+          <MinerRow key={r.ticker} result={r} universe={universeMap.get(r.ticker)!} spotPrice={spotPrice} onApprove={onApprove} />
         ))}
       </div>
     </div>
