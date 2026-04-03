@@ -22,9 +22,9 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SB_URL, SB_KEY);
 
-    // Step 1: Fetch UxC price indicators page
-    console.log("Fetching UxC price indicators page...");
-    const pageRes = await fetch("https://www.uxc.com/p/prices/UxCPriceIndicators.aspx", {
+    // Step 1: Fetch Cameco uranium price page (UxC blocks automated requests)
+    console.log("Fetching Cameco uranium price page...");
+    const pageRes = await fetch("https://www.cameco.com/invest/markets/uranium-price", {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; PriceBot/1.0)",
         "Accept": "text/html",
@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
     });
 
     if (!pageRes.ok) {
-      throw new Error(`Failed to fetch UxC page: ${pageRes.status}`);
+      throw new Error(`Failed to fetch Cameco page: ${pageRes.status}`);
     }
 
     const html = await pageRes.text();
