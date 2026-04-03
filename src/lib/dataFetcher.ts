@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { FRED_SERIES, CACHE_TTL_HOURS } from './constants';
+import { FRED_SERIES } from './constants';
 import type { CentralBankEntry, EtfFlowEntry } from './gdiEngine';
 import type { MinerPrice } from './leverageEngine';
 
