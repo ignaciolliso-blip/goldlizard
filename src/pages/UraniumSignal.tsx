@@ -28,24 +28,23 @@ const UraniumSignal = () => {
     reactors: UraniumReactor[];
     minerPrices: MinerPrice[];
   } | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const data = await fetchAllUraniumData();
-        setRawData(data);
-
-        setAnchorResult(computeUraniumAnchor(data.prices));
-        setForcesResult(computeUraniumForces(data.supplyDemand));
-        setLeverageResult(computeUraniumLeverage(data.prices, data.minerPrices, data.valuations));
-      } catch (e: any) {
-        setError(e.message || 'Failed to load uranium data');
-      } finally {
-        setLoading(false);
-      }
+  const loadData = async () => {
+    try {
+      const data = await fetchAllUraniumData();
+      setRawData(data);
+      setAnchorResult(computeUraniumAnchor(data.prices));
+      setForcesResult(computeUraniumForces(data.supplyDemand));
+      setLeverageResult(computeUraniumLeverage(data.prices, data.minerPrices, data.valuations));
+    } catch (e: any) {
+      setError(e.message || 'Failed to load uranium data');
+    } finally {
+      setLoading(false);
     }
-    load();
-  }, []);
+  };
+
+  useEffect(() => { loadData(); }, [refreshKey]);
 
   const spotPrice = anchorResult?.spotPrice ?? 0;
 
@@ -149,7 +148,7 @@ const UraniumSignal = () => {
         </div>
 
         {/* Miner Valuation Panel */}
-        <UraniumMinerValuationPanel uraniumSpotPrice={anchorResult?.spotPrice ?? 78} />
+        <UraniumMinerValuationPanel uraniumSpotPrice={anchorResult?.spotPrice ?? 78} onPriceUpdated={() => setRefreshKey(k => k + 1)} />
 
         {/* AI Narrator */}
         {anchorResult && (
