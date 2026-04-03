@@ -456,12 +456,16 @@ export default function UraniumMinerValuationPanel({ uraniumSpotPrice, onPriceUp
       await new Promise(r => setTimeout(r, 500));
 
       // Step 2: Fetch financials
-      setUpdateStatus('Fetching financials from FMP...');
+      setUpdateStatus('Fetching financials from Alpha Vantage...');
       const finRes = await supabase.functions.invoke('fetch-miner-financials', { body: {} });
       if (finRes.error) throw new Error(finRes.error.message);
 
       const finSummary = finRes.data;
-      setUpdateStatus(`Financials done — ${finSummary?.succeeded ?? 0}/${finSummary?.total ?? 0} tickers fetched.`);
+      if (finSummary?.fresh) {
+        setUpdateStatus(`Financials current — last updated ${finSummary.hours_ago}h ago.`);
+      } else {
+        setUpdateStatus(`Financials done — ${finSummary?.succeeded ?? 0}/${finSummary?.total ?? 0} tickers fetched.`);
+      }
 
       // Step 2: Extract resource data
       await new Promise(r => setTimeout(r, 500));
