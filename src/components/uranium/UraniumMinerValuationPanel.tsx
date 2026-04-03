@@ -7,7 +7,8 @@ import {
   type MinerValuationResult,
   type Signal,
 } from '@/lib/uraniumMinerValuationEngine';
-import { ChevronDown, ChevronRight, RefreshCw, ExternalLink, AlertTriangle, Pickaxe, HardHat, Search, Crown } from 'lucide-react';
+import { ChevronDown, ChevronRight, RefreshCw, ExternalLink, AlertTriangle, Pickaxe, HardHat, Search, Crown, CheckCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
