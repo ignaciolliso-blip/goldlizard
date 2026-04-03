@@ -441,7 +441,20 @@ export default function UraniumMinerValuationPanel({ uraniumSpotPrice }: Props) 
     setUpdating(true);
 
     try {
-      // Step 1: Fetch financials
+      // Step 1: Fetch uranium spot price
+      setUpdateStatus('Fetching uranium spot price...');
+      const priceRes = await supabase.functions.invoke('fetch-uranium-price', { body: {} });
+      if (priceRes.error) throw new Error(priceRes.error.message);
+      const priceData = priceRes.data;
+      if (priceData?.success) {
+        setUpdateStatus(`Uranium spot: $${priceData.spot_price}/lb${priceData.lt_contract_price ? `, LT: $${priceData.lt_contract_price}/lb` : ''}`);
+      } else if (priceData?.error) {
+        console.warn('Price fetch warning:', priceData.error);
+        setUpdateStatus('Warning: Could not fetch uranium price. Continuing with existing data...');
+      }
+      await new Promise(r => setTimeout(r, 500));
+
+      // Step 2: Fetch financials
       setUpdateStatus('Fetching financials from FMP...');
       const finRes = await supabase.functions.invoke('fetch-miner-financials', { body: {} });
       if (finRes.error) throw new Error(finRes.error.message);
