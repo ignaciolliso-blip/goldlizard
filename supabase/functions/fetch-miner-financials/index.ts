@@ -5,94 +5,108 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const FMP_KEY = Deno.env.get("FMP_API_KEY")!;
+const AV_KEY = Deno.env.get("ALPHA_VANTAGE_KEY")!;
 const SB_URL = Deno.env.get("SUPABASE_URL")!;
 const SB_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const supabase = createClient(SB_URL, SB_KEY);
 
-// Tickers that need alternate symbols on FMP
-const ALTERNATE_TICKERS: Record<string, string[]> = {
-  "KAP": ["KAP.L", "0ZAT.L"],
-  "DYL": ["DYL.AX"],
-  "BOE": ["BOE.AX"],
-  "LOT": ["LOT.AX"],
-  "PDN": ["PDN.AX"],
+// Map internal tickers to Alpha Vantage symbols
+const TICKER_MAP: Record<string, string> = {
+  CCJ: "CCJ",
+  KAP: "KAP.LON",
+  NXE: "NXE",
+  DNN: "DNN",
+  UUUU: "UUUU",
+  UEC: "UEC",
+  PDN: "PALAF",
+  BOE: "BQSSF",
+  DYL: "DYLLF",
+  LOT: "LTSRF",
+  URG: "URG",
+  FCU: "FCUUF",
+  EU: "EU",
+  ISO: "ISENF",
+  URC: "UROY",
 };
 
-interface ProfileData {
-  price?: number;
-  mktCap?: number;
-  sharesOutstanding?: number; // note: this is from the /quote endpoint sometimes
+const B = 1_000_000_000;
+
+function toNum(val: string | undefined | null): number | null {
+  if (!val || val === "None" || val === "-") return null;
+  const n = Number(val);
+  return isNaN(n) ? null : n;
 }
 
-async function fmpFetch(url: string) {
+function fmtMarketCap(bn: number): string {
+  if (bn >= 1) return `$${bn.toFixed(1)}B`;
+  const m = bn * 1000;
+  return `$${m.toFixed(0)}M`;
+}
+
+async function fetchOverview(avSymbol: string) {
+  const url = `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${avSymbol}&apikey=${AV_KEY}`;
   const res = await fetch(url);
   if (!res.ok) {
-    console.error(`FMP ${res.status} for ${url.replace(FMP_KEY, '***')}`);
+    console.error(`AV OVERVIEW ${res.status} for ${avSymbol}`);
     return null;
   }
   const json = await res.json();
-  if (json && json["Error Message"]) {
-    console.error(`FMP error: ${json["Error Message"]}`);
+  if (json["Error Message"] || json["Note"] || !json["MarketCapitalization"]) {
+    console.error(`AV OVERVIEW no data for ${avSymbol}:`, json["Error Message"] || json["Note"] || "empty");
     return null;
   }
   return json;
 }
 
 async function fetchForTicker(ticker: string) {
-  const candidates = [ticker, ...(ALTERNATE_TICKERS[ticker] || [])];
+  const avSymbol = TICKER_MAP[ticker] || ticker;
 
-  for (const sym of candidates) {
-    try {
-      const [profileArr, bsArr, isArr] = await Promise.all([
-        fmpFetch(`https://financialmodelingprep.com/api/v3/profile/${sym}?apikey=${FMP_KEY}`),
-        fmpFetch(`https://financialmodelingprep.com/api/v3/balance-sheet-statement/${sym}?limit=1&apikey=${FMP_KEY}`),
-        fmpFetch(`https://financialmodelingprep.com/api/v3/income-statement/${sym}?limit=1&apikey=${FMP_KEY}`),
-      ]);
+  try {
+    const overview = await fetchOverview(avSymbol);
+    if (!overview) return null;
 
-      const profile = Array.isArray(profileArr) && profileArr.length > 0 ? profileArr[0] : null;
-      if (!profile || !profile.mktCap) {
-        console.log(`No profile data for ${sym}, trying next alternate...`);
-        continue;
-      }
+    const marketCapRaw = toNum(overview["MarketCapitalization"]);
+    if (!marketCapRaw) return null;
 
-      const bs = Array.isArray(bsArr) && bsArr.length > 0 ? bsArr[0] : null;
-      const is_ = Array.isArray(isArr) && isArr.length > 0 ? isArr[0] : null;
+    const marketCap = marketCapRaw / B;
+    const ebitdaRaw = toNum(overview["EBITDA"]);
+    const ebitda = ebitdaRaw != null ? ebitdaRaw / B : null;
+    const sharesRaw = toNum(overview["SharesOutstanding"]);
+    const sharesOut = sharesRaw != null ? sharesRaw / B : null;
 
-      const B = 1_000_000_000;
-      const sharePrice = profile.price ?? null;
-      const marketCap = profile.mktCap ? profile.mktCap / B : null;
-      const sharesOut = profile.mktCap && profile.price ? (profile.mktCap / profile.price) / B : null;
-      const totalDebt = bs?.totalDebt != null ? bs.totalDebt / B : null;
-      const cash = bs?.cashAndCashEquivalents != null ? bs.cashAndCashEquivalents / B : null;
-      const ebitda = is_?.ebitda != null ? is_.ebitda / B : null;
+    // Try to get price from overview's AnalystTargetPrice as fallback, but prefer 50DayMovingAverage
+    const priceRaw = toNum(overview["AnalystTargetPrice"]) || toNum(overview["50DayMovingAverage"]);
+    // Better: derive from market cap / shares
+    const sharePrice = sharesRaw && marketCapRaw ? marketCapRaw / sharesRaw : priceRaw;
 
-      let ev: number | null = null;
-      if (marketCap != null) {
-        ev = marketCap + (totalDebt ?? 0) - (cash ?? 0);
-      }
+    // Debt and cash - available in some OVERVIEW responses
+    const totalDebtRaw = toNum(overview["TotalDebt"]) || toNum(overview["LongTermDebt"]);
+    const totalDebt = totalDebtRaw != null ? totalDebtRaw / B : null;
+    const cashRaw = toNum(overview["CashAndCashEquivalentsAtCarryingValue"]) || toNum(overview["TotalCash"]);
+    const cash = cashRaw != null ? cashRaw / B : null;
 
-      return {
-        ticker,
-        share_price: sharePrice,
-        market_cap_usd_bn: marketCap,
-        total_debt_usd_bn: totalDebt,
-        cash_usd_bn: cash,
-        ebitda_usd_bn: ebitda,
-        ev_usd_bn: ev,
-        shares_outstanding_bn: sharesOut,
-        annual_production_mlb: null,
-        fetched_at: new Date().toISOString(),
-        _symbol_used: sym,
-      };
-    } catch (e) {
-      console.error(`Error fetching ${sym}:`, e);
-      continue;
-    }
+    // EV = market cap + debt - cash (use 0 if unavailable)
+    const ev = marketCap + (totalDebt ?? 0) - (cash ?? 0);
+
+    return {
+      ticker,
+      share_price: sharePrice ?? null,
+      market_cap_usd_bn: marketCap,
+      total_debt_usd_bn: totalDebt,
+      cash_usd_bn: cash,
+      ebitda_usd_bn: ebitda,
+      ev_usd_bn: ev,
+      shares_outstanding_bn: sharesOut,
+      annual_production_mlb: null,
+      fetched_at: new Date().toISOString(),
+      _av_symbol: avSymbol,
+      _market_cap_display: fmtMarketCap(marketCap),
+    };
+  } catch (e) {
+    console.error(`Error fetching ${avSymbol}:`, e);
+    return null;
   }
-
-  return null;
 }
 
 Deno.serve(async (req) => {
@@ -101,7 +115,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // 1. Read tickers from universe table
     const { data: miners, error: minersErr } = await supabase
       .from("uranium_miner_universe")
       .select("ticker");
@@ -109,42 +122,45 @@ Deno.serve(async (req) => {
     if (minersErr) throw new Error("Failed to read miner universe: " + minersErr.message);
 
     const tickers = (miners || []).map((m: { ticker: string }) => m.ticker);
-    console.log(`Fetching financials for ${tickers.length} tickers: ${tickers.join(", ")}`);
+    console.log(`Fetching financials for ${tickers.length} tickers via Alpha Vantage`);
 
-    const results: { ticker: string; status: string; symbol_used?: string }[] = [];
+    const results: { ticker: string; status: string; av_symbol?: string }[] = [];
     const rows: Record<string, unknown>[] = [];
+    const marketCapUpdates: { ticker: string; display: string }[] = [];
 
-    // 2. Fetch data for each ticker
+    // Sequential to respect rate limits
     for (const ticker of tickers) {
       const data = await fetchForTicker(ticker);
       if (data) {
-        const { _symbol_used, ...row } = data;
+        const { _av_symbol, _market_cap_display, ...row } = data;
         rows.push(row);
-        results.push({ ticker, status: "ok", symbol_used: _symbol_used });
+        results.push({ ticker, status: "ok", av_symbol: _av_symbol });
+        marketCapUpdates.push({ ticker, display: _market_cap_display });
       } else {
         results.push({ ticker, status: "skipped — no data found" });
       }
     }
 
-    // 3. Insert all rows
+    // Insert financials
     if (rows.length > 0) {
       const { error: insertErr } = await supabase
         .from("uranium_miner_financials")
         .insert(rows);
-
       if (insertErr) throw new Error("Failed to insert financials: " + insertErr.message);
+    }
+
+    // Update etf_holdings market_cap_usd for matching tickers
+    for (const { ticker, display } of marketCapUpdates) {
+      await supabase
+        .from("etf_holdings")
+        .update({ market_cap_usd: display })
+        .eq("ticker", ticker);
     }
 
     const succeeded = results.filter((r) => r.status === "ok").length;
     const failed = results.filter((r) => r.status !== "ok").length;
 
-    const summary = {
-      total: tickers.length,
-      succeeded,
-      failed,
-      details: results,
-    };
-
+    const summary = { total: tickers.length, succeeded, failed, details: results };
     console.log("Done:", JSON.stringify(summary));
 
     return new Response(JSON.stringify(summary), {
