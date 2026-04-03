@@ -480,6 +480,22 @@ export default function UraniumMinerValuationPanel({ uraniumSpotPrice }: Props) 
     }
   };
 
+  // ── Approve handler ──────────────────────────────────────────────────────
+  const handleApprove = useCallback(async (ticker: string) => {
+    const { error } = await supabase
+      .from('uranium_miner_universe')
+      .update({ resources_approved: true, updated_at: new Date().toISOString() })
+      .eq('ticker', ticker);
+
+    if (error) {
+      toast.error(`Failed to approve ${ticker}: ${error.message}`);
+      return;
+    }
+
+    toast.success(`${ticker} resource data approved`);
+    setUniverse(prev => prev.map(u => u.ticker === ticker ? { ...u, resources_approved: true } : u));
+  }, []);
+
   // ── Render ───────────────────────────────────────────────────────────────
   if (loading) {
     return (
