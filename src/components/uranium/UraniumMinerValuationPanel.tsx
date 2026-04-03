@@ -337,12 +337,13 @@ function MinerRow({ result, universe, spotPrice, onApprove }: {
 
 // ── Section ──────────────────────────────────────────────────────────────────
 
-function StageSection({ title, icon, results, universeMap, spotPrice }: {
+function StageSection({ title, icon, results, universeMap, spotPrice, onApprove }: {
   title: string;
   icon: React.ReactNode;
   results: MinerValuationResult[];
   universeMap: Map<string, UniverseRow>;
   spotPrice: number;
+  onApprove: (ticker: string) => void;
 }) {
   if (results.length === 0) return null;
 
