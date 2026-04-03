@@ -54,26 +54,52 @@ export async function fetchFredSeries(
 export async function fetchGoldSpot(onStatus?: (msg: string) => void): Promise<Observation[]> {
   onStatus?.('Fetching Gold Spot Price...');
 
-  // Use the same FRED proxy + cache pattern as all other series
-  const { data, error } = await supabase.functions.invoke('fred-proxy', {
-    body: { series_id: 'GOLDPMGBD228NLBM', observation_start: '2005-01-01', cache_key: 'GOLD_SPOT' },
-  });
+  try {
+    // 1. Check data_cache for fresh GOLD_SPOT (< 6 hours old)
+    const { data: cacheRow } = await supabase
+      .from('data_cache')
+      .select('data_json, last_fetched')
+      .eq('series_id', 'GOLD_SPOT')
+      .maybeSingle();
 
-  if (error) {
-    console.error('Edge function error for GOLD_SPOT:', error);
-    throw new Error('Failed to fetch gold spot price');
+    if (cacheRow) {
+      const age = Date.now() - new Date(cacheRow.last_fetched).getTime();
+      const SIX_HOURS = 6 * 60 * 60 * 1000;
+      if (age < SIX_HOURS && Array.isArray(cacheRow.data_json)) {
+        console.log('GOLD_SPOT: using fresh cache');
+        return (cacheRow.data_json as any[]).map((o: any) => ({ date: o.date, value: Number(o.value) }));
+      }
+    }
+
+    // 2. Cache stale/missing — call fred-proxy for fresh FRED data
+    const { data, error } = await supabase.functions.invoke('fred-proxy', {
+      body: { series_id: 'GOLDPMGBD228NLBM', observation_start: '2005-01-01', cache_key: 'GOLD_SPOT' },
+    });
+
+    if (error) throw error;
+
+    if (data?.fromCache && Array.isArray(data.observations)) {
+      return data.observations as Observation[];
+    }
+
+    if (!data?.observations) {
+      throw new Error(data?.error_message || 'no data');
+    }
+
+    return parseObservations(data.observations);
+  } catch (e) {
+    // 3. Fallback to static JSON if both above fail
+    console.warn('GOLD_SPOT: FRED fetch failed, falling back to static file:', e);
+    try {
+      const res = await fetch('/data/gold-historical.json');
+      if (!res.ok) throw new Error(`Static file HTTP ${res.status}`);
+      const json = await res.json();
+      return (json as any[]).map((o: any) => ({ date: o.date, value: Number(o.value || o.price) }));
+    } catch (fallbackErr) {
+      console.error('GOLD_SPOT: all sources failed', fallbackErr);
+      throw new Error('Failed to fetch gold spot price from any source');
+    }
   }
-
-  if (data?.fromCache && Array.isArray(data.observations)) {
-    return data.observations as Observation[];
-  }
-
-  if (!data?.observations) {
-    console.error('No observations for GOLD_SPOT:', data);
-    throw new Error('Failed to fetch gold spot price');
-  }
-
-  return parseObservations(data.observations);
 }
 
 export async function fetchPhysicalDemand(): Promise<CentralBankEntry[]> {
