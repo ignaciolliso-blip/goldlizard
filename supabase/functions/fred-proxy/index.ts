@@ -98,7 +98,7 @@ serve(async (req) => {
         // Update cache
         await supabase.from('data_cache').upsert({
           series_id: 'GOLD_SPOT',
-          data_json: existingObs,
+          data_json: avObs,
           last_fetched: new Date().toISOString(),
         });
 
