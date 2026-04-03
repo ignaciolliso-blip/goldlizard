@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
           },
           {
             role: "user",
-            content: `Extract the current uranium spot price (Ux U3O8 Price) and long-term contract price (Ux LT U3O8 Price) from this UxC price indicators page HTML:\n\n${trimmedHtml}`,
+            content: `Extract the current uranium spot price and long-term contract price from this Cameco uranium price page HTML. Cameco publishes industry-average month-end prices from UxC and TradeTech. Look for the most recent spot and long-term prices in USD per pound U3O8:\n\n${trimmedHtml}`,
           },
         ],
         tools: [
