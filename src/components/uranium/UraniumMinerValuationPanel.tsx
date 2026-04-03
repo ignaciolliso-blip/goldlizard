@@ -330,7 +330,7 @@ function MinerRow({ result, universe, spotPrice, onApprove }: {
         </div>
       </button>
 
-      {expanded && <DetailCard result={result} universe={universe} spotPrice={spotPrice} />}
+      {expanded && <DetailCard result={result} universe={universe} spotPrice={spotPrice} onApprove={onApprove} />}
     </div>
   );
 }
