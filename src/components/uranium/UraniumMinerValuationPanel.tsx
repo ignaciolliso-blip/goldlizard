@@ -256,10 +256,11 @@ function SourceRow({ label, source, url, date }: {
 
 // ── Miner Row ────────────────────────────────────────────────────────────────
 
-function MinerRow({ result, universe, spotPrice }: {
+function MinerRow({ result, universe, spotPrice, onApprove }: {
   result: MinerValuationResult;
   universe: UniverseRow;
   spotPrice: number;
+  onApprove: (ticker: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
 
