@@ -36,7 +36,72 @@ serve(async (req) => {
       });
     }
 
-    // Gold price proxy — removed, now uses standard FRED path below with GOLDPMGBD228NLBM
+    // Live gold spot price via Alpha Vantage
+    if (action === 'gold_spot_price') {
+      // Check cache first
+      const { data: cached } = await supabase
+        .from('data_cache')
+        .select('*')
+        .eq('series_id', 'GOLD_SPOT')
+        .maybeSingle();
+
+      if (cached && isCacheFresh(cached.last_fetched)) {
+        return new Response(JSON.stringify({ observations: cached.data_json, fromCache: true }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Cache is stale or missing — fetch live gold price and merge with history
+      try {
+        // Fetch current gold price from free gold-api.com (no key needed)
+        const goldApiRes = await fetch('https://api.gold-api.com/price/XAU');
+        const goldApiData = await goldApiRes.json();
+
+        if (!goldApiData?.price || isNaN(goldApiData.price)) {
+          console.error('gold-api.com unexpected response:', JSON.stringify(goldApiData).slice(0, 500));
+          if (cached) {
+            return new Response(JSON.stringify({ observations: cached.data_json, fromCache: true, stale: true }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+          return new Response(JSON.stringify({ error: 'Gold API error and no cache available' }), {
+            status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        const livePrice = goldApiData.price;
+        const today = new Date().toISOString().slice(0, 10);
+
+        // Merge: take existing cached observations, replace/add today's price
+        let observations: { date: string; value: number }[] = [];
+        if (cached && Array.isArray(cached.data_json)) {
+          observations = (cached.data_json as any[]).filter((o: any) => o.date !== today);
+        }
+        observations.push({ date: today, value: livePrice });
+        observations.sort((a, b) => a.date.localeCompare(b.date));
+
+        // Update cache
+        await supabase.from('data_cache').upsert({
+          series_id: 'GOLD_SPOT',
+          data_json: observations,
+          last_fetched: new Date().toISOString(),
+        });
+
+        return new Response(JSON.stringify({ observations, fromCache: false, livePrice, source: 'gold-api' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (err) {
+        console.error('Gold price fetch failed:', err);
+        if (cached) {
+          return new Response(JSON.stringify({ observations: cached.data_json, fromCache: true, stale: true }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        return new Response(JSON.stringify({ error: 'Gold price fetch failed and no cache' }), {
+          status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
 
     // Check cache first (using service role)
     const cacheId = cache_key || series_id;

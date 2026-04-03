@@ -71,25 +71,21 @@ export async function fetchGoldSpot(onStatus?: (msg: string) => void): Promise<O
       }
     }
 
-    // 2. Cache stale/missing — call fred-proxy for fresh FRED data
+    // 2. Cache stale/missing — call fred-proxy with Alpha Vantage gold_spot_price action
     const { data, error } = await supabase.functions.invoke('fred-proxy', {
-      body: { series_id: 'GOLDPMGBD228NLBM', observation_start: '2005-01-01', cache_key: 'GOLD_SPOT' },
+      body: { action: 'gold_spot_price' },
     });
 
     if (error) throw error;
 
-    if (data?.fromCache && Array.isArray(data.observations)) {
-      return data.observations as Observation[];
+    if (Array.isArray(data?.observations)) {
+      return data.observations.map((o: any) => ({ date: o.date, value: Number(o.value) }));
     }
 
-    if (!data?.observations) {
-      throw new Error(data?.error_message || 'no data');
-    }
-
-    return parseObservations(data.observations);
+    throw new Error(data?.error || 'no data from gold_spot_price');
   } catch (e) {
     // 3. Fallback to static JSON if both above fail
-    console.warn('GOLD_SPOT: FRED fetch failed, falling back to static file:', e);
+    console.warn('GOLD_SPOT: Alpha Vantage fetch failed, falling back to static file:', e);
     try {
       const res = await fetch('/data/gold-historical.json');
       if (!res.ok) throw new Error(`Static file HTTP ${res.status}`);
