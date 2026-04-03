@@ -484,6 +484,7 @@ export default function UraniumMinerValuationPanel({ uraniumSpotPrice, onPriceUp
       await new Promise(r => setTimeout(r, 500));
       setUpdateStatus('Calculating valuations...');
       await loadData();
+      onPriceUpdated?.();
       setUpdateStatus('');
     } catch (e) {
       console.error('Update error:', e);
