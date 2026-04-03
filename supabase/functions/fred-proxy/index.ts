@@ -36,22 +36,7 @@ serve(async (req) => {
       });
     }
 
-    // Gold price proxy
-    if (action === 'gold_price') {
-      const url = `https://api.metals.dev/v1/timeseries?api_key=demo&currency=USD&unit=toz&start_date=${observation_start || '2015-01-01'}&end_date=${new Date().toISOString().split('T')[0]}&metal=gold`;
-      try {
-        const response = await fetch(url);
-        if (response.ok) {
-          const data = await response.json();
-          return new Response(JSON.stringify(data), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-      } catch (_e) { /* fall through */ }
-      return new Response(JSON.stringify({ rates: {} }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    // Gold price proxy — removed, now uses standard FRED path below with GOLDPMGBD228NLBM
 
     // Check cache first (using service role)
     const cacheId = cache_key || series_id;
