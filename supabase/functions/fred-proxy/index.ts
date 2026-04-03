@@ -72,6 +72,9 @@ serve(async (req) => {
           }
           
           const historicals = fmpData?.historical || (Array.isArray(fmpData) ? fmpData : null);
+
+          if (historicals && Array.isArray(historicals)) {
+            const fmpObs = historicals
               .map((d: any) => ({ date: d.date, value: parseFloat(d.close) }))
               .filter((o: any) => !isNaN(o.value))
               .sort((a: any, b: any) => a.date.localeCompare(b.date));
