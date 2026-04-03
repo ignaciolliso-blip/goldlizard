@@ -51,72 +51,89 @@ serve(async (req) => {
         });
       }
 
-      // Fetch live price from Alpha Vantage
+      // Try multiple sources: FMP first, then Alpha Vantage, then stale cache
+      const fmpKey = Deno.env.get('FMP_API_KEY')?.trim();
       const avKey = Deno.env.get('ALPHA_VANTAGE_KEY')?.trim();
-      if (!avKey) {
-        // No key — return cached data if any, even if stale
-        if (cached) {
-          return new Response(JSON.stringify({ observations: cached.data_json, fromCache: true, stale: true }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
+
+      // Source 1: FMP historical gold price
+      if (fmpKey) {
+        try {
+          const fmpUrl = `https://financialmodelingprep.com/api/v3/historical-price-full/XAUUSD?from=2005-01-01&apikey=${fmpKey}`;
+          const fmpRes = await fetch(fmpUrl);
+          const fmpData = await fmpRes.json();
+
+          if (fmpData?.historical && Array.isArray(fmpData.historical)) {
+            const fmpObs = fmpData.historical
+              .map((d: any) => ({ date: d.date, value: parseFloat(d.close) }))
+              .filter((o: any) => !isNaN(o.value))
+              .sort((a: any, b: any) => a.date.localeCompare(b.date));
+
+            if (fmpObs.length > 100) {
+              await supabase.from('data_cache').upsert({
+                series_id: 'GOLD_SPOT',
+                data_json: fmpObs,
+                last_fetched: new Date().toISOString(),
+              });
+
+              const latestPrice = fmpObs[fmpObs.length - 1]?.value;
+              return new Response(JSON.stringify({ observations: fmpObs, fromCache: false, livePrice: latestPrice, source: 'fmp' }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              });
+            }
+          }
+          console.error('FMP unexpected response:', JSON.stringify(fmpData).slice(0, 500));
+        } catch (fmpErr) {
+          console.error('FMP fetch failed:', fmpErr);
         }
-        return new Response(JSON.stringify({ error: 'ALPHA_VANTAGE_KEY not configured and no cache' }), {
-          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
       }
 
-      try {
-        // Use FX_DAILY for XAU/USD — returns daily OHLC for gold in USD
-        const avUrl = `https://www.alphavantage.co/query?function=FX_DAILY&from_symbol=XAU&to_symbol=USD&outputsize=full&apikey=${avKey}`;
-        const avRes = await fetch(avUrl);
-        const avData = await avRes.json();
+      // Source 2: Alpha Vantage FX_DAILY XAU/USD
+      if (avKey) {
+        try {
+          const avUrl = `https://www.alphavantage.co/query?function=FX_DAILY&from_symbol=XAU&to_symbol=USD&outputsize=full&apikey=${avKey}`;
+          const avRes = await fetch(avUrl);
+          const avData = await avRes.json();
 
-        const timeSeries = avData?.['Time Series FX (Daily)'];
-        if (!timeSeries || typeof timeSeries !== 'object') {
+          const timeSeries = avData?.['Time Series FX (Daily)'];
+          if (timeSeries && typeof timeSeries === 'object') {
+            const avObs: { date: string; value: number }[] = [];
+            for (const [date, ohlc] of Object.entries(timeSeries)) {
+              const close = parseFloat((ohlc as any)['4. close']);
+              if (!isNaN(close) && date >= '2005-01-01') {
+                avObs.push({ date, value: close });
+              }
+            }
+            avObs.sort((a, b) => a.date.localeCompare(b.date));
+
+            if (avObs.length > 100) {
+              await supabase.from('data_cache').upsert({
+                series_id: 'GOLD_SPOT',
+                data_json: avObs,
+                last_fetched: new Date().toISOString(),
+              });
+
+              const latestPrice = avObs[avObs.length - 1]?.value;
+              return new Response(JSON.stringify({ observations: avObs, fromCache: false, livePrice: latestPrice, source: 'alphavantage' }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              });
+            }
+          }
           console.error('Alpha Vantage unexpected response:', JSON.stringify(avData).slice(0, 500));
-          // Rate limit or error — return stale cache if available
-          if (cached) {
-            return new Response(JSON.stringify({ observations: cached.data_json, fromCache: true, stale: true }), {
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          }
-          return new Response(JSON.stringify({ error: 'Alpha Vantage error and no cache available' }), {
-            status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
+        } catch (avErr) {
+          console.error('Alpha Vantage fetch failed:', avErr);
         }
+      }
 
-        // Convert AV daily series to observation array
-        const avObs: { date: string; value: number }[] = [];
-        for (const [date, ohlc] of Object.entries(timeSeries)) {
-          const close = parseFloat((ohlc as any)['4. close']);
-          if (!isNaN(close) && date >= '2005-01-01') {
-            avObs.push({ date, value: close });
-          }
-        }
-        avObs.sort((a, b) => a.date.localeCompare(b.date));
-
-        // Update cache
-        await supabase.from('data_cache').upsert({
-          series_id: 'GOLD_SPOT',
-          data_json: avObs,
-          last_fetched: new Date().toISOString(),
-        });
-
-        const latestPrice = avObs.length > 0 ? avObs[avObs.length - 1].value : null;
-        return new Response(JSON.stringify({ observations: avObs, fromCache: false, livePrice: latestPrice }), {
+      // Source 3: Return stale cache if available
+      if (cached) {
+        return new Response(JSON.stringify({ observations: cached.data_json, fromCache: true, stale: true }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
-      } catch (avError) {
-        console.error('Alpha Vantage fetch failed:', avError);
-        if (cached) {
-          return new Response(JSON.stringify({ observations: cached.data_json, fromCache: true, stale: true }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-        return new Response(JSON.stringify({ error: 'Alpha Vantage failed and no cache' }), {
-          status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
       }
+
+      return new Response(JSON.stringify({ error: 'No gold price source available and no cache' }), {
+        status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Check cache first (using service role)
