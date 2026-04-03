@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
+import UraniumMinerValuationPanel from '@/components/uranium/UraniumMinerValuationPanel';
 import { fetchAllUraniumData } from '@/lib/uraniumDataFetcher';
 import {
   computeUraniumAnchor, computeUraniumForces, computeUraniumLeverage,
