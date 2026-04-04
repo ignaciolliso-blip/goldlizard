@@ -327,7 +327,7 @@ function ForcesCard({ forces }: { forces: UraniumForcesResult | null }) {
 }
 
 // ─── LEVERAGE CARD ───
-function LeverageCard({ leverage }: { leverage: UraniumLeverageResult | null }) {
+function LeverageCard({ leverage, spotPriceOverride }: { leverage: UraniumLeverageResult | null; spotPriceOverride?: number }) {
   if (!leverage) return <SkeletonCard />;
 
   const conclusion = deriveLeverageConclusion(leverage.sectorPNAV);
