@@ -4,13 +4,14 @@ import {
   CartesianGrid, ReferenceArea, ReferenceLine,
 } from 'recharts';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { GOLD_PNAV_ANNOTATIONS, GOLD_CYCLE_TABLE, HISTORICAL_AVG_PNAV } from '@/lib/leverageEngine';
+import { GOLD_PNAV_ANNOTATIONS, buildGoldCycleTable, HISTORICAL_AVG_PNAV } from '@/lib/leverageEngine';
 import type { GoldPNAVHistoryPoint } from '@/lib/leverageEngine';
 import { ExternalLink } from 'lucide-react';
 
 interface Props {
   data: GoldPNAVHistoryPoint[];
   currentPNAV: number;
+  currentGoldPrice?: number;
 }
 
 export default function GoldHistoricalPNAVChart({ data, currentPNAV }: Props) {
