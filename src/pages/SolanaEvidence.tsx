@@ -22,8 +22,6 @@ const SolanaEvidence = () => {
   const [agentDate, setAgentDate] = useState(new Date().toISOString().split('T')[0]);
   const [agentTxns, setAgentTxns] = useState('');
   const [agentVolume, setAgentVolume] = useState('');
-  const [agentPct, setAgentPct] = useState('');
-  const [totalTxns, setTotalTxns] = useState('');
 
   // Forecast state
   const [target1y, setTarget1y] = useState('');
