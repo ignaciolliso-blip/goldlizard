@@ -190,12 +190,12 @@ const AppNav = () => {
               <NavLink
                 key={l.to}
                 to={l.to}
-                end={l.to === '/' || l.to === '/uranium'}
+                end={l.to === '/' || l.to === '/uranium' || l.to === '/solana'}
                 className={({ isActive }) =>
                   cn(
                     'block px-4 py-2.5 text-sm font-medium rounded-md transition-colors',
                     isActive
-                      ? `${accentClass} ${accentBg} border-l-2 ${currentAsset === 'Uranium' ? 'border-uranium' : 'border-gold'}`
+                      ? `${accentClass} ${accentBg} border-l-2 ${currentAsset === 'Uranium' ? 'border-uranium' : currentAsset === 'Solana' ? 'border-solana' : 'border-gold'}`
                       : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
                   )
                 }
