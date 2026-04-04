@@ -42,8 +42,15 @@ interface Props {
   currentSpotPrice?: number;
 }
 
-export default function HistoricalPNAVChart({ data, currentPNAV }: Props) {
+export default function HistoricalPNAVChart({ data, currentPNAV, currentSpotPrice }: Props) {
   const isMobile = useIsMobile();
+  const CYCLE_TABLE = useMemo(() => {
+    const spotLabel = currentSpotPrice && currentSpotPrice > 0 ? `$${Math.round(currentSpotPrice)}/lb` : '—';
+    return [
+      ...CYCLE_TABLE_STATIC,
+      { cycle: 'TODAY (2026)', price: spotLabel, pnav: `${currentPNAV.toFixed(1)}×`, result: '???' },
+    ];
+  }, [currentPNAV, currentSpotPrice]);
 
   const chartData = useMemo(() => {
     if (!data.length) {

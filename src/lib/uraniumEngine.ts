@@ -287,7 +287,7 @@ export const URANIUM_ANNOTATIONS = [
   { date: '2024-01-15', label: 'U hits $106', detail: 'Spot breaks $100 for first time since 2007. Driven by Sprott buying, utility contracting acceleration, and supply disappointments.', important: true },
   { date: '2024-05-01', label: 'US bans Russian U', detail: 'PREU Act signed. Phases out Russian LEU imports by 2028. Forces US utilities to find alternative enrichment.', important: false },
   { date: '2025-01-01', label: 'Trump: quadruple nuclear', detail: 'Executive order to quadruple US nuclear capacity by 2050. Would require doubling global uranium production. $80B pledged for new AP1000 reactors.', important: false },
-  { date: '2026-01-01', label: 'TODAY — Spot ~$78', detail: 'Long-term contracts at $86 — 14-year high. Mining equities reprice. Utilities still undercontracted. The structural deficit continues to build.', important: true },
+  { date: '2026-01-01', label: 'TODAY', detail: 'Long-term contracts at multi-year highs. Mining equities reprice. Utilities still undercontracted. The structural deficit continues to build.', important: true },
 ];
 
 // Projection constants
