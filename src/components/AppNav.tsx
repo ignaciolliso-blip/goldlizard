@@ -9,8 +9,8 @@ import { Menu, X, LogIn, LogOut } from 'lucide-react';
 const assets = [
   { label: 'Gold', active: true, path: '/' },
   { label: 'Uranium', active: true, path: '/uranium' },
+  { label: 'Solana', active: true, path: '/solana' },
   { label: 'Oil', active: false, path: '/oil' },
-  { label: 'Silver', active: false, path: '/silver' },
   { label: 'Strategy', active: false, path: '/strategy' },
 ];
 
