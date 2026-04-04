@@ -163,7 +163,7 @@ const AppNav = () => {
             <NavLink
               key={l.to}
               to={l.to}
-              end={l.to === '/' || l.to === '/uranium'}
+              end={l.to === '/' || l.to === '/uranium' || l.to === '/solana'}
               className={({ isActive }) =>
                 cn(
                   'px-4 py-1.5 text-sm font-medium transition-colors relative',
