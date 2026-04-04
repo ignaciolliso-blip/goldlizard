@@ -158,14 +158,14 @@ export const GOLD_PNAV_ANNOTATIONS = [
   {
     date: "2025-01",
     pnav: 1.3,
-    label: "Gold at $5,595 ATH — miners lagging",
-    detail: "Gold has risen 2.5× from 2022 lows but miners have only partially re-rated. P/NAV at 1.3× is well below the 2011 peak of 2.5×. Record margins ($3,100/oz profit at $4,500 gold) haven't been fully capitalised. The catch-up potential remains.",
+    label: "Gold ATH — miners lagging",
+    detail: "Gold has risen 2.5× from 2022 lows but miners have only partially re-rated. P/NAV at 1.3× is well below the 2011 peak of 2.5×. The catch-up potential remains.",
   },
   {
     date: "2026-03",
     pnav: 1.1,
-    label: "TODAY — miners at 1.1× NAV after pullback",
-    detail: "Gold has pulled back 20% from ATH to ~$4,500. Miners have pulled back more (typical beta). At 1.1× NAV — below the historical average of 1.3×. With AISC at $1,400 and gold at $4,500, margins are still extraordinary ($3,100/oz). The market is not pricing in these margins sustainably.",
+    label: "TODAY — miners after pullback",
+    detail: "Miners have pulled back more than gold (typical beta). P/NAV below the historical average of 1.3×. Record AISC margins persist. The market is not pricing in these margins sustainably.",
   },
 ];
 
