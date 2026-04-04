@@ -116,6 +116,34 @@ Deno.serve(async (req) => {
     const fdvFeeRatio = annualisedFees > 0 ? solFdv / annualisedFees : 0
 
     // ============================================
+    // FETCH 4: Solana RPC — Total daily transactions
+    // ============================================
+    let dailyTransactions = 0
+
+    try {
+      const rpcResponse = await fetch('https://api.mainnet-beta.solana.com', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'getRecentPerformanceSamples',
+          params: [1]
+        })
+      })
+      if (rpcResponse.ok) {
+        const rpcData = await rpcResponse.json()
+        if (rpcData.result && rpcData.result[0]) {
+          const sample = rpcData.result[0]
+          const txPerSecond = sample.numTransactions / sample.samplePeriodSecs
+          dailyTransactions = Math.round(txPerSecond * 86400)
+        }
+      }
+    } catch (e) {
+      console.error('Solana RPC fetch failed:', e)
+    }
+
+    // ============================================
     // WRITE ALL METRICS TO SUPABASE
     // ============================================
     const now = new Date().toISOString()
@@ -129,6 +157,7 @@ Deno.serve(async (req) => {
       { metric_name: 'tvl_usd', value: tvlUsd, source: 'defillama', fetched_at: now },
       { metric_name: 'stablecoin_supply', value: stablecoinSupply, source: 'defillama', fetched_at: now },
       { metric_name: 'fdv_fee_ratio', value: fdvFeeRatio, source: 'computed', fetched_at: now },
+      { metric_name: 'daily_transactions', value: dailyTransactions, source: 'solana_rpc', fetched_at: now },
     ]
 
     for (const metric of metrics) {
@@ -160,6 +189,7 @@ Deno.serve(async (req) => {
         daily_fees_usd: dailyFees,
         annualised_fees: annualisedFees,
         fdv_fee_ratio: fdvFeeRatio,
+        daily_transactions: dailyTransactions,
         btc_price: btcPrice,
         eth_price: ethPrice,
       })

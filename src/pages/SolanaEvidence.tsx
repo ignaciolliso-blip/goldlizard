@@ -22,8 +22,6 @@ const SolanaEvidence = () => {
   const [agentDate, setAgentDate] = useState(new Date().toISOString().split('T')[0]);
   const [agentTxns, setAgentTxns] = useState('');
   const [agentVolume, setAgentVolume] = useState('');
-  const [agentPct, setAgentPct] = useState('');
-  const [totalTxns, setTotalTxns] = useState('');
 
   // Forecast state
   const [target1y, setTarget1y] = useState('');
@@ -57,16 +55,22 @@ const SolanaEvidence = () => {
     }
   };
 
+  // Auto-computed values for agent metrics
+  const totalDailyTxns = metrics?.daily_transactions || 0;
+  const computedAgentPct = agentTxns && totalDailyTxns > 0
+    ? (parseFloat(agentTxns) / totalDailyTxns * 100)
+    : 0;
+
   const saveAgentData = async () => {
-    if (!agentTxns && !agentPct) return;
+    if (!agentTxns) return;
     try {
       await supabase.from('solana_agent_metrics' as any).upsert(
         {
           date: agentDate,
-          x402_daily_transactions: agentTxns ? parseFloat(agentTxns) : null,
+          x402_daily_transactions: parseFloat(agentTxns),
           x402_daily_volume_usd: agentVolume ? parseFloat(agentVolume) : null,
-          agent_pct_of_total_txns: agentPct ? parseFloat(agentPct) : null,
-          total_daily_transactions: totalTxns ? parseFloat(totalTxns) : null,
+          agent_pct_of_total_txns: computedAgentPct > 0 ? parseFloat(computedAgentPct.toFixed(4)) : null,
+          total_daily_transactions: totalDailyTxns > 0 ? totalDailyTxns : null,
           source: 'manual',
         },
         { onConflict: 'date' }
@@ -74,8 +78,6 @@ const SolanaEvidence = () => {
       toast({ title: 'Agent data saved', description: `Data for ${agentDate} saved` });
       setAgentTxns('');
       setAgentVolume('');
-      setAgentPct('');
-      setTotalTxns('');
     } catch (e: any) {
       toast({ title: 'Error', description: e.message, variant: 'destructive' });
     }
@@ -321,34 +323,53 @@ const SolanaEvidence = () => {
                     <ExternalLink size={10} /> x402scan
                   </a>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[10px] text-muted-foreground">Date</label>
-                    <input type="date" value={agentDate} onChange={e => setAgentDate(e.target.value)}
-                      className="w-full bg-background border border-border rounded px-2 py-1 text-sm font-mono text-foreground" />
+                <div className="space-y-3">
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Manual Inputs</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[10px] text-muted-foreground">Date</label>
+                      <input type="date" value={agentDate} onChange={e => setAgentDate(e.target.value)}
+                        className="w-full bg-background border border-border rounded px-2 py-1 text-sm font-mono text-foreground" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground">
+                        x402 Txns/day
+                        <a href="https://x402scan.com" target="_blank" rel="noopener noreferrer"
+                          className="ml-1 text-solana hover:underline"><ExternalLink size={8} className="inline" /></a>
+                      </label>
+                      <input type="number" value={agentTxns} onChange={e => setAgentTxns(e.target.value)}
+                        className="w-full bg-background border border-border rounded px-2 py-1 text-sm font-mono text-foreground" placeholder="e.g. 150000" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground">
+                        x402 Volume/day (USD)
+                        <a href="https://x402scan.com" target="_blank" rel="noopener noreferrer"
+                          className="ml-1 text-solana hover:underline"><ExternalLink size={8} className="inline" /></a>
+                      </label>
+                      <input type="number" value={agentVolume} onChange={e => setAgentVolume(e.target.value)}
+                        className="w-full bg-background border border-border rounded px-2 py-1 text-sm font-mono text-foreground" placeholder="e.g. 500000" />
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-[10px] text-muted-foreground">x402 Txns/day</label>
-                    <input type="number" value={agentTxns} onChange={e => setAgentTxns(e.target.value)}
-                      className="w-full bg-background border border-border rounded px-2 py-1 text-sm font-mono text-foreground" placeholder="e.g. 150000" />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-muted-foreground">x402 Volume (USD)</label>
-                    <input type="number" value={agentVolume} onChange={e => setAgentVolume(e.target.value)}
-                      className="w-full bg-background border border-border rounded px-2 py-1 text-sm font-mono text-foreground" placeholder="e.g. 500000" />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-muted-foreground">Agent % of Total</label>
-                    <input type="number" value={agentPct} onChange={e => setAgentPct(e.target.value)}
-                      className="w-full bg-background border border-border rounded px-2 py-1 text-sm font-mono text-foreground" placeholder="e.g. 12.5" />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-muted-foreground">Total Daily Txns</label>
-                    <input type="number" value={totalTxns} onChange={e => setTotalTxns(e.target.value)}
-                      className="w-full bg-background border border-border rounded px-2 py-1 text-sm font-mono text-foreground" placeholder="e.g. 65000000" />
+
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mt-4">Auto-Filled (read-only)</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-background/50 border border-border/50 rounded px-2 py-1.5">
+                      <label className="text-[10px] text-muted-foreground">Total Solana Txns/day</label>
+                      <p className="font-mono text-sm text-foreground/80">
+                        {totalDailyTxns > 0 ? Math.round(totalDailyTxns).toLocaleString() : 'Awaiting RPC data'}
+                      </p>
+                      <p className="text-[9px] text-muted-foreground/60">Source: Solana RPC (auto)</p>
+                    </div>
+                    <div className="bg-background/50 border border-border/50 rounded px-2 py-1.5">
+                      <label className="text-[10px] text-muted-foreground">Agent % of Total</label>
+                      <p className="font-mono text-sm text-foreground/80">
+                        {computedAgentPct > 0 ? `${computedAgentPct.toFixed(4)}%` : '—'}
+                      </p>
+                      <p className="text-[9px] text-muted-foreground/60">Computed: x402 txns ÷ total × 100</p>
+                    </div>
                   </div>
                 </div>
-                <button onClick={saveAgentData} disabled={!agentTxns && !agentPct}
+                <button onClick={saveAgentData} disabled={!agentTxns}
                   className="flex items-center gap-1 px-3 py-1.5 bg-solana-cyan/20 text-solana-cyan rounded text-xs font-medium hover:bg-solana-cyan/30 transition-colors disabled:opacity-40">
                   <Plus size={12} /> Save Agent Data
                 </button>
