@@ -143,6 +143,7 @@ function AnchorCard({ anchor }: { anchor: UraniumAnchorResult | null }) {
           <span className="text-muted-foreground">Greenfield cost</span>
           <span className="font-mono text-muted-foreground">$85–$100/lb</span>
         </div>
+        <p className="text-[10px] text-muted-foreground/60 italic">Cost estimates as of Q1 2026. Update in Evidence &gt; Data Management.</p>
         <div className="flex justify-between">
           <span className="text-muted-foreground">Gap to greenfield</span>
           <span className="font-mono font-semibold text-foreground">{anchor.gapToGreenfield > 0 ? '+' : ''}{anchor.gapToGreenfield.toFixed(0)}%</span>
@@ -326,7 +327,7 @@ function ForcesCard({ forces }: { forces: UraniumForcesResult | null }) {
 }
 
 // ─── LEVERAGE CARD ───
-function LeverageCard({ leverage }: { leverage: UraniumLeverageResult | null }) {
+function LeverageCard({ leverage, spotPriceOverride }: { leverage: UraniumLeverageResult | null; spotPriceOverride?: number }) {
   if (!leverage) return <SkeletonCard />;
 
   const conclusion = deriveLeverageConclusion(leverage.sectorPNAV);
@@ -339,8 +340,10 @@ function LeverageCard({ leverage }: { leverage: UraniumLeverageResult | null }) 
   const gaugePos = Math.min(Math.max((leverage.sectorPNAV - gaugeMin) / (gaugeMax - gaugeMin), 0), 1) * 100;
   const histPos = Math.min(Math.max((leverage.historicalAvgPNAV - gaugeMin) / (gaugeMax - gaugeMin), 0), 1) * 100;
 
-  const spotPrice = leverage.ratioSeries.length > 0 && leverage.currentRatio > 0
-    ? leverage.currentURNMPrice / leverage.currentRatio : 78;
+  const spotPrice = spotPriceOverride && spotPriceOverride > 0
+    ? spotPriceOverride
+    : (leverage.ratioSeries.length > 0 && leverage.currentRatio > 0
+      ? leverage.currentURNMPrice / leverage.currentRatio : 0);
 
   return (
     <CardShell
@@ -650,12 +653,15 @@ function HoldingsSection() {
 
 // ─── MAIN EXPORT ───
 export default function UraniumSignalLenses({ anchorResult, forcesResult, leverageResult }: Props) {
+  // Pass the real spot price from the anchor into the leverage card
+  const spotPriceFromAnchor = anchorResult?.spotPrice ?? 0;
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <AnchorCard anchor={anchorResult} />
         <ForcesCard forces={forcesResult} />
-        <LeverageCard leverage={leverageResult} />
+        <LeverageCard leverage={leverageResult} spotPriceOverride={spotPriceFromAnchor} />
       </div>
       <HoldingsSection />
     </div>

@@ -148,7 +148,7 @@ const UraniumSignal = () => {
         </div>
 
         {/* Miner Valuation Panel */}
-        <UraniumMinerValuationPanel uraniumSpotPrice={anchorResult?.spotPrice ?? 78} onPriceUpdated={() => setRefreshKey(k => k + 1)} />
+        <UraniumMinerValuationPanel uraniumSpotPrice={anchorResult?.spotPrice ?? 0} onPriceUpdated={() => setRefreshKey(k => k + 1)} />
 
         {/* AI Narrator */}
         {anchorResult && (

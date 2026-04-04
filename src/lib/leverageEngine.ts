@@ -158,22 +158,36 @@ export const GOLD_PNAV_ANNOTATIONS = [
   {
     date: "2025-01",
     pnav: 1.3,
-    label: "Gold at $5,595 ATH — miners lagging",
-    detail: "Gold has risen 2.5× from 2022 lows but miners have only partially re-rated. P/NAV at 1.3× is well below the 2011 peak of 2.5×. Record margins ($3,100/oz profit at $4,500 gold) haven't been fully capitalised. The catch-up potential remains.",
+    label: "Gold ATH — miners lagging",
+    detail: "Gold has risen 2.5× from 2022 lows but miners have only partially re-rated. P/NAV at 1.3× is well below the 2011 peak of 2.5×. The catch-up potential remains.",
   },
   {
     date: "2026-03",
     pnav: 1.1,
-    label: "TODAY — miners at 1.1× NAV after pullback",
-    detail: "Gold has pulled back 20% from ATH to ~$4,500. Miners have pulled back more (typical beta). At 1.1× NAV — below the historical average of 1.3×. With AISC at $1,400 and gold at $4,500, margins are still extraordinary ($3,100/oz). The market is not pricing in these margins sustainably.",
+    label: "TODAY — miners after pullback",
+    detail: "Miners have pulled back more than gold (typical beta). P/NAV below the historical average of 1.3×. Record AISC margins persist. The market is not pricing in these margins sustainably.",
   },
 ];
 
-export const GOLD_CYCLE_TABLE = [
+export const GOLD_CYCLE_TABLE_STATIC = [
   { cycle: '2006 Early Bull', price: '$600', pnav: '1.4×', margin: '$200', result: 'Gold 3×\'d, miners 4×\'d' },
   { cycle: '2011 Mania Peak', price: '$1,920', pnav: '2.5×', margin: '$700', result: 'Gold -45%, miners -80%' },
   { cycle: '2015 Trough', price: '$1,050', pnav: '0.4×', margin: '-$50', result: 'Gold 2×\'d, miners 5×\'d' },
   { cycle: '2020 COVID Peak', price: '$2,075', pnav: '1.4×', margin: '$600', result: 'Gold flat, miners -30%' },
   { cycle: '2022 Fed Tightening', price: '$1,630', pnav: '0.6×', margin: '$400', result: 'Gold 2.7×\'d, miners 3×\'d' },
-  { cycle: 'TODAY (2026)', price: '$4,500', pnav: '1.1×', margin: '$3,100', result: '???' },
 ];
+
+/** Build cycle table with dynamic TODAY row */
+export function buildGoldCycleTable(currentGoldPrice: number, currentPNAV: number, aisc = 1400) {
+  const margin = currentGoldPrice > 0 ? currentGoldPrice - aisc : 0;
+  return [
+    ...GOLD_CYCLE_TABLE_STATIC,
+    {
+      cycle: 'TODAY (2026)',
+      price: currentGoldPrice > 0 ? `$${Math.round(currentGoldPrice).toLocaleString()}` : '—',
+      pnav: `${currentPNAV.toFixed(1)}×`,
+      margin: margin > 0 ? `$${Math.round(margin).toLocaleString()}` : '—',
+      result: '???',
+    },
+  ];
+}

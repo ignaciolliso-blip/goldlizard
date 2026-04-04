@@ -286,6 +286,7 @@ const UraniumAnalysis = () => {
               notes: p.notes,
             }))}
             currentPNAV={leverageResult?.sectorPNAV ?? 1.5}
+            currentSpotPrice={anchorResult?.spotPrice}
           />
         </div>
 

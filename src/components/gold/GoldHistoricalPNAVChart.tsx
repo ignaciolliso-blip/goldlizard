@@ -4,17 +4,19 @@ import {
   CartesianGrid, ReferenceArea, ReferenceLine,
 } from 'recharts';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { GOLD_PNAV_ANNOTATIONS, GOLD_CYCLE_TABLE, HISTORICAL_AVG_PNAV } from '@/lib/leverageEngine';
+import { GOLD_PNAV_ANNOTATIONS, buildGoldCycleTable, HISTORICAL_AVG_PNAV } from '@/lib/leverageEngine';
 import type { GoldPNAVHistoryPoint } from '@/lib/leverageEngine';
 import { ExternalLink } from 'lucide-react';
 
 interface Props {
   data: GoldPNAVHistoryPoint[];
   currentPNAV: number;
+  currentGoldPrice?: number;
 }
 
-export default function GoldHistoricalPNAVChart({ data, currentPNAV }: Props) {
+export default function GoldHistoricalPNAVChart({ data, currentPNAV, currentGoldPrice }: Props) {
   const isMobile = useIsMobile();
+  const GOLD_CYCLE_TABLE = useMemo(() => buildGoldCycleTable(currentGoldPrice ?? 0, currentPNAV), [currentGoldPrice, currentPNAV]);
 
   const chartData = useMemo(() => {
     if (data.length > 0) {
@@ -174,8 +176,7 @@ export default function GoldHistoricalPNAVChart({ data, currentPNAV }: Props) {
         <div className="px-4 py-3 border-t border-border">
           <p className="text-xs text-muted-foreground leading-relaxed">
             <strong>Key:</strong> P/NAV below 0.5× = strong buy (2015, 2022). P/NAV above 2.0× = take profits (2011).
-            P/NAV 0.8–1.5× = hold and accumulate on dips (TODAY). Today's margins ($3,100/oz) are the highest in history
-            — yet P/NAV (1.1×) is below the historical average (1.3×).
+            P/NAV 0.8–1.5× = hold and accumulate on dips (TODAY). Current margins and P/NAV are dynamic — see the TODAY row above.
           </p>
         </div>
       </div>
