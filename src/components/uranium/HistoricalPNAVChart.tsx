@@ -28,13 +28,12 @@ const PNAV_ANNOTATIONS = [
   { date: '2026-03-01', pnav: 1.5, label: 'TODAY — ~1.5× NAV', detail: 'After volatile 2025 (spot flat, equities +40%), miners at moderate premiums. Historical average since 2003: ~1.2×. Current 1.5× is one-third of the 2007 peak.' },
 ];
 
-const CYCLE_TABLE = [
+const CYCLE_TABLE_STATIC = [
   { cycle: '2003 Early Bull', price: '$10/lb', pnav: '1.0×', result: 'Uranium 10×\'d, miners 20×\'d' },
   { cycle: '2007 Mania Peak', price: '$136/lb', pnav: '4.5×', result: 'Uranium -70%, miners -90%' },
   { cycle: '2011 Pre-Fukushima', price: '$70/lb', pnav: '1.8×', result: 'Uranium -75%, miners -85%' },
   { cycle: '2016 Cycle Trough', price: '$18/lb', pnav: '0.35×', result: 'Uranium 5×\'d, miners 8×\'d' },
   { cycle: '2024 Recovery', price: '$106/lb', pnav: '1.7×', result: '[in progress]' },
-  { cycle: 'TODAY (2026)', price: '$78/lb', pnav: '1.5×', result: '???' },
 ];
 
 interface Props {
