@@ -69,6 +69,30 @@ const App = () => (
                     </Suspense>
                   }
                 />
+                <Route
+                  path="/solana"
+                  element={
+                    <Suspense fallback={<LoadingProgress message="Loading Solana..." />}>
+                      <SolanaSignal />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/solana/analysis"
+                  element={
+                    <Suspense fallback={<LoadingProgress message="Loading Solana Analysis..." />}>
+                      <SolanaAnalysis />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/solana/evidence"
+                  element={
+                    <Suspense fallback={<LoadingProgress message="Loading Solana Evidence..." />}>
+                      <SolanaEvidence />
+                    </Suspense>
+                  }
+                />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
