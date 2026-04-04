@@ -37,21 +37,23 @@ const SolanaEvidence = () => {
     if (!feeAmount) return;
     const val = parseFloat(feeAmount);
     try {
-      await supabase.from('solana_metrics' as any).upsert(
+      const { error: feeErr } = await supabase.from('solana_metrics' as any).upsert(
         { metric_name: 'daily_fees', value: val, source: 'manual', fetched_at: new Date().toISOString() },
         { onConflict: 'metric_name' }
       );
+      if (feeErr) throw new Error(feeErr.message);
       if (ethFeeAmount) {
-        await supabase.from('solana_metrics' as any).upsert(
+        const { error: ethErr } = await supabase.from('solana_metrics' as any).upsert(
           { metric_name: 'eth_daily_fees', value: parseFloat(ethFeeAmount), source: 'manual', fetched_at: new Date().toISOString() },
           { onConflict: 'metric_name' }
         );
+        if (ethErr) throw new Error(ethErr.message);
       }
       toast({ title: 'Fees updated', description: `Daily fees set to ${formatUSD(val)}` });
       setFeeAmount('');
       setEthFeeAmount('');
     } catch (e: any) {
-      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+      toast({ title: 'Error saving fees', description: e.message, variant: 'destructive' });
     }
   };
 
