@@ -72,11 +72,11 @@ const AppNav = () => {
   }, [navigate, toggleGuideMode, layers]);
 
   // Determine accent color based on asset
-  const accentClass = currentAsset === 'Uranium' ? 'text-uranium' : 'text-gold';
-  const accentBg = currentAsset === 'Uranium' ? 'bg-uranium/10' : 'bg-gold/10';
-  const accentDot = currentAsset === 'Uranium' ? 'bg-uranium' : 'bg-gold';
-  const accentLine = currentAsset === 'Uranium' ? 'bg-uranium' : 'bg-gold';
-  const accentRing = currentAsset === 'Uranium' ? 'ring-uranium/40 text-uranium bg-uranium/15' : 'ring-gold/40 text-gold bg-gold/15';
+  const accentClass = currentAsset === 'Uranium' ? 'text-uranium' : currentAsset === 'Solana' ? 'text-solana' : 'text-gold';
+  const accentBg = currentAsset === 'Uranium' ? 'bg-uranium/10' : currentAsset === 'Solana' ? 'bg-solana/10' : 'bg-gold/10';
+  const accentDot = currentAsset === 'Uranium' ? 'bg-uranium' : currentAsset === 'Solana' ? 'bg-solana' : 'bg-gold';
+  const accentLine = currentAsset === 'Uranium' ? 'bg-uranium' : currentAsset === 'Solana' ? 'bg-solana' : 'bg-gold';
+  const accentRing = currentAsset === 'Uranium' ? 'ring-uranium/40 text-uranium bg-uranium/15' : currentAsset === 'Solana' ? 'ring-solana/40 text-solana bg-solana/15' : 'ring-gold/40 text-gold bg-gold/15';
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-b border-border">
