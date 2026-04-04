@@ -155,6 +155,48 @@ export type Database = {
         }
         Relationships: []
       }
+      forecast_log: {
+        Row: {
+          actual_price_at_check: number | null
+          asset: string
+          basis: string | null
+          checked_at: string | null
+          created_at: string | null
+          id: number
+          metadata: Json | null
+          price_at_creation: number | null
+          target_1y: number | null
+          target_3y: number | null
+          verdict: string | null
+        }
+        Insert: {
+          actual_price_at_check?: number | null
+          asset: string
+          basis?: string | null
+          checked_at?: string | null
+          created_at?: string | null
+          id?: number
+          metadata?: Json | null
+          price_at_creation?: number | null
+          target_1y?: number | null
+          target_3y?: number | null
+          verdict?: string | null
+        }
+        Update: {
+          actual_price_at_check?: number | null
+          asset?: string
+          basis?: string | null
+          checked_at?: string | null
+          created_at?: string | null
+          id?: number
+          metadata?: Json | null
+          price_at_creation?: number | null
+          target_1y?: number | null
+          target_3y?: number | null
+          verdict?: string | null
+        }
+        Relationships: []
+      }
       miner_prices: {
         Row: {
           close_price: number
@@ -299,6 +341,132 @@ export type Database = {
           source?: string
           uranium_lt_contract?: number | null
           uranium_spot?: number
+        }
+        Relationships: []
+      }
+      solana_agent_metrics: {
+        Row: {
+          agent_pct_of_total_txns: number | null
+          created_at: string | null
+          date: string
+          id: number
+          notes: string | null
+          source: string | null
+          total_daily_transactions: number | null
+          x402_daily_transactions: number | null
+          x402_daily_volume_usd: number | null
+        }
+        Insert: {
+          agent_pct_of_total_txns?: number | null
+          created_at?: string | null
+          date: string
+          id?: number
+          notes?: string | null
+          source?: string | null
+          total_daily_transactions?: number | null
+          x402_daily_transactions?: number | null
+          x402_daily_volume_usd?: number | null
+        }
+        Update: {
+          agent_pct_of_total_txns?: number | null
+          created_at?: string | null
+          date?: string
+          id?: number
+          notes?: string | null
+          source?: string | null
+          total_daily_transactions?: number | null
+          x402_daily_transactions?: number | null
+          x402_daily_volume_usd?: number | null
+        }
+        Relationships: []
+      }
+      solana_daily_history: {
+        Row: {
+          annualised_fees: number | null
+          btc_price: number | null
+          created_at: string | null
+          daily_active_addresses: number | null
+          daily_fees_usd: number | null
+          daily_revenue_usd: number | null
+          daily_transactions: number | null
+          date: string
+          eth_daily_fees: number | null
+          eth_price: number | null
+          fdv_fee_ratio: number | null
+          id: number
+          sol_fdv: number | null
+          sol_market_cap: number | null
+          sol_price: number | null
+          sol_volume_24h: number | null
+          stablecoin_supply_usd: number | null
+          tvl_usd: number | null
+        }
+        Insert: {
+          annualised_fees?: number | null
+          btc_price?: number | null
+          created_at?: string | null
+          daily_active_addresses?: number | null
+          daily_fees_usd?: number | null
+          daily_revenue_usd?: number | null
+          daily_transactions?: number | null
+          date: string
+          eth_daily_fees?: number | null
+          eth_price?: number | null
+          fdv_fee_ratio?: number | null
+          id?: number
+          sol_fdv?: number | null
+          sol_market_cap?: number | null
+          sol_price?: number | null
+          sol_volume_24h?: number | null
+          stablecoin_supply_usd?: number | null
+          tvl_usd?: number | null
+        }
+        Update: {
+          annualised_fees?: number | null
+          btc_price?: number | null
+          created_at?: string | null
+          daily_active_addresses?: number | null
+          daily_fees_usd?: number | null
+          daily_revenue_usd?: number | null
+          daily_transactions?: number | null
+          date?: string
+          eth_daily_fees?: number | null
+          eth_price?: number | null
+          fdv_fee_ratio?: number | null
+          id?: number
+          sol_fdv?: number | null
+          sol_market_cap?: number | null
+          sol_price?: number | null
+          sol_volume_24h?: number | null
+          stablecoin_supply_usd?: number | null
+          tvl_usd?: number | null
+        }
+        Relationships: []
+      }
+      solana_metrics: {
+        Row: {
+          fetched_at: string | null
+          id: number
+          metric_name: string
+          source: string
+          value: number | null
+          value_text: string | null
+        }
+        Insert: {
+          fetched_at?: string | null
+          id?: number
+          metric_name: string
+          source: string
+          value?: number | null
+          value_text?: string | null
+        }
+        Update: {
+          fetched_at?: string | null
+          id?: number
+          metric_name?: string
+          source?: string
+          value?: number | null
+          value_text?: string | null
         }
         Relationships: []
       }
