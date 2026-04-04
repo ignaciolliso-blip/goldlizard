@@ -66,7 +66,7 @@ const SolanaEvidence = () => {
   const saveAgentData = async () => {
     if (!agentTxns) return;
     try {
-      await supabase.from('solana_agent_metrics' as any).upsert(
+      const { error: agentErr } = await supabase.from('solana_agent_metrics' as any).upsert(
         {
           date: agentDate,
           x402_daily_transactions: parseFloat(agentTxns),
@@ -77,11 +77,12 @@ const SolanaEvidence = () => {
         },
         { onConflict: 'date' }
       );
+      if (agentErr) throw new Error(agentErr.message);
       toast({ title: 'Agent data saved', description: `Data for ${agentDate} saved` });
       setAgentTxns('');
       setAgentVolume('');
     } catch (e: any) {
-      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+      toast({ title: 'Error saving agent data', description: e.message, variant: 'destructive' });
     }
   };
 
