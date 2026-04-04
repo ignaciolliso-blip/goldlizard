@@ -17,6 +17,7 @@ const assets = [
 // Get current asset from pathname
 function getCurrentAsset(pathname: string) {
   if (pathname.startsWith('/uranium')) return 'Uranium';
+  if (pathname.startsWith('/solana')) return 'Solana';
   return 'Gold';
 }
 
