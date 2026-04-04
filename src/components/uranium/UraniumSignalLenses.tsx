@@ -340,8 +340,10 @@ function LeverageCard({ leverage, spotPriceOverride }: { leverage: UraniumLevera
   const gaugePos = Math.min(Math.max((leverage.sectorPNAV - gaugeMin) / (gaugeMax - gaugeMin), 0), 1) * 100;
   const histPos = Math.min(Math.max((leverage.historicalAvgPNAV - gaugeMin) / (gaugeMax - gaugeMin), 0), 1) * 100;
 
-  const spotPrice = leverage.ratioSeries.length > 0 && leverage.currentRatio > 0
-    ? leverage.currentURNMPrice / leverage.currentRatio : 0;
+  const spotPrice = spotPriceOverride && spotPriceOverride > 0
+    ? spotPriceOverride
+    : (leverage.ratioSeries.length > 0 && leverage.currentRatio > 0
+      ? leverage.currentURNMPrice / leverage.currentRatio : 0);
 
   return (
     <CardShell
