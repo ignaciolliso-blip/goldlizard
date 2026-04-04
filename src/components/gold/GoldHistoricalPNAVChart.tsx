@@ -14,8 +14,9 @@ interface Props {
   currentGoldPrice?: number;
 }
 
-export default function GoldHistoricalPNAVChart({ data, currentPNAV }: Props) {
+export default function GoldHistoricalPNAVChart({ data, currentPNAV, currentGoldPrice }: Props) {
   const isMobile = useIsMobile();
+  const GOLD_CYCLE_TABLE = useMemo(() => buildGoldCycleTable(currentGoldPrice ?? 0, currentPNAV), [currentGoldPrice, currentPNAV]);
 
   const chartData = useMemo(() => {
     if (data.length > 0) {
