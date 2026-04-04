@@ -167,6 +167,7 @@ const Analysis = () => {
           <GoldHistoricalPNAVChart
             data={leverageResult.pnavHistory}
             currentPNAV={leverageResult.sectorPNAV}
+            currentGoldPrice={currentGoldPrice}
           />
         )}
 
