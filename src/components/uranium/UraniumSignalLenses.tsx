@@ -341,7 +341,7 @@ function LeverageCard({ leverage }: { leverage: UraniumLeverageResult | null }) 
   const histPos = Math.min(Math.max((leverage.historicalAvgPNAV - gaugeMin) / (gaugeMax - gaugeMin), 0), 1) * 100;
 
   const spotPrice = leverage.ratioSeries.length > 0 && leverage.currentRatio > 0
-    ? leverage.currentURNMPrice / leverage.currentRatio : 78;
+    ? leverage.currentURNMPrice / leverage.currentRatio : 0;
 
   return (
     <CardShell
