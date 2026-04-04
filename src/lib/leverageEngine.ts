@@ -169,11 +169,25 @@ export const GOLD_PNAV_ANNOTATIONS = [
   },
 ];
 
-export const GOLD_CYCLE_TABLE = [
+export const GOLD_CYCLE_TABLE_STATIC = [
   { cycle: '2006 Early Bull', price: '$600', pnav: '1.4×', margin: '$200', result: 'Gold 3×\'d, miners 4×\'d' },
   { cycle: '2011 Mania Peak', price: '$1,920', pnav: '2.5×', margin: '$700', result: 'Gold -45%, miners -80%' },
   { cycle: '2015 Trough', price: '$1,050', pnav: '0.4×', margin: '-$50', result: 'Gold 2×\'d, miners 5×\'d' },
   { cycle: '2020 COVID Peak', price: '$2,075', pnav: '1.4×', margin: '$600', result: 'Gold flat, miners -30%' },
   { cycle: '2022 Fed Tightening', price: '$1,630', pnav: '0.6×', margin: '$400', result: 'Gold 2.7×\'d, miners 3×\'d' },
-  { cycle: 'TODAY (2026)', price: '$4,500', pnav: '1.1×', margin: '$3,100', result: '???' },
 ];
+
+/** Build cycle table with dynamic TODAY row */
+export function buildGoldCycleTable(currentGoldPrice: number, currentPNAV: number, aisc = 1400) {
+  const margin = currentGoldPrice > 0 ? currentGoldPrice - aisc : 0;
+  return [
+    ...GOLD_CYCLE_TABLE_STATIC,
+    {
+      cycle: 'TODAY (2026)',
+      price: currentGoldPrice > 0 ? `$${Math.round(currentGoldPrice).toLocaleString()}` : '—',
+      pnav: `${currentPNAV.toFixed(1)}×`,
+      margin: margin > 0 ? `$${Math.round(margin).toLocaleString()}` : '—',
+      result: '???',
+    },
+  ];
+}
