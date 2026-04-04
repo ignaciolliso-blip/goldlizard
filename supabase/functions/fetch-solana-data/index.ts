@@ -157,6 +157,7 @@ Deno.serve(async (req) => {
       { metric_name: 'tvl_usd', value: tvlUsd, source: 'defillama', fetched_at: now },
       { metric_name: 'stablecoin_supply', value: stablecoinSupply, source: 'defillama', fetched_at: now },
       { metric_name: 'fdv_fee_ratio', value: fdvFeeRatio, source: 'computed', fetched_at: now },
+      { metric_name: 'daily_transactions', value: dailyTransactions, source: 'solana_rpc', fetched_at: now },
     ]
 
     for (const metric of metrics) {
