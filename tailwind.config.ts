@@ -73,6 +73,12 @@ export default {
           demand: "hsl(var(--uranium-demand))",
           supply: "hsl(var(--uranium-supply))",
         },
+        solana: {
+          DEFAULT: "hsl(var(--solana))",
+          light: "hsl(var(--solana-light))",
+          green: "hsl(var(--solana-green))",
+          cyan: "hsl(var(--solana-cyan))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
