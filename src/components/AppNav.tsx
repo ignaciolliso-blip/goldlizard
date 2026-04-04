@@ -30,6 +30,13 @@ function getLayerTabs(asset: string) {
       { to: '/uranium/evidence', label: 'The Evidence', key: '3' },
     ];
   }
+  if (asset === 'Solana') {
+    return [
+      { to: '/solana', label: 'The Signal', key: '1' },
+      { to: '/solana/analysis', label: 'The Analysis', key: '2' },
+      { to: '/solana/evidence', label: 'The Evidence', key: '3' },
+    ];
+  }
   return [
     { to: '/', label: 'The Signal', key: '1' },
     { to: '/analysis', label: 'The Analysis', key: '2' },
