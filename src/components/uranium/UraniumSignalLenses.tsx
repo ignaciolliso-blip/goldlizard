@@ -651,12 +651,15 @@ function HoldingsSection() {
 
 // ─── MAIN EXPORT ───
 export default function UraniumSignalLenses({ anchorResult, forcesResult, leverageResult }: Props) {
+  // Pass the real spot price from the anchor into the leverage card
+  const spotPriceFromAnchor = anchorResult?.spotPrice ?? 0;
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <AnchorCard anchor={anchorResult} />
         <ForcesCard forces={forcesResult} />
-        <LeverageCard leverage={leverageResult} />
+        <LeverageCard leverage={leverageResult} spotPriceOverride={spotPriceFromAnchor} />
       </div>
       <HoldingsSection />
     </div>
