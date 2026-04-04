@@ -143,6 +143,7 @@ function AnchorCard({ anchor }: { anchor: UraniumAnchorResult | null }) {
           <span className="text-muted-foreground">Greenfield cost</span>
           <span className="font-mono text-muted-foreground">$85–$100/lb</span>
         </div>
+        <p className="text-[10px] text-muted-foreground/60 italic">Cost estimates as of Q1 2026. Update in Evidence &gt; Data Management.</p>
         <div className="flex justify-between">
           <span className="text-muted-foreground">Gap to greenfield</span>
           <span className="font-mono font-semibold text-foreground">{anchor.gapToGreenfield > 0 ? '+' : ''}{anchor.gapToGreenfield.toFixed(0)}%</span>
