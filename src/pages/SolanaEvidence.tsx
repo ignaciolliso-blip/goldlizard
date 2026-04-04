@@ -55,16 +55,22 @@ const SolanaEvidence = () => {
     }
   };
 
+  // Auto-computed values for agent metrics
+  const totalDailyTxns = metrics?.daily_transactions || 0;
+  const computedAgentPct = agentTxns && totalDailyTxns > 0
+    ? (parseFloat(agentTxns) / totalDailyTxns * 100)
+    : 0;
+
   const saveAgentData = async () => {
-    if (!agentTxns && !agentPct) return;
+    if (!agentTxns) return;
     try {
       await supabase.from('solana_agent_metrics' as any).upsert(
         {
           date: agentDate,
-          x402_daily_transactions: agentTxns ? parseFloat(agentTxns) : null,
+          x402_daily_transactions: parseFloat(agentTxns),
           x402_daily_volume_usd: agentVolume ? parseFloat(agentVolume) : null,
-          agent_pct_of_total_txns: agentPct ? parseFloat(agentPct) : null,
-          total_daily_transactions: totalTxns ? parseFloat(totalTxns) : null,
+          agent_pct_of_total_txns: computedAgentPct > 0 ? parseFloat(computedAgentPct.toFixed(4)) : null,
+          total_daily_transactions: totalDailyTxns > 0 ? totalDailyTxns : null,
           source: 'manual',
         },
         { onConflict: 'date' }
@@ -72,8 +78,6 @@ const SolanaEvidence = () => {
       toast({ title: 'Agent data saved', description: `Data for ${agentDate} saved` });
       setAgentTxns('');
       setAgentVolume('');
-      setAgentPct('');
-      setTotalTxns('');
     } catch (e: any) {
       toast({ title: 'Error', description: e.message, variant: 'destructive' });
     }
