@@ -100,7 +100,7 @@ const AppNav = () => {
                   className={cn(
                     'px-2.5 py-1 text-xs font-medium rounded-sm transition-colors whitespace-nowrap',
                     a.active && currentAsset === a.label
-                      ? `${a.label === 'Uranium' ? 'text-uranium bg-uranium/10' : 'text-gold bg-gold/10'}`
+                      ? `${a.label === 'Uranium' ? 'text-uranium bg-uranium/10' : a.label === 'Solana' ? 'text-solana bg-solana/10' : 'text-gold bg-gold/10'}`
                       : a.active
                       ? 'text-muted-foreground hover:text-foreground'
                       : 'text-muted-foreground/40 cursor-not-allowed'
