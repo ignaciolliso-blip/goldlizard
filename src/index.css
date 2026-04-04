@@ -57,6 +57,12 @@
     --uranium-demand: 24 95% 53%;
     --uranium-supply: 217 91% 60%;
 
+    /* Solana tokens */
+    --solana: 262 100% 64%;
+    --solana-light: 262 100% 74%;
+    --solana-green: 156 93% 58%;
+    --solana-cyan: 191 100% 50%;
+
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
