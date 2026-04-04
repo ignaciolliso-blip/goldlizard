@@ -14,6 +14,7 @@ export interface SolanaMetrics {
   daily_revenue: number;
   fdv_fee_ratio: number;
   eth_daily_fees: number;
+  daily_transactions: number;
   last_updated: string;
 }
 

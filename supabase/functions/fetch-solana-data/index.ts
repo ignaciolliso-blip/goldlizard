@@ -189,6 +189,7 @@ Deno.serve(async (req) => {
         daily_fees_usd: dailyFees,
         annualised_fees: annualisedFees,
         fdv_fee_ratio: fdvFeeRatio,
+        daily_transactions: dailyTransactions,
         btc_price: btcPrice,
         eth_price: ethPrice,
       })
