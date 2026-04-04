@@ -39,6 +39,7 @@ const CYCLE_TABLE_STATIC = [
 interface Props {
   data: SectorPNAVPoint[];
   currentPNAV: number;
+  currentSpotPrice?: number;
 }
 
 export default function HistoricalPNAVChart({ data, currentPNAV }: Props) {
