@@ -17,6 +17,9 @@ const Evidence = lazy(() => import("./pages/Evidence.tsx"));
 const UraniumSignal = lazy(() => import("./pages/UraniumSignal.tsx"));
 const UraniumAnalysis = lazy(() => import("./pages/UraniumAnalysis.tsx"));
 const UraniumEvidence = lazy(() => import("./pages/UraniumEvidence.tsx"));
+const SolanaSignal = lazy(() => import("./pages/SolanaSignal.tsx"));
+const SolanaAnalysis = lazy(() => import("./pages/SolanaAnalysis.tsx"));
+const SolanaEvidence = lazy(() => import("./pages/SolanaEvidence.tsx"));
 
 const queryClient = new QueryClient();
 
