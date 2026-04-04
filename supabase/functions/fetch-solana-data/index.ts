@@ -116,6 +116,34 @@ Deno.serve(async (req) => {
     const fdvFeeRatio = annualisedFees > 0 ? solFdv / annualisedFees : 0
 
     // ============================================
+    // FETCH 4: Solana RPC — Total daily transactions
+    // ============================================
+    let dailyTransactions = 0
+
+    try {
+      const rpcResponse = await fetch('https://api.mainnet-beta.solana.com', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'getRecentPerformanceSamples',
+          params: [1]
+        })
+      })
+      if (rpcResponse.ok) {
+        const rpcData = await rpcResponse.json()
+        if (rpcData.result && rpcData.result[0]) {
+          const sample = rpcData.result[0]
+          const txPerSecond = sample.numTransactions / sample.samplePeriodSecs
+          dailyTransactions = Math.round(txPerSecond * 86400)
+        }
+      }
+    } catch (e) {
+      console.error('Solana RPC fetch failed:', e)
+    }
+
+    // ============================================
     // WRITE ALL METRICS TO SUPABASE
     // ============================================
     const now = new Date().toISOString()
