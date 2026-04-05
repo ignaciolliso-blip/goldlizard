@@ -78,12 +78,17 @@ export default function SolanaForcesCard({ result }: Props) {
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">NET SIGNAL</span>
           <span className={cn('font-mono font-bold text-sm uppercase', verdictColor)}>
-            {result.overallVerdict}
+            {result.overallVerdict === 'insufficient_data' ? 'INSUFFICIENT DATA' : result.overallVerdict}
           </span>
         </div>
         {result.overallVerdict === 'contracting' && (
           <p className="text-xs text-bearish mt-2">
             Network activity is contracting. This is not a buying signal.
+          </p>
+        )}
+        {result.overallVerdict === 'insufficient_data' && (
+          <p className="text-xs text-muted-foreground mt-2">
+            Need at least 7 daily snapshots to determine trends. Data is accumulating automatically.
           </p>
         )}
       </div>
