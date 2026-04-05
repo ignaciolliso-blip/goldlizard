@@ -16,8 +16,8 @@ export function computeSolanaAnchor(
   metrics: SolanaMetrics,
   history: SolanaDailyHistory[]
 ): SolanaAnchorResult {
-  const fdv = metrics.sol_fdv || 0;
-  const dailyFees = metrics.daily_fees || 0;
+  const fdv = Number(metrics.sol_fdv) || 0;
+  const dailyFees = Number(metrics.daily_fees) || 0;
   const annualisedFees = dailyFees * 365;
   const fdvFeeRatio = annualisedFees > 0 ? fdv / annualisedFees : 0;
 
