@@ -118,14 +118,16 @@ export interface SolanaForcesResult {
   tier1Score: { improving: number; total: number; verdict: string };
   tier2Score: { improving: number; total: number; verdict: string };
   tier3Score: { improving: number; total: number; verdict: string };
-  overallVerdict: 'growing' | 'stalling' | 'contracting';
+  overallVerdict: 'growing' | 'stalling' | 'contracting' | 'insufficient_data';
+  insufficientData: boolean;
 }
 
 export function computeSolanaForces(
   metrics: SolanaMetrics,
-  _history: SolanaDailyHistory[],
+  history: SolanaDailyHistory[],
   agentMetrics: SolanaAgentMetric[]
 ): SolanaForcesResult {
+  const insufficientData = history.length < 7;
   const lastAgent = agentMetrics.length > 0 ? agentMetrics[agentMetrics.length - 1] : null;
 
   const forceMetrics: ForceMetric[] = [
@@ -161,11 +163,16 @@ export function computeSolanaForces(
   const t3 = { improving: countImproving(tier3), total: tier3.length, verdict: tierVerdict(countImproving(tier3), tier3.length) };
 
   const totalImproving = countImproving(forceMetrics);
-  const overallVerdict: 'growing' | 'stalling' | 'contracting' =
-    totalImproving >= forceMetrics.length * 0.5 ? 'growing' :
-    totalImproving <= forceMetrics.length * 0.3 ? 'contracting' : 'stalling';
 
-  return { metrics: forceMetrics, tier1Score: t1, tier2Score: t2, tier3Score: t3, overallVerdict };
+  let overallVerdict: 'growing' | 'stalling' | 'contracting' | 'insufficient_data';
+  if (insufficientData) {
+    overallVerdict = 'insufficient_data';
+  } else {
+    overallVerdict = totalImproving >= forceMetrics.length * 0.5 ? 'growing' :
+      totalImproving <= forceMetrics.length * 0.3 ? 'contracting' : 'stalling';
+  }
+
+  return { metrics: forceMetrics, tier1Score: t1, tier2Score: t2, tier3Score: t3, overallVerdict, insufficientData };
 }
 
 // ── Leverage: Timing Signal ──
@@ -176,8 +183,11 @@ export interface SolanaLeverageResult {
 
 export function computeSolanaLeverage(
   anchorTrend: 'compressing' | 'expanding' | 'flat',
-  forcesVerdict: 'growing' | 'stalling' | 'contracting'
+  forcesVerdict: 'growing' | 'stalling' | 'contracting' | 'insufficient_data'
 ): SolanaLeverageResult {
+  if (forcesVerdict === 'insufficient_data') {
+    return { timingSignal: { text: 'WAIT — Accumulating baseline data. Check back in one week for trend signals.', color: 'neutral' } };
+  }
   if (forcesVerdict === 'contracting' && anchorTrend === 'expanding') {
     return { timingSignal: { text: 'DO NOT ADD — fundamentals deteriorating while valuation stays high', color: 'bearish' } };
   }
