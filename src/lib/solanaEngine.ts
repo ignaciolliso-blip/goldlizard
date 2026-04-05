@@ -183,8 +183,11 @@ export interface SolanaLeverageResult {
 
 export function computeSolanaLeverage(
   anchorTrend: 'compressing' | 'expanding' | 'flat',
-  forcesVerdict: 'growing' | 'stalling' | 'contracting'
+  forcesVerdict: 'growing' | 'stalling' | 'contracting' | 'insufficient_data'
 ): SolanaLeverageResult {
+  if (forcesVerdict === 'insufficient_data') {
+    return { timingSignal: { text: 'WAIT — Accumulating baseline data. Check back in one week for trend signals.', color: 'neutral' } };
+  }
   if (forcesVerdict === 'contracting' && anchorTrend === 'expanding') {
     return { timingSignal: { text: 'DO NOT ADD — fundamentals deteriorating while valuation stays high', color: 'bearish' } };
   }
