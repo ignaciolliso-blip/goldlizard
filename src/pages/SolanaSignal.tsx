@@ -42,9 +42,17 @@ const SolanaSignal = () => {
     <div className="min-h-screen bg-background">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 pt-6 pb-8 space-y-10">
         {/* Temporary debug banner */}
-        <div className="bg-yellow-900/30 border border-yellow-600/50 rounded-lg px-4 py-2 font-mono text-xs text-yellow-300">
-          DEBUG: daily_fees = ${metrics.daily_fees ?? 'N/A'} | fdv = ${metrics.sol_fdv ? `$${(metrics.sol_fdv / 1e9).toFixed(1)}B` : 'N/A'} | fdv_fee_ratio = {metrics.fdv_fee_ratio ? `${Math.round(metrics.fdv_fee_ratio)}×` : '0'} | agent_rows = {agentMetrics.length} | daily_txns = {metrics.daily_transactions?.toLocaleString() ?? 'N/A'} | last_updated = {metrics.last_updated || 'N/A'}
-        </div>
+        {(() => {
+          const df = Number(metrics.daily_fees) || 0;
+          const fdv = Number(metrics.sol_fdv) || 0;
+          const ann = df * 365;
+          const ratio = ann > 0 ? fdv / ann : 0;
+          return (
+            <div className="bg-yellow-900/30 border border-yellow-600/50 rounded-lg px-4 py-2 font-mono text-xs text-yellow-300">
+              DEBUG: daily_fees = ${df.toLocaleString()} | fdv = ${fdv > 0 ? `$${(fdv / 1e9).toFixed(1)}B` : 'N/A'} | fdv_fee_ratio = {ratio > 0 ? `${ratio.toFixed(1)}×` : '0'} (computed live) | agent_rows = {agentMetrics.length} | daily_txns = {metrics.daily_transactions?.toLocaleString() ?? 'N/A'} | last_updated = {metrics.last_updated || 'N/A'}
+            </div>
+          );
+        })()}
         {/* Page intro */}
         <PageIntro storageKey="solana_signal_intro_dismissed">
           <h3 className="font-display text-foreground mb-3">How to Read This Page</h3>
