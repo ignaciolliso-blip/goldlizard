@@ -124,9 +124,10 @@ export interface SolanaForcesResult {
 
 export function computeSolanaForces(
   metrics: SolanaMetrics,
-  _history: SolanaDailyHistory[],
+  history: SolanaDailyHistory[],
   agentMetrics: SolanaAgentMetric[]
 ): SolanaForcesResult {
+  const insufficientData = history.length < 7;
   const lastAgent = agentMetrics.length > 0 ? agentMetrics[agentMetrics.length - 1] : null;
 
   const forceMetrics: ForceMetric[] = [
