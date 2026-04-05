@@ -163,11 +163,16 @@ export function computeSolanaForces(
   const t3 = { improving: countImproving(tier3), total: tier3.length, verdict: tierVerdict(countImproving(tier3), tier3.length) };
 
   const totalImproving = countImproving(forceMetrics);
-  const overallVerdict: 'growing' | 'stalling' | 'contracting' =
-    totalImproving >= forceMetrics.length * 0.5 ? 'growing' :
-    totalImproving <= forceMetrics.length * 0.3 ? 'contracting' : 'stalling';
 
-  return { metrics: forceMetrics, tier1Score: t1, tier2Score: t2, tier3Score: t3, overallVerdict };
+  let overallVerdict: 'growing' | 'stalling' | 'contracting' | 'insufficient_data';
+  if (insufficientData) {
+    overallVerdict = 'insufficient_data';
+  } else {
+    overallVerdict = totalImproving >= forceMetrics.length * 0.5 ? 'growing' :
+      totalImproving <= forceMetrics.length * 0.3 ? 'contracting' : 'stalling';
+  }
+
+  return { metrics: forceMetrics, tier1Score: t1, tier2Score: t2, tier3Score: t3, overallVerdict, insufficientData };
 }
 
 // ── Leverage: Timing Signal ──
