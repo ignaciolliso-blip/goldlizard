@@ -118,7 +118,8 @@ export interface SolanaForcesResult {
   tier1Score: { improving: number; total: number; verdict: string };
   tier2Score: { improving: number; total: number; verdict: string };
   tier3Score: { improving: number; total: number; verdict: string };
-  overallVerdict: 'growing' | 'stalling' | 'contracting';
+  overallVerdict: 'growing' | 'stalling' | 'contracting' | 'insufficient_data';
+  insufficientData: boolean;
 }
 
 export function computeSolanaForces(
