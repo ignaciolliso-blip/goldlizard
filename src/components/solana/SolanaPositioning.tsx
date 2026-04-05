@@ -195,7 +195,7 @@ export default function SolanaPositioning({ anchor, forces, leverage, solPrice }
       {forces.insufficientData && (
         <div className="bg-muted/50 border border-muted rounded-lg p-3">
           <p className="text-xs text-muted-foreground">
-            ⚠️ <span className="font-medium">Limited data:</span> Only {0} daily snapshots available. Need 7+ days to calculate trends. Forces verdict will update automatically as data accumulates.
+            ⚠️ <span className="font-medium">Limited data:</span> Fewer than 7 daily snapshots available. Need 7+ days to calculate trends. Forces verdict will update automatically as data accumulates.
           </p>
         </div>
       )}
