@@ -29,7 +29,8 @@ const tierLabels: Record<number, { name: string; color: string }> = {
 
 export default function SolanaForcesCard({ result }: Props) {
   const verdictColor = result.overallVerdict === 'growing' ? 'text-bullish' :
-    result.overallVerdict === 'contracting' ? 'text-bearish' : 'text-neutral';
+    result.overallVerdict === 'contracting' ? 'text-bearish' :
+    result.overallVerdict === 'insufficient_data' ? 'text-muted-foreground' : 'text-neutral';
 
   return (
     <div className="bg-card border border-card-border rounded-xl p-5 sm:p-6 space-y-5">
