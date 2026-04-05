@@ -14,6 +14,82 @@ function derivePositioning(anchor: SolanaAnchorResult, forces: SolanaForcesResul
   const verdict = forces.overallVerdict;
   const ratio = anchor.fdvFeeRatio;
 
+  // Strong fundamentals: ratio < 50×
+  if (ratio > 0 && ratio < 50) {
+    if (verdict === 'insufficient_data') {
+      return {
+        action: 'PROMISING FUNDAMENTALS — ACCUMULATING DATA',
+        detail: 'Fee revenue strongly supports the current valuation (comparable to mature tech platforms). Need at least 7 days of network data to confirm usage trends. Check back in one week.',
+        color: 'neutral',
+      };
+    }
+    if (verdict === 'growing') {
+      return {
+        action: 'ACCUMULATE',
+        detail: `FDV/Fee ratio of ${Math.round(ratio)}× is strong fundamental value — cheaper than Ethereum and in line with mature payment networks. Network activity is growing, confirming fee sustainability.`,
+        color: 'bullish',
+      };
+    }
+    if (verdict === 'contracting') {
+      return {
+        action: 'HOLD CAUTIOUSLY',
+        detail: `Fee fundamentals are strong (${Math.round(ratio)}× is cheaper than Ethereum), but network usage is declining. Watch whether fee revenue holds up despite lower activity — if fees persist, this is a buying opportunity.`,
+        color: 'neutral',
+      };
+    }
+    // stalling
+    return {
+      action: 'HOLD — MONITOR CLOSELY',
+      detail: `Fee fundamentals are strong at ${Math.round(ratio)}×, but network activity is flat. If usage re-accelerates, this becomes a clear accumulation signal.`,
+      color: 'neutral',
+    };
+  }
+
+  // Moderate premium: 50-500×
+  if (ratio >= 50 && ratio <= 500) {
+    if (verdict === 'insufficient_data') {
+      return {
+        action: 'WAIT — ACCUMULATING DATA',
+        detail: `FDV/Fee ratio of ${Math.round(ratio)}× implies a growth premium. Need trend data to assess whether the premium is justified. Check back in one week.`,
+        color: 'neutral',
+      };
+    }
+    if (verdict === 'growing' && trend === 'compressing') {
+      return {
+        action: 'ACCUMULATE',
+        detail: 'Growth premium with improving fundamentals and compressing valuation. Fees growing faster than price — healthy setup.',
+        color: 'bullish',
+      };
+    }
+    if (verdict === 'growing') {
+      return {
+        action: 'ACCUMULATE ON WEAKNESS',
+        detail: 'Moderate growth premium with improving network activity. Patient accumulation on dips makes sense.',
+        color: 'bullish',
+      };
+    }
+    if (verdict === 'contracting') {
+      return {
+        action: 'REDUCE EXPOSURE',
+        detail: `Growth premium of ${Math.round(ratio)}× is not supported by current network trends. Activity contracting while valuation assumes growth.`,
+        color: 'bearish',
+      };
+    }
+    return {
+      action: 'HOLD — MONITOR',
+      detail: `Moderate premium with stalling activity. Watch for directional break in usage metrics.`,
+      color: 'neutral',
+    };
+  }
+
+  // Expensive: > 500×
+  if (verdict === 'insufficient_data') {
+    return {
+      action: 'WAIT — HIGH VALUATION, NO TREND DATA',
+      detail: `FDV/Fee ratio of ${ratio > 0 ? Math.round(ratio).toLocaleString() + '×' : 'N/A'} reflects significant narrative premium. Need trend data before taking a position. Do not buy blind at this valuation.`,
+      color: 'neutral',
+    };
+  }
   if (verdict === 'contracting') {
     return {
       action: 'DO NOT BUY',
@@ -24,7 +100,7 @@ function derivePositioning(anchor: SolanaAnchorResult, forces: SolanaForcesResul
   if (trend === 'expanding' && verdict === 'growing') {
     return {
       action: 'HOLD — MONITOR CLOSELY',
-      detail: 'Fundamentals are growing but the market is pricing in that growth aggressively. The FDV/Fee ratio is expanding, meaning you\'re paying more per dollar of fee revenue than before. Good fundamentals, but frothy valuation.',
+      detail: 'Fundamentals are growing but the market is pricing in that growth aggressively. The FDV/Fee ratio is expanding, meaning you\'re paying more per dollar of fee revenue than before.',
       color: 'neutral',
     };
   }
@@ -33,13 +109,6 @@ function derivePositioning(anchor: SolanaAnchorResult, forces: SolanaForcesResul
       action: 'REDUCE EXPOSURE',
       detail: 'Valuation expanding while growth stalls is the worst combination for risk/reward. Price is running on narrative, not fundamentals.',
       color: 'bearish',
-    };
-  }
-  if (trend === 'compressing' && verdict === 'growing' && ratio < 2000) {
-    return {
-      action: 'ACCUMULATE',
-      detail: 'Fundamentals improving and valuation becoming more reasonable. The FDV/Fee ratio is compressing — fees are growing faster than price. This is the signal you want to see.',
-      color: 'bullish',
     };
   }
   if (trend === 'compressing' && verdict === 'growing') {
@@ -52,7 +121,7 @@ function derivePositioning(anchor: SolanaAnchorResult, forces: SolanaForcesResul
   if (trend === 'compressing' && verdict === 'stalling') {
     return {
       action: 'HOLD CAUTIOUSLY',
-      detail: 'Ratio improving but usage metrics stalling. The ratio compression may be from price decline rather than fee growth. Watch for fee acceleration before adding.',
+      detail: 'Ratio improving but usage metrics stalling. Watch for fee acceleration before adding.',
       color: 'neutral',
     };
   }
@@ -63,15 +132,52 @@ function derivePositioning(anchor: SolanaAnchorResult, forces: SolanaForcesResul
   };
 }
 
+function buildNarrative(anchor: SolanaAnchorResult, forces: SolanaForcesResult, solPrice: number): string {
+  const ratio = anchor.fdvFeeRatio;
+  const verdict = forces.overallVerdict;
+  const feesStr = anchor.annualisedFees > 0 ? formatUSD(anchor.annualisedFees) : 'N/A';
+  const ratioStr = ratio > 0 ? `${Math.round(ratio).toLocaleString()}×` : 'N/A';
+  const ethRatioStr = `~${Math.round(anchor.ethFdvFeeRatio)}×`;
+
+  const activityStatus = verdict === 'insufficient_data'
+    ? 'insufficient historical data to determine trends (need 7+ daily snapshots)'
+    : verdict;
+
+  // Strong fundamentals narrative (< 50×)
+  if (ratio > 0 && ratio < 50) {
+    return `Solana's FDV/Fee ratio of ${ratioStr} indicates the network generates significant revenue relative to its valuation — comparable to mature tech platforms and ${Math.round(anchor.ethFdvFeeRatio / ratio)}× cheaper than Ethereum (${ethRatioStr}). Annualised fee revenue is ${feesStr}. However, network activity metrics show ${activityStatus}, which ${verdict === 'growing' ? 'confirms fee sustainability' : verdict === 'insufficient_data' ? 'means trend confirmation is pending' : 'raises questions about whether current fee levels are sustainable'}.`;
+  }
+
+  // Moderate premium narrative (50-500×)
+  if (ratio > 0 && ratio <= 500) {
+    return `Solana is generating ${feesStr} in annualised fee revenue with an FDV/Fee ratio of ${ratioStr} (vs Ethereum at ${ethRatioStr}). This implies a growth premium — the market expects fees to grow ${Math.round(ratio / 100)}-${Math.round(ratio / 30)}× to reach mature valuations. The ratio is ${anchor.ratioTrend6m}. Network activity is ${activityStatus}.`;
+  }
+
+  // Expensive narrative (> 500×)
+  if (verdict === 'insufficient_data') {
+    return `Solana is generating ${feesStr} in annualised fee revenue. The FDV/Fee ratio is ${ratioStr} (vs Ethereum at ${ethRatioStr}), reflecting a significant narrative premium. SOL at ${formatUSD(solPrice)} embeds expectations of substantial fee growth. Trend data is insufficient — need at least 7 daily snapshots to assess direction.`;
+  }
+
+  if (verdict === 'contracting') {
+    return `Solana's network activity is contracting. TVL, stablecoin supply, and transaction volume are declining. The FDV/Fee ratio is ${ratioStr}, ${anchor.ratioTrend6m === 'expanding' ? 'and expanding — the market is paying MORE per dollar of fee revenue. This is the opposite of what you want to see.' : anchor.ratioTrend6m === 'compressing' ? 'though compressing as price adjusts to weaker fundamentals.' : 'and flat.'} SOL at ${formatUSD(solPrice)} reflects narrative premium, not fundamental value. Do not add to positions until metrics stabilise.`;
+  }
+
+  return `Solana is generating ${feesStr} in annualised fee revenue. The FDV/Fee ratio is ${ratioStr} (vs Ethereum at ${ethRatioStr}). The ratio is ${anchor.ratioTrend6m}, which ${anchor.ratioTrend6m === 'compressing' ? 'indicates fees are growing faster than price — a healthy sign' : anchor.ratioTrend6m === 'expanding' ? 'suggests the market is getting ahead of fundamentals' : 'shows no clear direction'}. Network activity is ${verdict}.`;
+}
+
 export default function SolanaPositioning({ anchor, forces, leverage, solPrice }: Props) {
   const pos = derivePositioning(anchor, forces);
   const actionColor = pos.color === 'bullish' ? 'text-bullish' :
     pos.color === 'bearish' ? 'text-bearish' : 'text-neutral';
 
-  // Build narrative
-  const narrative = forces.overallVerdict === 'contracting'
-    ? `Solana's network activity is contracting. TVL, stablecoin supply, and transaction volume are declining. The FDV/Fee Revenue ratio is ${anchor.fdvFeeRatio > 0 ? `${Math.round(anchor.fdvFeeRatio).toLocaleString()}×` : 'N/A'}, ${anchor.ratioTrend6m === 'expanding' ? 'and expanding — meaning the market is paying MORE per dollar of fee revenue than before. This is the opposite of what you want to see.' : anchor.ratioTrend6m === 'compressing' ? 'though compressing as price adjusts to weaker fundamentals.' : 'and flat.'} SOL at ${formatUSD(solPrice)} reflects narrative premium, not fundamental value. Do not add to positions until metrics stabilise.`
-    : `Solana is generating ${anchor.annualisedFees > 0 ? formatUSD(anchor.annualisedFees) : 'N/A'} in annualised fee revenue. The FDV/Fee ratio is ${anchor.fdvFeeRatio > 0 ? `${Math.round(anchor.fdvFeeRatio).toLocaleString()}×` : 'N/A'} (vs Ethereum at ~${Math.round(anchor.ethFdvFeeRatio)}×). The ratio is ${anchor.ratioTrend6m}, which ${anchor.ratioTrend6m === 'compressing' ? 'indicates fees are growing faster than price — a healthy sign' : anchor.ratioTrend6m === 'expanding' ? 'suggests the market is getting ahead of fundamentals' : 'shows no clear direction'}. Network activity is ${forces.overallVerdict}.`;
+  const narrative = buildNarrative(anchor, forces, solPrice);
+
+  const forcesVerdictDisplay = forces.overallVerdict === 'insufficient_data'
+    ? 'NO DATA'
+    : forces.overallVerdict;
+  const forcesColor = forces.overallVerdict === 'growing' ? 'text-bullish' :
+    forces.overallVerdict === 'contracting' ? 'text-bearish' :
+    'text-muted-foreground';
 
   return (
     <div className="bg-card border border-card-border rounded-xl p-5 sm:p-6 space-y-5">
@@ -85,6 +191,15 @@ export default function SolanaPositioning({ anchor, forces, leverage, solPrice }
       </div>
       <p className="text-sm text-muted-foreground leading-relaxed">{pos.detail}</p>
 
+      {/* Insufficient data warning */}
+      {forces.insufficientData && (
+        <div className="bg-muted/50 border border-muted rounded-lg p-3">
+          <p className="text-xs text-muted-foreground">
+            ⚠️ <span className="font-medium">Limited data:</span> Only {0} daily snapshots available. Need 7+ days to calculate trends. Forces verdict will update automatically as data accumulates.
+          </p>
+        </div>
+      )}
+
       {/* Matrix summary */}
       <div className="grid grid-cols-3 gap-3 text-xs">
         <div className="bg-secondary/30 rounded-lg p-3">
@@ -97,10 +212,7 @@ export default function SolanaPositioning({ anchor, forces, leverage, solPrice }
         </div>
         <div className="bg-secondary/30 rounded-lg p-3">
           <p className="text-muted-foreground mb-1">Forces</p>
-          <p className={cn('font-mono uppercase',
-            forces.overallVerdict === 'growing' ? 'text-bullish' :
-            forces.overallVerdict === 'contracting' ? 'text-bearish' : 'text-neutral'
-          )}>{forces.overallVerdict}</p>
+          <p className={cn('font-mono uppercase', forcesColor)}>{forcesVerdictDisplay}</p>
         </div>
         <div className="bg-secondary/30 rounded-lg p-3">
           <p className="text-muted-foreground mb-1">Timing</p>
