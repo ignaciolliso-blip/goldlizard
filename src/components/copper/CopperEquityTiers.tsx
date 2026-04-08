@@ -192,6 +192,12 @@ export default function CopperEquityTiers({ equities, marketData, anchorResult, 
         </CardContent>
       </Card>
 
+      {/* Jurisdiction Risk Table */}
+      <div className="space-y-3">
+        <h2 className="font-display text-xl text-copper">Jurisdiction Risk</h2>
+        <CopperJurisdictionTable jurisdictions={jurisdictions} marketData={marketData} />
+      </div>
+
       {/* ETF Tier */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
