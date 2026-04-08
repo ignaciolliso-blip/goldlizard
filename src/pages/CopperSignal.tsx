@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { fetchCopperMarketData, fetchCopperJurisdictions, fetchCopperForces, fetchCopperEquities, fetchCopperSupplyDemand, fetchCopperFinancials, type CopperMarketData, type CopperJurisdiction, type CopperForce, type CopperEquityName, type CopperSupplyDemandRow, type CopperEquityFinancial } from "@/lib/copperDataFetcher";
-import { computeCopperAnchor, type CopperAnchorResult } from "@/lib/copperEngine";
+import { computeCopperAnchor, type CopperAnchorResult, LBS_PER_TONNE } from "@/lib/copperEngine";
+import CopperHowToRead from "@/components/copper/CopperHowToRead";
 import CopperAnchorGauge from "@/components/copper/CopperAnchorGauge";
 import CopperHonestFindings from "@/components/copper/CopperHonestFindings";
 import CopperForcesCard from "@/components/copper/CopperForcesCard";
@@ -8,6 +9,7 @@ import CopperJurisdictionTable from "@/components/copper/CopperJurisdictionTable
 import CopperEquityTiers from "@/components/copper/CopperEquityTiers";
 import CopperSupplyDemandCharts from "@/components/copper/CopperSupplyDemandCharts";
 import CopperFinancialsForm from "@/components/copper/CopperFinancialsForm";
+import CopperStaleWarnings from "@/components/copper/CopperStaleWarnings";
 import Footer from "@/components/Footer";
 import LoadingProgress from "@/components/LoadingProgress";
 
@@ -68,7 +70,10 @@ const CopperSignal = () => {
   return (
     <div className="min-h-screen">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-8 space-y-8">
-        {/* Header */}
+        {/* 1. How to Read This Page */}
+        <CopperHowToRead />
+
+        {/* 2. Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <h1 className="font-display text-3xl text-copper">Copper</h1>
@@ -86,20 +91,18 @@ const CopperSignal = () => {
           )}
         </div>
 
-        {/* Anchor Gauge */}
+        {/* Stale data warnings */}
+        <CopperStaleWarnings marketData={marketData} equities={equities} financials={financials} />
+
+        {/* 3. Anchor Gauge */}
         {anchorResult && marketData && (
           <CopperAnchorGauge anchor={anchorResult} marketData={marketData} />
         )}
 
-        {/* Forces Scorecard */}
-        {forces.length > 0 && (
-          <div className="space-y-3">
-            <h2 className="font-display text-xl text-copper">Forces</h2>
-            <CopperForcesCard forces={forces} />
-          </div>
-        )}
+        {/* 4. Honest Findings */}
+        <CopperHonestFindings />
 
-        {/* Supply-Demand Charts */}
+        {/* 5. Supply-Demand Charts */}
         {supplyDemand.length > 0 && (
           <div className="space-y-3">
             <h2 className="font-display text-xl text-copper">Structural Deficit</h2>
@@ -107,15 +110,15 @@ const CopperSignal = () => {
           </div>
         )}
 
-        {/* Jurisdiction Risk */}
-        {jurisdictions.length > 0 && (
+        {/* 6. Forces Scorecard */}
+        {forces.length > 0 && (
           <div className="space-y-3">
-            <h2 className="font-display text-xl text-copper">Leverage — Equity Positioning</h2>
-            <CopperJurisdictionTable jurisdictions={jurisdictions} marketData={marketData} />
+            <h2 className="font-display text-xl text-copper">Forces</h2>
+            <CopperForcesCard forces={forces} />
           </div>
         )}
 
-        {/* Equity Tiers + Composite */}
+        {/* 7. Composite Signal + 8. Jurisdiction + 9-12. Equity Tiers */}
         {equities.length > 0 && anchorResult && marketData && (
           <CopperEquityTiers
             equities={equities}
@@ -135,9 +138,6 @@ const CopperSignal = () => {
             onUpdated={handleFinancialsUpdated}
           />
         )}
-
-        {/* Honest Findings */}
-        <CopperHonestFindings />
       </div>
       <Footer />
     </div>
