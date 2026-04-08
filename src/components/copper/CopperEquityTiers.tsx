@@ -2,8 +2,10 @@ import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Briefcase, HardHat, Search, Layers, Info, AlertTriangle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Briefcase, HardHat, Search, Layers, Info, AlertTriangle, HelpCircle } from "lucide-react";
 import { LBS_PER_TONNE } from "@/lib/copperEngine";
+import CopperJurisdictionTable from "./CopperJurisdictionTable";
 import { computeValuation, type ValuationResult } from "@/lib/copperValuationEngine";
 import type { CopperEquityName, CopperMarketData, CopperJurisdiction, CopperForce, CopperEquityFinancial } from "@/lib/copperDataFetcher";
 import type { CopperAnchorResult } from "@/lib/copperEngine";
@@ -190,6 +192,12 @@ export default function CopperEquityTiers({ equities, marketData, anchorResult, 
         </CardContent>
       </Card>
 
+      {/* Jurisdiction Risk Table */}
+      <div className="space-y-3">
+        <h2 className="font-display text-xl text-copper">Jurisdiction Risk</h2>
+        <CopperJurisdictionTable jurisdictions={jurisdictions} marketData={marketData} />
+      </div>
+
       {/* ETF Tier */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
@@ -325,11 +333,23 @@ function ProducerCard({ equity, spotLb, incentiveLb, financial, valuation }: {
               {equity.aisc_source && <span className="ml-1">({equity.aisc_source})</span>}
             </p>
             {currentMargin != null && incentiveMargin != null && marginExpansion != null && (
-              <p className="text-[10px] text-muted-foreground">
-                Margin: <span className="font-mono text-foreground">${currentMargin.toFixed(2)}/lb</span>
-                {" → "}At incentive: <span className="font-mono text-emerald-500">${incentiveMargin.toFixed(2)}/lb</span>
-                {" → "}<span className="font-mono font-bold text-emerald-400">{marginExpansion.toFixed(1)}× expansion</span>
-              </p>
+              <div className="flex items-center gap-1">
+                <p className="text-[10px] text-muted-foreground">
+                  Margin: <span className="font-mono text-foreground">${currentMargin.toFixed(2)}/lb</span>
+                  {" → "}At incentive: <span className="font-mono text-emerald-500">${incentiveMargin.toFixed(2)}/lb</span>
+                  {" → "}<span className="font-mono font-bold text-emerald-400">{marginExpansion.toFixed(1)}× expansion</span>
+                </p>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-3 w-3 text-muted-foreground/50 shrink-0 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[260px]">
+                      <p className="text-xs">This shows how many times the miner's profit per pound grows if copper reaches incentive price. A 2.7× expansion means margins nearly triple. Lower AISC = bigger current margin = higher expansion multiple.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             )}
           </div>
         )}
