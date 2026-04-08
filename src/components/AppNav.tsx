@@ -10,6 +10,7 @@ const assets = [
   { label: 'Gold', active: true, path: '/' },
   { label: 'Uranium', active: true, path: '/uranium' },
   { label: 'Solana', active: true, path: '/solana' },
+  { label: 'Copper', active: true, path: '/copper' },
   { label: 'Oil', active: false, path: '/oil' },
   { label: 'Strategy', active: false, path: '/strategy' },
 ];
@@ -18,6 +19,7 @@ const assets = [
 function getCurrentAsset(pathname: string) {
   if (pathname.startsWith('/uranium')) return 'Uranium';
   if (pathname.startsWith('/solana')) return 'Solana';
+  if (pathname.startsWith('/copper')) return 'Copper';
   return 'Gold';
 }
 
@@ -35,6 +37,11 @@ function getLayerTabs(asset: string) {
       { to: '/solana', label: 'The Signal', key: '1' },
       { to: '/solana/analysis', label: 'The Analysis', key: '2' },
       { to: '/solana/evidence', label: 'The Evidence', key: '3' },
+    ];
+  }
+  if (asset === 'Copper') {
+    return [
+      { to: '/copper', label: 'The Signal', key: '1' },
     ];
   }
   return [

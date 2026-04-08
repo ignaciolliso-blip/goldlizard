@@ -3,7 +3,6 @@ import { fetchCopperMarketData, fetchCopperJurisdictions, type CopperMarketData,
 import { computeCopperAnchor, type CopperAnchorResult } from "@/lib/copperEngine";
 import CopperAnchorGauge from "@/components/copper/CopperAnchorGauge";
 import CopperHonestFindings from "@/components/copper/CopperHonestFindings";
-import PageIntro from "@/components/PageIntro";
 import Footer from "@/components/Footer";
 import LoadingProgress from "@/components/LoadingProgress";
 
@@ -50,15 +49,14 @@ const CopperSignal = () => {
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-8 space-y-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <PageIntro
-            title="Copper"
-            subtitle="Incentive Price Parity — The Anchor"
-            accentColor="copper"
-          />
+          <div>
+            <h1 className="font-display text-3xl text-copper">Copper</h1>
+            <p className="text-sm text-muted-foreground mt-1">Incentive Price Parity — The Anchor</p>
+          </div>
           {marketData && (
             <div className="flex flex-col items-end gap-1">
               <span className="px-3 py-1.5 rounded-md bg-copper/10 text-copper font-mono text-lg font-semibold">
-                ${Number(marketData.spot_price_lb).toFixed(2)}/lb &nbsp;(${Number(marketData.spot_price_tonne).toLocaleString()}/t)
+                ${Number(marketData.spot_price_lb).toFixed(2)}/lb&nbsp;(${Number(marketData.spot_price_tonne).toLocaleString()}/t)
               </span>
               <span className="text-xs text-muted-foreground">
                 Last updated: {marketData.date}
