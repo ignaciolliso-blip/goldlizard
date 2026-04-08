@@ -20,6 +20,7 @@ const UraniumEvidence = lazy(() => import("./pages/UraniumEvidence.tsx"));
 const SolanaSignal = lazy(() => import("./pages/SolanaSignal.tsx"));
 const SolanaAnalysis = lazy(() => import("./pages/SolanaAnalysis.tsx"));
 const SolanaEvidence = lazy(() => import("./pages/SolanaEvidence.tsx"));
+const CopperSignal = lazy(() => import("./pages/CopperSignal.tsx"));
 
 const queryClient = new QueryClient();
 
@@ -90,6 +91,14 @@ const App = () => (
                   element={
                     <Suspense fallback={<LoadingProgress message="Loading Solana Evidence..." />}>
                       <SolanaEvidence />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/copper"
+                  element={
+                    <Suspense fallback={<LoadingProgress message="Loading Copper..." />}>
+                      <CopperSignal />
                     </Suspense>
                   }
                 />

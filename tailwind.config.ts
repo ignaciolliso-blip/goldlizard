@@ -79,6 +79,10 @@ export default {
           green: "hsl(var(--solana-green))",
           cyan: "hsl(var(--solana-cyan))",
         },
+        copper: {
+          DEFAULT: "hsl(var(--copper))",
+          light: "hsl(var(--copper-light))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

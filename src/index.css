@@ -63,6 +63,10 @@
     --solana-green: 156 93% 58%;
     --solana-cyan: 191 100% 50%;
 
+    /* Copper tokens */
+    --copper: 20 90% 52%;
+    --copper-light: 20 85% 65%;
+
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
