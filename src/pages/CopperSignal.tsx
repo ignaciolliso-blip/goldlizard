@@ -91,7 +91,14 @@ const CopperSignal = () => {
           </div>
         )}
 
-        {/* Jurisdiction Risk */}
+        {/* Supply-Demand Charts */}
+        {supplyDemand.length > 0 && (
+          <div className="space-y-3">
+            <h2 className="font-display text-xl text-copper">Structural Deficit</h2>
+            <CopperSupplyDemandCharts data={supplyDemand} />
+          </div>
+        )}
+
         {jurisdictions.length > 0 && (
           <div className="space-y-3">
             <h2 className="font-display text-xl text-copper">Leverage — Equity Positioning</h2>
