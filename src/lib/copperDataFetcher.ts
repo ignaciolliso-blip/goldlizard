@@ -105,3 +105,33 @@ export async function fetchCopperEquities(): Promise<CopperEquityName[]> {
   if (error || !data) return [];
   return (data as unknown) as CopperEquityName[];
 }
+
+export interface CopperSupplyDemandRow {
+  id: string;
+  year: number;
+  demand_core_mt: number | null;
+  demand_ev_mt: number | null;
+  demand_grid_mt: number | null;
+  demand_renewables_mt: number | null;
+  demand_data_centers_mt: number | null;
+  demand_defense_mt: number | null;
+  demand_total_mt: number | null;
+  supply_primary_mt: number | null;
+  supply_secondary_mt: number | null;
+  supply_total_mt: number | null;
+  annual_balance_mt: number | null;
+  cumulative_deficit_mt: number | null;
+  scenario: string;
+  source: string | null;
+}
+
+export async function fetchCopperSupplyDemand(scenario = "base"): Promise<CopperSupplyDemandRow[]> {
+  const { data, error } = await supabase
+    .from("copper_supply_demand_model")
+    .select("*")
+    .eq("scenario", scenario)
+    .order("year", { ascending: true });
+
+  if (error || !data) return [];
+  return data as CopperSupplyDemandRow[];
+}
