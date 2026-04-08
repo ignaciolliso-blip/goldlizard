@@ -61,6 +61,7 @@ export interface CopperEquityName {
   notes: string | null;
   sort_order: number;
   active: boolean;
+  yahoo_symbol: string | null;
 }
 
 export async function fetchCopperMarketData(): Promise<CopperMarketData | null> {
@@ -158,6 +159,10 @@ export interface CopperEquityFinancial {
   insider_flag: string | null;
   roic_pct: number | null;
   source: string | null;
+  source_url: string | null;
+  guidance_production: string | null;
+  guidance_aisc: string | null;
+  data_tier: string | null;
   updated_at: string;
 }
 

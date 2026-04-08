@@ -36,6 +36,9 @@ interface FormState {
   insider_flag: string;
   roic_pct: string;
   source: string;
+  source_url: string;
+  guidance_production: string;
+  guidance_aisc: string;
 }
 
 const emptyForm: FormState = {
@@ -58,6 +61,9 @@ const emptyForm: FormState = {
   insider_flag: "NEUTRAL",
   roic_pct: "",
   source: "",
+  source_url: "",
+  guidance_production: "",
+  guidance_aisc: "",
 };
 
 function parseNum(v: string): number | null {
@@ -98,6 +104,9 @@ export default function CopperFinancialsForm({ equities, financials, onUpdated }
         insider_flag: existing.insider_flag || "NEUTRAL",
         roic_pct: existing.roic_pct?.toString() || "",
         source: existing.source || "",
+        source_url: existing.source_url || "",
+        guidance_production: existing.guidance_production || "",
+        guidance_aisc: existing.guidance_aisc || "",
       });
     } else {
       setForm({ ...emptyForm });
@@ -132,6 +141,10 @@ export default function CopperFinancialsForm({ equities, financials, onUpdated }
         insider_flag: form.insider_flag || null,
         roic_pct: parseNum(form.roic_pct),
         source: form.source || null,
+        source_url: form.source_url || null,
+        guidance_production: form.guidance_production || null,
+        guidance_aisc: form.guidance_aisc || null,
+        data_tier: "manual",
       };
 
       const { error } = await supabase.from("copper_equity_financials").insert(row as any);
@@ -243,15 +256,41 @@ export default function CopperFinancialsForm({ equities, financials, onUpdated }
                   </div>
                 </div>
 
+                {/* Guidance */}
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground mb-2">Guidance & Source</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-muted-foreground">Production Guidance</Label>
+                      <Input value={form.guidance_production} onChange={e => updateField("guidance_production", e.target.value)} placeholder="e.g. 455-530 kt" className="text-xs h-8" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-muted-foreground">AISC Guidance</Label>
+                      <Input value={form.guidance_aisc} onChange={e => updateField("guidance_aisc", e.target.value)} placeholder="e.g. $1.65-$1.95/lb" className="text-xs h-8" />
+                    </div>
+                  </div>
+                </div>
+
                 {/* Source */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Source</Label>
-                  <Input
-                    value={form.source}
-                    onChange={e => updateField("source", e.target.value)}
-                    placeholder="e.g. Q1 2026 earnings, Bloomberg"
-                    className="text-xs"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Source</Label>
+                    <Input
+                      value={form.source}
+                      onChange={e => updateField("source", e.target.value)}
+                      placeholder="e.g. Q1 2026 earnings, Bloomberg"
+                      className="text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Source URL</Label>
+                    <Input
+                      value={form.source_url}
+                      onChange={e => updateField("source_url", e.target.value)}
+                      placeholder="https://..."
+                      className="text-xs"
+                    />
+                  </div>
                 </div>
 
                 <button
