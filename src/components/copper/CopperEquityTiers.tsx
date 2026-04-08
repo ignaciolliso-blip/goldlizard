@@ -1,15 +1,20 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Briefcase, HardHat, Search, Layers, Info, AlertTriangle, HelpCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Briefcase, HardHat, Search, Layers, Info, AlertTriangle, HelpCircle, RefreshCw, Loader2 } from "lucide-react";
 import { LBS_PER_TONNE } from "@/lib/copperEngine";
 import CopperJurisdictionTable from "./CopperJurisdictionTable";
 import { computeValuation, type ValuationResult } from "@/lib/copperValuationEngine";
 import type { CopperEquityName, CopperMarketData, CopperJurisdiction, CopperForce, CopperEquityFinancial } from "@/lib/copperDataFetcher";
 import type { CopperAnchorResult } from "@/lib/copperEngine";
 import { computeForcesVerdict } from "./CopperForcesCard";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Props {
   equities: CopperEquityName[];
@@ -18,6 +23,7 @@ interface Props {
   forces: CopperForce[];
   jurisdictions: CopperJurisdiction[];
   financials: CopperEquityFinancial[];
+  onFinancialsUpdated?: () => void;
 }
 
 function riskTagColor(tag: string): string {
@@ -37,7 +43,6 @@ function jurisdictionScore(jurs: { country: string; risk_tag: string }[] | null)
 }
 
 function compositeSignal(score: number, redFlags: ValuationResult["redFlags"]): { text: string; color: string } {
-  // Apply red flag caps
   const caps = redFlags.filter(f => f.cap).map(f => f.cap!);
   let result: { text: string; color: string };
   if (score >= 4) result = { text: "STRONG BUY", color: "bg-emerald-600 text-white" };
@@ -46,7 +51,6 @@ function compositeSignal(score: number, redFlags: ValuationResult["redFlags"]): 
   else if (score >= -0.5) result = { text: "HOLD / WATCH", color: "bg-muted text-muted-foreground" };
   else result = { text: "REDUCE / AVOID", color: "bg-red-500 text-white" };
 
-  // Apply caps
   const signalRank = (s: string) => {
     if (s === "REDUCE / AVOID") return 0;
     if (s === "HOLD / WATCH") return 1;
@@ -92,22 +96,33 @@ function metricLabel(flag: "cheap" | "fair" | "expensive"): string {
   return "FAIR";
 }
 
-export default function CopperEquityTiers({ equities, marketData, anchorResult, forces, jurisdictions, financials }: Props) {
+function dataTierIcon(tier: string | null, updatedAt: string | null): { icon: string; tooltip: string } {
+  if (tier === "yahoo_auto") {
+    const daysSince = updatedAt ? Math.floor((Date.now() - new Date(updatedAt).getTime()) / 86400000) : 999;
+    if (daysSince > 14) return { icon: "⚠️", tooltip: `Auto-fetched — stale (${daysSince}d ago)` };
+    return { icon: "🔄", tooltip: `Auto-fetched from Yahoo (${updatedAt?.split("T")[0]})` };
+  }
+  if (tier === "claude_research") {
+    const daysSince = updatedAt ? Math.floor((Date.now() - new Date(updatedAt).getTime()) / 86400000) : 999;
+    if (daysSince > 120) return { icon: "⚠️", tooltip: `AI-researched — stale (${daysSince}d ago)` };
+    return { icon: "🔍", tooltip: `AI-researched (${updatedAt?.split("T")[0]})` };
+  }
+  return { icon: "⚠️", tooltip: "Missing or manual entry" };
+}
+
+export default function CopperEquityTiers({ equities, marketData, anchorResult, forces, jurisdictions, financials, onFinancialsUpdated }: Props) {
   const spotLb = Number(marketData.spot_price_lb);
   const incentiveLb = Number(marketData.incentive_price_tonne) / LBS_PER_TONNE;
   const forcesVerdict = useMemo(() => computeForcesVerdict(forces), [forces]);
 
-  // Build financials map: equity_id → most recent financial
   const financialsMap = useMemo(() => {
     const map = new Map<string, CopperEquityFinancial>();
-    // Already sorted desc by as_of_date, so first match per equity_id is most recent
     for (const f of financials) {
       if (!map.has(f.equity_id)) map.set(f.equity_id, f);
     }
     return map;
   }, [financials]);
 
-  // Valuation map
   const valuationMap = useMemo(() => {
     const map = new Map<string, ValuationResult>();
     for (const eq of equities) {
@@ -122,7 +137,6 @@ export default function CopperEquityTiers({ equities, marketData, anchorResult, 
   const developers = equities.filter(e => e.tier === "developer");
   const explorers = equities.filter(e => e.tier === "explorer");
 
-  // Composite scores
   const compositeData = useMemo(() => {
     return equities.filter(e => e.tier !== "etf").map(eq => {
       const anchorScore = anchorResult.positioning.score;
@@ -252,6 +266,7 @@ export default function CopperEquityTiers({ equities, marketData, anchorResult, 
               incentiveLb={incentiveLb}
               financial={financialsMap.get(p.id) ?? null}
               valuation={valuationMap.get(p.id) ?? null}
+              onResearchComplete={onFinancialsUpdated}
             />
           ))}
         </div>
@@ -266,7 +281,12 @@ export default function CopperEquityTiers({ equities, marketData, anchorResult, 
         <p className="text-xs text-muted-foreground">Pre-production. Re-rating catalysts ahead.</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {developers.map(d => (
-            <DeveloperCard key={d.id} equity={d} financial={financialsMap.get(d.id) ?? null} />
+            <DeveloperCard
+              key={d.id}
+              equity={d}
+              financial={financialsMap.get(d.id) ?? null}
+              onResearchComplete={onFinancialsUpdated}
+            />
           ))}
         </div>
       </div>
@@ -286,7 +306,7 @@ export default function CopperEquityTiers({ equities, marketData, anchorResult, 
         </Card>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {explorers.map(e => (
-            <DeveloperCard key={e.id} equity={e} financial={null} />
+            <DeveloperCard key={e.id} equity={e} financial={null} showResearch={false} />
           ))}
         </div>
       </div>
@@ -294,14 +314,166 @@ export default function CopperEquityTiers({ equities, marketData, anchorResult, 
   );
 }
 
-function ProducerCard({ equity, spotLb, incentiveLb, financial, valuation }: {
+// ── Research Confirmation Modal ──────────────────────────────────────
+
+function ResearchModal({ open, onClose, equityName, ticker, data, onConfirm }: {
+  open: boolean;
+  onClose: () => void;
+  equityName: string;
+  ticker: string;
+  data: Record<string, any>;
+  onConfirm: (editedData: Record<string, any>) => void;
+}) {
+  const [editData, setEditData] = useState<Record<string, any>>(data);
+
+  const updateField = (key: string, value: string) => {
+    setEditData(prev => ({ ...prev, [key]: value === "" ? null : isNaN(Number(value)) ? value : Number(value) }));
+  };
+
+  const fields = Object.entries(editData).filter(([k]) => k !== "data_date" && k !== "source_url");
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-sm">AI Research: {equityName} ({ticker})</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">Review and edit before saving:</p>
+          <div className="grid grid-cols-2 gap-2">
+            {fields.map(([key, val]) => (
+              <div key={key} className="space-y-1">
+                <Label className="text-[10px] text-muted-foreground">{key}</Label>
+                <Input
+                  value={val?.toString() ?? ""}
+                  onChange={e => updateField(key, e.target.value)}
+                  className="text-xs h-7"
+                />
+              </div>
+            ))}
+          </div>
+          {editData.source_url && (
+            <p className="text-[10px] text-muted-foreground">
+              Source: <a href={editData.source_url} target="_blank" rel="noopener noreferrer" className="text-copper underline">{editData.source_url}</a>
+            </p>
+          )}
+          {editData.data_date && (
+            <p className="text-[10px] text-muted-foreground">Data as of: {editData.data_date}</p>
+          )}
+        </div>
+        <DialogFooter className="gap-2">
+          <button onClick={onClose} className="px-3 py-1.5 text-xs rounded border border-border text-muted-foreground hover:bg-muted">Cancel</button>
+          <button onClick={() => onConfirm(editData)} className="px-3 py-1.5 text-xs rounded bg-copper text-white hover:bg-copper/90">Confirm & Save</button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Research Button Hook ──────────────────────────────────────
+
+function useResearchEquity(equityId: string, equityName: string, ticker: string, onComplete?: () => void) {
+  const [researching, setResearching] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [researchData, setResearchData] = useState<Record<string, any> | null>(null);
+
+  const startResearch = async () => {
+    setResearching(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("research-copper-equity", {
+        body: { equity_id: equityId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setResearchData(data.research);
+      setModalOpen(true);
+    } catch (e: any) {
+      toast.error(e.message || "Research failed");
+    } finally {
+      setResearching(false);
+    }
+  };
+
+  const confirmSave = async (editedData: Record<string, any>) => {
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      const row: Record<string, any> = {
+        equity_id: equityId,
+        as_of_date: today,
+        data_tier: "claude_research",
+        source: "AI Research (Gemini)",
+        source_url: editedData.source_url || null,
+        guidance_production: editedData.guidance_production || null,
+        guidance_aisc: editedData.guidance_aisc || null,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Map producer fields
+      if (editedData.aisc_lb != null) row.production_kt = editedData.production_kt ?? null;
+      if (editedData.production_growth_pct != null) row.production_growth_pct = editedData.production_growth_pct;
+      if (editedData.reserve_life_years != null) row.reserve_life_years = editedData.reserve_life_years;
+      if (editedData.copper_revenue_pct != null) row.copper_revenue_pct = editedData.copper_revenue_pct;
+      if (editedData.roic_pct != null) row.roic_pct = editedData.roic_pct;
+      if (editedData.p_nav != null) row.p_nav = editedData.p_nav;
+      if (editedData.ev_ebitda_forward != null) row.ev_ebitda_forward = editedData.ev_ebitda_forward;
+      if (editedData.production_kt != null) row.production_kt = editedData.production_kt;
+
+      // Developer fields mapped to same columns
+      if (editedData.annual_production_kt != null) row.production_kt = editedData.annual_production_kt;
+
+      const { error } = await supabase.from("copper_equity_financials").insert(row as any);
+      if (error) throw error;
+
+      // Update AISC on equity names if available
+      if (editedData.aisc_lb != null) {
+        await supabase
+          .from("copper_equity_names")
+          .update({
+            aisc_lb: editedData.aisc_lb,
+            aisc_source: editedData.data_date || "AI Research",
+          } as any)
+          .eq("id", equityId);
+      }
+
+      toast.success(`Research data saved for ${ticker}`);
+      setModalOpen(false);
+      onComplete?.();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to save research data");
+    }
+  };
+
+  return { researching, modalOpen, researchData, startResearch, confirmSave, setModalOpen };
+}
+
+// ── Data Source Icon Component ──────────────────────────────────────
+
+function DataSourceIcon({ tier, updatedAt }: { tier: string | null; updatedAt: string | null }) {
+  const { icon, tooltip } = dataTierIcon(tier, updatedAt);
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="text-[9px] cursor-help">{icon}</span>
+        </TooltipTrigger>
+        <TooltipContent><p className="text-xs">{tooltip}</p></TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+// ── Producer Card ──────────────────────────────────────
+
+function ProducerCard({ equity, spotLb, incentiveLb, financial, valuation, onResearchComplete }: {
   equity: CopperEquityName; spotLb: number; incentiveLb: number;
   financial: CopperEquityFinancial | null; valuation: ValuationResult | null;
+  onResearchComplete?: () => void;
 }) {
   const aisc = equity.aisc_lb;
   const currentMargin = aisc != null ? spotLb - aisc : null;
   const incentiveMargin = aisc != null ? incentiveLb - aisc : null;
   const marginExpansion = currentMargin && incentiveMargin && currentMargin > 0 ? incentiveMargin / currentMargin : null;
+  const { researching, modalOpen, researchData, startResearch, confirmSave, setModalOpen } = useResearchEquity(equity.id, equity.name, equity.ticker, onResearchComplete);
 
   return (
     <Card className="border-border/50">
@@ -357,23 +529,35 @@ function ProducerCard({ equity, spotLb, incentiveLb, financial, valuation }: {
         {/* Section B: Financials */}
         {financial && valuation ? (
           <div className="space-y-2">
-            {/* Valuation metrics grid */}
+            {/* Row 1: Valuation metrics grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
               {valuation.metrics.map(m => (
                 <div key={m.label} className="bg-muted/20 rounded p-1.5 text-center">
-                  <p className="text-[9px] text-muted-foreground">{m.label}</p>
+                  <div className="flex items-center justify-center gap-0.5">
+                    <p className="text-[9px] text-muted-foreground">{m.label}</p>
+                    <DataSourceIcon
+                      tier={m.label.includes("P/NAV") || m.label.includes("NTM") ? (financial.data_tier === "claude_research" ? "claude_research" : financial.data_tier) : "yahoo_auto"}
+                      updatedAt={financial.updated_at}
+                    />
+                  </div>
                   <p className="font-mono text-xs font-bold">{m.value}</p>
                   <p className={`text-[8px] font-bold ${metricColor(m.flag)}`}>{metricLabel(m.flag)}</p>
                 </div>
               ))}
             </div>
 
-            {/* Operational metrics */}
+            {/* Row 2: Operational metrics */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
               {financial.production_kt != null && (
                 <div className="bg-muted/20 rounded p-1.5 text-center">
-                  <p className="text-[9px] text-muted-foreground">Production</p>
+                  <div className="flex items-center justify-center gap-0.5">
+                    <p className="text-[9px] text-muted-foreground">Production</p>
+                    <DataSourceIcon tier="claude_research" updatedAt={financial.updated_at} />
+                  </div>
                   <p className="font-mono text-xs">{financial.production_kt} kt/yr</p>
+                  {financial.guidance_production && (
+                    <p className="text-[8px] text-muted-foreground/70">Guide: {financial.guidance_production}</p>
+                  )}
                 </div>
               )}
               {financial.production_growth_pct != null && (
@@ -396,10 +580,13 @@ function ProducerCard({ equity, spotLb, incentiveLb, financial, valuation }: {
               )}
             </div>
 
-            {/* ROIC + Insider */}
+            {/* Row 3: ROIC + Insider */}
             <div className="flex flex-wrap gap-3 text-[10px]">
               {financial.roic_pct != null && (
-                <span className="text-muted-foreground">ROIC: <span className="font-mono text-foreground">{financial.roic_pct}%</span></span>
+                <span className="text-muted-foreground">
+                  ROIC: <span className="font-mono text-foreground">{financial.roic_pct}%</span>
+                  <DataSourceIcon tier="claude_research" updatedAt={financial.updated_at} />
+                </span>
               )}
               {financial.insider_flag && (
                 <span className="text-muted-foreground">
@@ -409,9 +596,15 @@ function ProducerCard({ equity, spotLb, incentiveLb, financial, valuation }: {
                   {financial.insider_net_buying_usd_m != null && (
                     <span className="text-muted-foreground/70"> (${Math.abs(financial.insider_net_buying_usd_m)}M, 12mo)</span>
                   )}
+                  <DataSourceIcon tier="yahoo_auto" updatedAt={financial.updated_at} />
                 </span>
               )}
             </div>
+
+            {/* Guidance strings */}
+            {(financial.guidance_aisc) && (
+              <p className="text-[9px] text-muted-foreground/70">AISC Guidance: {financial.guidance_aisc}</p>
+            )}
 
             {/* Valuation signal */}
             <div className="flex items-center gap-2">
@@ -441,20 +634,64 @@ function ProducerCard({ equity, spotLb, incentiveLb, financial, valuation }: {
             )}
 
             {financial.source && (
-              <p className="text-[9px] text-muted-foreground/50">Source: {financial.source}</p>
+              <p className="text-[9px] text-muted-foreground/50">
+                Source: {financial.source}
+                {financial.source_url && (
+                  <> — <a href={financial.source_url} target="_blank" rel="noopener noreferrer" className="text-copper underline">View</a></>
+                )}
+              </p>
             )}
           </div>
         ) : (
-          <p className="text-[10px] text-muted-foreground/50 italic">Financial metrics pending — populate via Data Management after next earnings cycle.</p>
+          <div className="space-y-1">
+            <p className="text-[10px] text-muted-foreground/50 italic">
+              {financial ? "Loading... (auto-fetch runs weekly)" : "Click 'Update Mining Data' to research"}
+            </p>
+          </div>
         )}
+
+        {/* Row 4: Research button */}
+        <div className="flex items-center gap-2 pt-1 border-t border-border/30">
+          <button
+            onClick={startResearch}
+            disabled={researching}
+            className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] rounded bg-copper/10 text-copper hover:bg-copper/20 disabled:opacity-50 transition-colors"
+          >
+            {researching ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3 w-3" />}
+            {researching ? "Researching..." : "Update Mining Data 🔍"}
+          </button>
+          {financial?.data_tier === "claude_research" && financial.as_of_date && (
+            <span className="text-[9px] text-muted-foreground">Last researched: {financial.as_of_date}</span>
+          )}
+        </div>
 
         {equity.rationale && <p className="text-[10px] text-muted-foreground leading-relaxed">{equity.rationale}</p>}
       </CardContent>
+
+      {/* Research confirmation modal */}
+      {researchData && (
+        <ResearchModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          equityName={equity.name}
+          ticker={equity.ticker}
+          data={researchData}
+          onConfirm={confirmSave}
+        />
+      )}
     </Card>
   );
 }
 
-function DeveloperCard({ equity, financial }: { equity: CopperEquityName; financial: CopperEquityFinancial | null }) {
+// ── Developer Card ──────────────────────────────────────
+
+function DeveloperCard({ equity, financial, onResearchComplete, showResearch = true }: {
+  equity: CopperEquityName; financial: CopperEquityFinancial | null;
+  onResearchComplete?: () => void;
+  showResearch?: boolean;
+}) {
+  const { researching, modalOpen, researchData, startResearch, confirmSave, setModalOpen } = useResearchEquity(equity.id, equity.name, equity.ticker, onResearchComplete);
+
   return (
     <Card className="border-border/50">
       <CardContent className="p-4 space-y-2">
@@ -491,8 +728,33 @@ function DeveloperCard({ equity, financial }: { equity: CopperEquityName; financ
           </div>
         )}
 
+        {/* Research button for developers (not explorers) */}
+        {showResearch && (
+          <div className="flex items-center gap-2 pt-1 border-t border-border/30">
+            <button
+              onClick={startResearch}
+              disabled={researching}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] rounded bg-copper/10 text-copper hover:bg-copper/20 disabled:opacity-50 transition-colors"
+            >
+              {researching ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3 w-3" />}
+              {researching ? "Researching..." : "Update Mining Data 🔍"}
+            </button>
+          </div>
+        )}
+
         {equity.rationale && <p className="text-[10px] text-muted-foreground leading-relaxed">{equity.rationale}</p>}
       </CardContent>
+
+      {researchData && (
+        <ResearchModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          equityName={equity.name}
+          ticker={equity.ticker}
+          data={researchData}
+          onConfirm={confirmSave}
+        />
+      )}
     </Card>
   );
 }
