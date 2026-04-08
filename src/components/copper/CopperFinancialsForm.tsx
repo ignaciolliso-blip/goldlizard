@@ -104,6 +104,9 @@ export default function CopperFinancialsForm({ equities, financials, onUpdated }
         insider_flag: existing.insider_flag || "NEUTRAL",
         roic_pct: existing.roic_pct?.toString() || "",
         source: existing.source || "",
+        source_url: existing.source_url || "",
+        guidance_production: existing.guidance_production || "",
+        guidance_aisc: existing.guidance_aisc || "",
       });
     } else {
       setForm({ ...emptyForm });
