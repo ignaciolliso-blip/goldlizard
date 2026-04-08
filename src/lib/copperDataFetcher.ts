@@ -26,6 +26,43 @@ export interface CopperJurisdiction {
   sort_order: number;
 }
 
+export interface CopperForce {
+  id: string;
+  metric_name: string;
+  category: string;
+  current_value: string | null;
+  prior_value: string | null;
+  direction: string | null;
+  source: string | null;
+  notes: string | null;
+  sort_order: number;
+}
+
+export interface CopperEquityName {
+  id: string;
+  name: string;
+  ticker: string;
+  exchange: string | null;
+  tier: string;
+  jurisdictions: { country: string; risk_tag: string }[] | null;
+  aisc_lb: number | null;
+  aisc_source: string | null;
+  stage: string | null;
+  key_catalyst: string | null;
+  catalyst_date: string | null;
+  catalyst_type: string | null;
+  catalyst_status: string | null;
+  rationale: string | null;
+  is_ucits: boolean | null;
+  isin: string | null;
+  expense_ratio: number | null;
+  aum_usd: number | null;
+  position_size_pct: number | null;
+  notes: string | null;
+  sort_order: number;
+  active: boolean;
+}
+
 export async function fetchCopperMarketData(): Promise<CopperMarketData | null> {
   const { data, error } = await supabase
     .from("copper_market_data")
@@ -46,4 +83,25 @@ export async function fetchCopperJurisdictions(): Promise<CopperJurisdiction[]> 
 
   if (error || !data) return [];
   return data as CopperJurisdiction[];
+}
+
+export async function fetchCopperForces(): Promise<CopperForce[]> {
+  const { data, error } = await supabase
+    .from("copper_forces")
+    .select("*")
+    .order("sort_order", { ascending: true });
+
+  if (error || !data) return [];
+  return data as CopperForce[];
+}
+
+export async function fetchCopperEquities(): Promise<CopperEquityName[]> {
+  const { data, error } = await supabase
+    .from("copper_equity_names")
+    .select("*")
+    .eq("active", true)
+    .order("sort_order", { ascending: true });
+
+  if (error || !data) return [];
+  return (data as unknown) as CopperEquityName[];
 }

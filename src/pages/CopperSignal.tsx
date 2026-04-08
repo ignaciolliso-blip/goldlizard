@@ -1,8 +1,11 @@
 import { useState, useEffect } from "react";
-import { fetchCopperMarketData, fetchCopperJurisdictions, type CopperMarketData, type CopperJurisdiction } from "@/lib/copperDataFetcher";
+import { fetchCopperMarketData, fetchCopperJurisdictions, fetchCopperForces, fetchCopperEquities, type CopperMarketData, type CopperJurisdiction, type CopperForce, type CopperEquityName } from "@/lib/copperDataFetcher";
 import { computeCopperAnchor, type CopperAnchorResult } from "@/lib/copperEngine";
 import CopperAnchorGauge from "@/components/copper/CopperAnchorGauge";
 import CopperHonestFindings from "@/components/copper/CopperHonestFindings";
+import CopperForcesCard from "@/components/copper/CopperForcesCard";
+import CopperJurisdictionTable from "@/components/copper/CopperJurisdictionTable";
+import CopperEquityTiers from "@/components/copper/CopperEquityTiers";
 import Footer from "@/components/Footer";
 import LoadingProgress from "@/components/LoadingProgress";
 
@@ -11,17 +14,23 @@ const CopperSignal = () => {
   const [error, setError] = useState<string | null>(null);
   const [marketData, setMarketData] = useState<CopperMarketData | null>(null);
   const [jurisdictions, setJurisdictions] = useState<CopperJurisdiction[]>([]);
+  const [forces, setForces] = useState<CopperForce[]>([]);
+  const [equities, setEquities] = useState<CopperEquityName[]>([]);
   const [anchorResult, setAnchorResult] = useState<CopperAnchorResult | null>(null);
 
   useEffect(() => {
     async function load() {
       try {
-        const [md, jur] = await Promise.all([
+        const [md, jur, frc, eq] = await Promise.all([
           fetchCopperMarketData(),
           fetchCopperJurisdictions(),
+          fetchCopperForces(),
+          fetchCopperEquities(),
         ]);
         setMarketData(md);
         setJurisdictions(jur);
+        setForces(frc);
+        setEquities(eq);
         if (md) setAnchorResult(computeCopperAnchor(md));
       } catch (e: any) {
         setError(e.message || "Failed to load copper data");
@@ -66,8 +75,35 @@ const CopperSignal = () => {
         </div>
 
         {/* Anchor Gauge */}
-        {anchorResult && (
-          <CopperAnchorGauge anchor={anchorResult} marketData={marketData!} />
+        {anchorResult && marketData && (
+          <CopperAnchorGauge anchor={anchorResult} marketData={marketData} />
+        )}
+
+        {/* Forces Scorecard */}
+        {forces.length > 0 && (
+          <div className="space-y-3">
+            <h2 className="font-display text-xl text-copper">Forces</h2>
+            <CopperForcesCard forces={forces} />
+          </div>
+        )}
+
+        {/* Jurisdiction Risk */}
+        {jurisdictions.length > 0 && (
+          <div className="space-y-3">
+            <h2 className="font-display text-xl text-copper">Leverage — Equity Positioning</h2>
+            <CopperJurisdictionTable jurisdictions={jurisdictions} marketData={marketData} />
+          </div>
+        )}
+
+        {/* Equity Tiers + Composite */}
+        {equities.length > 0 && anchorResult && marketData && (
+          <CopperEquityTiers
+            equities={equities}
+            marketData={marketData}
+            anchorResult={anchorResult}
+            forces={forces}
+            jurisdictions={jurisdictions}
+          />
         )}
 
         {/* Honest Findings */}
