@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { fetchCopperMarketData, fetchCopperJurisdictions, fetchCopperForces, fetchCopperEquities, type CopperMarketData, type CopperJurisdiction, type CopperForce, type CopperEquityName } from "@/lib/copperDataFetcher";
+import { fetchCopperMarketData, fetchCopperJurisdictions, fetchCopperForces, fetchCopperEquities, fetchCopperSupplyDemand, type CopperMarketData, type CopperJurisdiction, type CopperForce, type CopperEquityName, type CopperSupplyDemandRow } from "@/lib/copperDataFetcher";
 import { computeCopperAnchor, type CopperAnchorResult } from "@/lib/copperEngine";
 import CopperAnchorGauge from "@/components/copper/CopperAnchorGauge";
 import CopperHonestFindings from "@/components/copper/CopperHonestFindings";
 import CopperForcesCard from "@/components/copper/CopperForcesCard";
 import CopperJurisdictionTable from "@/components/copper/CopperJurisdictionTable";
 import CopperEquityTiers from "@/components/copper/CopperEquityTiers";
+import CopperSupplyDemandCharts from "@/components/copper/CopperSupplyDemandCharts";
 import Footer from "@/components/Footer";
 import LoadingProgress from "@/components/LoadingProgress";
 
@@ -16,21 +17,24 @@ const CopperSignal = () => {
   const [jurisdictions, setJurisdictions] = useState<CopperJurisdiction[]>([]);
   const [forces, setForces] = useState<CopperForce[]>([]);
   const [equities, setEquities] = useState<CopperEquityName[]>([]);
+  const [supplyDemand, setSupplyDemand] = useState<CopperSupplyDemandRow[]>([]);
   const [anchorResult, setAnchorResult] = useState<CopperAnchorResult | null>(null);
 
   useEffect(() => {
     async function load() {
       try {
-        const [md, jur, frc, eq] = await Promise.all([
+        const [md, jur, frc, eq, sd] = await Promise.all([
           fetchCopperMarketData(),
           fetchCopperJurisdictions(),
           fetchCopperForces(),
           fetchCopperEquities(),
+          fetchCopperSupplyDemand(),
         ]);
         setMarketData(md);
         setJurisdictions(jur);
         setForces(frc);
         setEquities(eq);
+        setSupplyDemand(sd);
         if (md) setAnchorResult(computeCopperAnchor(md));
       } catch (e: any) {
         setError(e.message || "Failed to load copper data");
