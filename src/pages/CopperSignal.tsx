@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { fetchCopperMarketData, fetchCopperJurisdictions, fetchCopperForces, fetchCopperEquities, fetchCopperSupplyDemand, type CopperMarketData, type CopperJurisdiction, type CopperForce, type CopperEquityName, type CopperSupplyDemandRow } from "@/lib/copperDataFetcher";
+import { useState, useEffect, useCallback } from "react";
+import { fetchCopperMarketData, fetchCopperJurisdictions, fetchCopperForces, fetchCopperEquities, fetchCopperSupplyDemand, fetchCopperFinancials, type CopperMarketData, type CopperJurisdiction, type CopperForce, type CopperEquityName, type CopperSupplyDemandRow, type CopperEquityFinancial } from "@/lib/copperDataFetcher";
 import { computeCopperAnchor, type CopperAnchorResult } from "@/lib/copperEngine";
 import CopperAnchorGauge from "@/components/copper/CopperAnchorGauge";
 import CopperHonestFindings from "@/components/copper/CopperHonestFindings";
@@ -7,6 +7,7 @@ import CopperForcesCard from "@/components/copper/CopperForcesCard";
 import CopperJurisdictionTable from "@/components/copper/CopperJurisdictionTable";
 import CopperEquityTiers from "@/components/copper/CopperEquityTiers";
 import CopperSupplyDemandCharts from "@/components/copper/CopperSupplyDemandCharts";
+import CopperFinancialsForm from "@/components/copper/CopperFinancialsForm";
 import Footer from "@/components/Footer";
 import LoadingProgress from "@/components/LoadingProgress";
 
@@ -18,31 +19,38 @@ const CopperSignal = () => {
   const [forces, setForces] = useState<CopperForce[]>([]);
   const [equities, setEquities] = useState<CopperEquityName[]>([]);
   const [supplyDemand, setSupplyDemand] = useState<CopperSupplyDemandRow[]>([]);
+  const [financials, setFinancials] = useState<CopperEquityFinancial[]>([]);
   const [anchorResult, setAnchorResult] = useState<CopperAnchorResult | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const [md, jur, frc, eq, sd] = await Promise.all([
-          fetchCopperMarketData(),
-          fetchCopperJurisdictions(),
-          fetchCopperForces(),
-          fetchCopperEquities(),
-          fetchCopperSupplyDemand(),
-        ]);
-        setMarketData(md);
-        setJurisdictions(jur);
-        setForces(frc);
-        setEquities(eq);
-        setSupplyDemand(sd);
-        if (md) setAnchorResult(computeCopperAnchor(md));
-      } catch (e: any) {
-        setError(e.message || "Failed to load copper data");
-      } finally {
-        setLoading(false);
-      }
+  const loadData = useCallback(async () => {
+    try {
+      const [md, jur, frc, eq, sd, fin] = await Promise.all([
+        fetchCopperMarketData(),
+        fetchCopperJurisdictions(),
+        fetchCopperForces(),
+        fetchCopperEquities(),
+        fetchCopperSupplyDemand(),
+        fetchCopperFinancials(),
+      ]);
+      setMarketData(md);
+      setJurisdictions(jur);
+      setForces(frc);
+      setEquities(eq);
+      setSupplyDemand(sd);
+      setFinancials(fin);
+      if (md) setAnchorResult(computeCopperAnchor(md));
+    } catch (e: any) {
+      setError(e.message || "Failed to load copper data");
+    } finally {
+      setLoading(false);
     }
-    load();
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const handleFinancialsUpdated = useCallback(async () => {
+    const fin = await fetchCopperFinancials();
+    setFinancials(fin);
   }, []);
 
   if (loading) return <LoadingProgress message="Loading Copper data..." />;
@@ -99,6 +107,7 @@ const CopperSignal = () => {
           </div>
         )}
 
+        {/* Jurisdiction Risk */}
         {jurisdictions.length > 0 && (
           <div className="space-y-3">
             <h2 className="font-display text-xl text-copper">Leverage — Equity Positioning</h2>
@@ -114,6 +123,16 @@ const CopperSignal = () => {
             anchorResult={anchorResult}
             forces={forces}
             jurisdictions={jurisdictions}
+            financials={financials}
+          />
+        )}
+
+        {/* Data Management Form */}
+        {equities.length > 0 && (
+          <CopperFinancialsForm
+            equities={equities}
+            financials={financials}
+            onUpdated={handleFinancialsUpdated}
           />
         )}
 
