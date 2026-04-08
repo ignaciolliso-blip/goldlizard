@@ -36,6 +36,9 @@ interface FormState {
   insider_flag: string;
   roic_pct: string;
   source: string;
+  source_url: string;
+  guidance_production: string;
+  guidance_aisc: string;
 }
 
 const emptyForm: FormState = {
@@ -58,6 +61,9 @@ const emptyForm: FormState = {
   insider_flag: "NEUTRAL",
   roic_pct: "",
   source: "",
+  source_url: "",
+  guidance_production: "",
+  guidance_aisc: "",
 };
 
 function parseNum(v: string): number | null {
