@@ -127,6 +127,7 @@ const CopperSignal = () => {
             forces={forces}
             jurisdictions={jurisdictions}
             financials={financials}
+            onFinancialsUpdated={handleFinancialsUpdated}
           />
         )}
 
