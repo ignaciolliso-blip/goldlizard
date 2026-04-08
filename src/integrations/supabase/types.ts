@@ -82,12 +82,15 @@ export type Database = {
           as_of_date: string
           capex_usd_m: number | null
           copper_revenue_pct: number | null
+          data_tier: string | null
           dividend_yield_pct: number | null
           equity_id: string
           ev_ebitda: number | null
           ev_ebitda_forward: number | null
           ev_usd_m: number | null
           fcf_yield_pct: number | null
+          guidance_aisc: string | null
+          guidance_production: string | null
           id: string
           insider_flag: string | null
           insider_net_buying_usd_m: number | null
@@ -100,18 +103,22 @@ export type Database = {
           reserve_life_years: number | null
           roic_pct: number | null
           source: string | null
+          source_url: string | null
           updated_at: string
         }
         Insert: {
           as_of_date: string
           capex_usd_m?: number | null
           copper_revenue_pct?: number | null
+          data_tier?: string | null
           dividend_yield_pct?: number | null
           equity_id: string
           ev_ebitda?: number | null
           ev_ebitda_forward?: number | null
           ev_usd_m?: number | null
           fcf_yield_pct?: number | null
+          guidance_aisc?: string | null
+          guidance_production?: string | null
           id?: string
           insider_flag?: string | null
           insider_net_buying_usd_m?: number | null
@@ -124,18 +131,22 @@ export type Database = {
           reserve_life_years?: number | null
           roic_pct?: number | null
           source?: string | null
+          source_url?: string | null
           updated_at?: string
         }
         Update: {
           as_of_date?: string
           capex_usd_m?: number | null
           copper_revenue_pct?: number | null
+          data_tier?: string | null
           dividend_yield_pct?: number | null
           equity_id?: string
           ev_ebitda?: number | null
           ev_ebitda_forward?: number | null
           ev_usd_m?: number | null
           fcf_yield_pct?: number | null
+          guidance_aisc?: string | null
+          guidance_production?: string | null
           id?: string
           insider_flag?: string | null
           insider_net_buying_usd_m?: number | null
@@ -148,6 +159,7 @@ export type Database = {
           reserve_life_years?: number | null
           roic_pct?: number | null
           source?: string | null
+          source_url?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -185,6 +197,7 @@ export type Database = {
           ticker: string
           tier: string
           updated_at: string
+          yahoo_symbol: string | null
         }
         Insert: {
           active?: boolean
@@ -210,6 +223,7 @@ export type Database = {
           ticker: string
           tier?: string
           updated_at?: string
+          yahoo_symbol?: string | null
         }
         Update: {
           active?: boolean
@@ -235,6 +249,7 @@ export type Database = {
           ticker?: string
           tier?: string
           updated_at?: string
+          yahoo_symbol?: string | null
         }
         Relationships: []
       }
