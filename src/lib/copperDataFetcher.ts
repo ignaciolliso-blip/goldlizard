@@ -103,5 +103,5 @@ export async function fetchCopperEquities(): Promise<CopperEquityName[]> {
     .order("sort_order", { ascending: true });
 
   if (error || !data) return [];
-  return data as CopperEquityName[];
+  return (data as unknown) as CopperEquityName[];
 }
