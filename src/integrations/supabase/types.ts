@@ -77,6 +77,347 @@ export type Database = {
         }
         Relationships: []
       }
+      copper_equity_financials: {
+        Row: {
+          as_of_date: string
+          capex_usd_m: number | null
+          copper_revenue_pct: number | null
+          dividend_yield_pct: number | null
+          equity_id: string
+          ev_ebitda: number | null
+          ev_ebitda_forward: number | null
+          ev_usd_m: number | null
+          fcf_yield_pct: number | null
+          id: string
+          insider_flag: string | null
+          insider_net_buying_usd_m: number | null
+          market_cap_usd_m: number | null
+          net_debt_ebitda: number | null
+          net_debt_usd_m: number | null
+          p_nav: number | null
+          production_growth_pct: number | null
+          production_kt: number | null
+          reserve_life_years: number | null
+          roic_pct: number | null
+          source: string | null
+          updated_at: string
+        }
+        Insert: {
+          as_of_date: string
+          capex_usd_m?: number | null
+          copper_revenue_pct?: number | null
+          dividend_yield_pct?: number | null
+          equity_id: string
+          ev_ebitda?: number | null
+          ev_ebitda_forward?: number | null
+          ev_usd_m?: number | null
+          fcf_yield_pct?: number | null
+          id?: string
+          insider_flag?: string | null
+          insider_net_buying_usd_m?: number | null
+          market_cap_usd_m?: number | null
+          net_debt_ebitda?: number | null
+          net_debt_usd_m?: number | null
+          p_nav?: number | null
+          production_growth_pct?: number | null
+          production_kt?: number | null
+          reserve_life_years?: number | null
+          roic_pct?: number | null
+          source?: string | null
+          updated_at?: string
+        }
+        Update: {
+          as_of_date?: string
+          capex_usd_m?: number | null
+          copper_revenue_pct?: number | null
+          dividend_yield_pct?: number | null
+          equity_id?: string
+          ev_ebitda?: number | null
+          ev_ebitda_forward?: number | null
+          ev_usd_m?: number | null
+          fcf_yield_pct?: number | null
+          id?: string
+          insider_flag?: string | null
+          insider_net_buying_usd_m?: number | null
+          market_cap_usd_m?: number | null
+          net_debt_ebitda?: number | null
+          net_debt_usd_m?: number | null
+          p_nav?: number | null
+          production_growth_pct?: number | null
+          production_kt?: number | null
+          reserve_life_years?: number | null
+          roic_pct?: number | null
+          source?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "copper_equity_financials_equity_id_fkey"
+            columns: ["equity_id"]
+            isOneToOne: false
+            referencedRelation: "copper_equity_names"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      copper_equity_names: {
+        Row: {
+          active: boolean
+          aisc_lb: number | null
+          aisc_source: string | null
+          aum_usd: number | null
+          catalyst_date: string | null
+          catalyst_status: string | null
+          catalyst_type: string | null
+          exchange: string | null
+          expense_ratio: number | null
+          id: string
+          is_ucits: boolean | null
+          isin: string | null
+          jurisdictions: Json | null
+          key_catalyst: string | null
+          name: string
+          notes: string | null
+          position_size_pct: number | null
+          rationale: string | null
+          sort_order: number
+          stage: string | null
+          ticker: string
+          tier: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          aisc_lb?: number | null
+          aisc_source?: string | null
+          aum_usd?: number | null
+          catalyst_date?: string | null
+          catalyst_status?: string | null
+          catalyst_type?: string | null
+          exchange?: string | null
+          expense_ratio?: number | null
+          id?: string
+          is_ucits?: boolean | null
+          isin?: string | null
+          jurisdictions?: Json | null
+          key_catalyst?: string | null
+          name: string
+          notes?: string | null
+          position_size_pct?: number | null
+          rationale?: string | null
+          sort_order?: number
+          stage?: string | null
+          ticker: string
+          tier?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          aisc_lb?: number | null
+          aisc_source?: string | null
+          aum_usd?: number | null
+          catalyst_date?: string | null
+          catalyst_status?: string | null
+          catalyst_type?: string | null
+          exchange?: string | null
+          expense_ratio?: number | null
+          id?: string
+          is_ucits?: boolean | null
+          isin?: string | null
+          jurisdictions?: Json | null
+          key_catalyst?: string | null
+          name?: string
+          notes?: string | null
+          position_size_pct?: number | null
+          rationale?: string | null
+          sort_order?: number
+          stage?: string | null
+          ticker?: string
+          tier?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      copper_forces: {
+        Row: {
+          category: string
+          current_value: string | null
+          direction: string | null
+          id: string
+          metric_name: string
+          notes: string | null
+          prior_value: string | null
+          sort_order: number
+          source: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          current_value?: string | null
+          direction?: string | null
+          id?: string
+          metric_name: string
+          notes?: string | null
+          prior_value?: string | null
+          sort_order?: number
+          source?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          current_value?: string | null
+          direction?: string | null
+          id?: string
+          metric_name?: string
+          notes?: string | null
+          prior_value?: string | null
+          sort_order?: number
+          source?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      copper_jurisdictions: {
+        Row: {
+          country: string
+          fraser_rank_text: string | null
+          id: string
+          key_risk_vector: string | null
+          narrative: string | null
+          risk_color: string | null
+          risk_tag: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          country: string
+          fraser_rank_text?: string | null
+          id?: string
+          key_risk_vector?: string | null
+          narrative?: string | null
+          risk_color?: string | null
+          risk_tag?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          country?: string
+          fraser_rank_text?: string | null
+          id?: string
+          key_risk_vector?: string | null
+          narrative?: string | null
+          risk_color?: string | null
+          risk_tag?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      copper_market_data: {
+        Row: {
+          date: string
+          deficit_current_year_kt: number | null
+          deficit_source: string | null
+          demand_2040_mt: number | null
+          fraser_survey_year: number | null
+          id: string
+          incentive_price_tonne: number
+          p90_aisc_tonne: number
+          spot_price_lb: number
+          spot_price_tonne: number
+          supply_peak_year: number | null
+          updated_at: string
+        }
+        Insert: {
+          date: string
+          deficit_current_year_kt?: number | null
+          deficit_source?: string | null
+          demand_2040_mt?: number | null
+          fraser_survey_year?: number | null
+          id?: string
+          incentive_price_tonne: number
+          p90_aisc_tonne: number
+          spot_price_lb: number
+          spot_price_tonne: number
+          supply_peak_year?: number | null
+          updated_at?: string
+        }
+        Update: {
+          date?: string
+          deficit_current_year_kt?: number | null
+          deficit_source?: string | null
+          demand_2040_mt?: number | null
+          fraser_survey_year?: number | null
+          id?: string
+          incentive_price_tonne?: number
+          p90_aisc_tonne?: number
+          spot_price_lb?: number
+          spot_price_tonne?: number
+          supply_peak_year?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      copper_supply_demand_model: {
+        Row: {
+          annual_balance_mt: number | null
+          cumulative_deficit_mt: number | null
+          demand_core_mt: number | null
+          demand_data_centers_mt: number | null
+          demand_defense_mt: number | null
+          demand_ev_mt: number | null
+          demand_grid_mt: number | null
+          demand_renewables_mt: number | null
+          demand_total_mt: number | null
+          id: string
+          scenario: string
+          source: string | null
+          supply_primary_mt: number | null
+          supply_secondary_mt: number | null
+          supply_total_mt: number | null
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          annual_balance_mt?: number | null
+          cumulative_deficit_mt?: number | null
+          demand_core_mt?: number | null
+          demand_data_centers_mt?: number | null
+          demand_defense_mt?: number | null
+          demand_ev_mt?: number | null
+          demand_grid_mt?: number | null
+          demand_renewables_mt?: number | null
+          demand_total_mt?: number | null
+          id?: string
+          scenario?: string
+          source?: string | null
+          supply_primary_mt?: number | null
+          supply_secondary_mt?: number | null
+          supply_total_mt?: number | null
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          annual_balance_mt?: number | null
+          cumulative_deficit_mt?: number | null
+          demand_core_mt?: number | null
+          demand_data_centers_mt?: number | null
+          demand_defense_mt?: number | null
+          demand_ev_mt?: number | null
+          demand_grid_mt?: number | null
+          demand_renewables_mt?: number | null
+          demand_total_mt?: number | null
+          id?: string
+          scenario?: string
+          source?: string | null
+          supply_primary_mt?: number | null
+          supply_secondary_mt?: number | null
+          supply_total_mt?: number | null
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
       data_cache: {
         Row: {
           data_json: Json
