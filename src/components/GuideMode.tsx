@@ -64,39 +64,61 @@ export function GuideTooltip({ id, text, children, position = 'bottom' }: GuideT
   const tooltipRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLSpanElement>(null);
 
-  // Reposition tooltip to stay within viewport
+  // Position tooltip with fixed coords so it escapes overflow:hidden/auto ancestors (e.g. tables).
   useEffect(() => {
-    if (!isOpen || !tooltipRef.current) return;
+    if (!isOpen || !tooltipRef.current || !triggerRef.current) return;
     const el = tooltipRef.current;
-    const rect = el.getBoundingClientRect();
+    const trigger = triggerRef.current.getBoundingClientRect();
     const vw = window.innerWidth;
     const vh = window.innerHeight;
+    const margin = 16;
 
-    // Reset any prior adjustments
-    el.style.left = '';
-    el.style.right = '';
-    el.style.top = '';
-    el.style.bottom = '';
-    el.style.transform = '';
+    const width = el.offsetWidth;
+    const height = el.offsetHeight;
 
-    const updated = el.getBoundingClientRect();
+    // Default: below trigger, horizontally centered on it
+    let left = trigger.left + trigger.width / 2 - width / 2;
+    let top = trigger.bottom + 8;
 
-    if (updated.right > vw - 16) {
-      el.style.left = 'auto';
-      el.style.right = '0';
-      el.style.transform = 'none';
+    if (left + width > vw - margin) left = vw - margin - width;
+    if (left < margin) left = margin;
+    if (top + height > vh - margin) {
+      // Flip above
+      top = trigger.top - height - 8;
     }
-    if (updated.left < 16) {
-      el.style.left = '0';
-      el.style.right = 'auto';
-      el.style.transform = 'none';
-    }
-    if (updated.bottom > vh - 16) {
-      el.style.top = 'auto';
-      el.style.bottom = '100%';
-      el.style.marginBottom = '8px';
-      el.style.marginTop = '0';
-    }
+    if (top < margin) top = margin;
+
+    el.style.left = `${left}px`;
+    el.style.top = `${top}px`;
+  }, [isOpen]);
+
+  // Reposition on scroll/resize while open
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = () => {
+      if (!tooltipRef.current || !triggerRef.current) return;
+      const el = tooltipRef.current;
+      const trigger = triggerRef.current.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const margin = 16;
+      const width = el.offsetWidth;
+      const height = el.offsetHeight;
+      let left = trigger.left + trigger.width / 2 - width / 2;
+      let top = trigger.bottom + 8;
+      if (left + width > vw - margin) left = vw - margin - width;
+      if (left < margin) left = margin;
+      if (top + height > vh - margin) top = trigger.top - height - 8;
+      if (top < margin) top = margin;
+      el.style.left = `${left}px`;
+      el.style.top = `${top}px`;
+    };
+    window.addEventListener('scroll', handler, true);
+    window.addEventListener('resize', handler);
+    return () => {
+      window.removeEventListener('scroll', handler, true);
+      window.removeEventListener('resize', handler);
+    };
   }, [isOpen]);
 
   if (!isGuideMode) return <>{children}</>;
@@ -114,8 +136,8 @@ export function GuideTooltip({ id, text, children, position = 'bottom' }: GuideT
       {isOpen && (
         <div
           ref={tooltipRef}
-          className="absolute z-[9999] top-full left-1/2 -translate-x-1/2 mt-2"
-          style={{ width: 'min(380px, 90vw)' }}
+          className="fixed z-[9999]"
+          style={{ width: 'min(380px, 90vw)', left: 0, top: 0 }}
         >
           <div
             className="rounded-xl p-4 text-sm leading-relaxed shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
