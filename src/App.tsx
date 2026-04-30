@@ -21,6 +21,7 @@ const SolanaSignal = lazy(() => import("./pages/SolanaSignal.tsx"));
 const SolanaAnalysis = lazy(() => import("./pages/SolanaAnalysis.tsx"));
 const SolanaEvidence = lazy(() => import("./pages/SolanaEvidence.tsx"));
 const CopperSignal = lazy(() => import("./pages/CopperSignal.tsx"));
+const EconomyDashboard = lazy(() => import("./pages/EconomyDashboard.tsx"));
 
 const queryClient = new QueryClient();
 
