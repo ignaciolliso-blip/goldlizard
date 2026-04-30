@@ -103,6 +103,14 @@ const App = () => (
                     </Suspense>
                   }
                 />
+                <Route
+                  path="/economy"
+                  element={
+                    <Suspense fallback={<LoadingProgress message="Loading Economy..." />}>
+                      <EconomyDashboard />
+                    </Suspense>
+                  }
+                />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
