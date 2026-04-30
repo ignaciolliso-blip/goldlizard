@@ -46,6 +46,11 @@ function getLayerTabs(asset: string) {
       { to: '/copper', label: 'The Signal', key: '1' },
     ];
   }
+  if (asset === 'Economy') {
+    return [
+      { to: '/economy', label: 'The Dashboard', key: '1' },
+    ];
+  }
   return [
     { to: '/', label: 'The Signal', key: '1' },
     { to: '/analysis', label: 'The Analysis', key: '2' },
