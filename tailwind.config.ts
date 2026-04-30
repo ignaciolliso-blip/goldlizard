@@ -83,6 +83,10 @@ export default {
           DEFAULT: "hsl(var(--copper))",
           light: "hsl(var(--copper-light))",
         },
+        economy: {
+          DEFAULT: "hsl(var(--economy))",
+          light: "hsl(var(--economy-light))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
