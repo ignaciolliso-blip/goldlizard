@@ -86,11 +86,11 @@ const AppNav = () => {
   }, [navigate, toggleGuideMode, layers]);
 
   // Determine accent color based on asset
-  const accentClass = currentAsset === 'Uranium' ? 'text-uranium' : currentAsset === 'Solana' ? 'text-solana' : currentAsset === 'Copper' ? 'text-copper' : 'text-gold';
-  const accentBg = currentAsset === 'Uranium' ? 'bg-uranium/10' : currentAsset === 'Solana' ? 'bg-solana/10' : currentAsset === 'Copper' ? 'bg-copper/10' : 'bg-gold/10';
-  const accentDot = currentAsset === 'Uranium' ? 'bg-uranium' : currentAsset === 'Solana' ? 'bg-solana' : currentAsset === 'Copper' ? 'bg-copper' : 'bg-gold';
-  const accentLine = currentAsset === 'Uranium' ? 'bg-uranium' : currentAsset === 'Solana' ? 'bg-solana' : currentAsset === 'Copper' ? 'bg-copper' : 'bg-gold';
-  const accentRing = currentAsset === 'Uranium' ? 'ring-uranium/40 text-uranium bg-uranium/15' : currentAsset === 'Solana' ? 'ring-solana/40 text-solana bg-solana/15' : currentAsset === 'Copper' ? 'ring-copper/40 text-copper bg-copper/15' : 'ring-gold/40 text-gold bg-gold/15';
+  const accentClass = currentAsset === 'Uranium' ? 'text-uranium' : currentAsset === 'Solana' ? 'text-solana' : currentAsset === 'Copper' ? 'text-copper' : currentAsset === 'Economy' ? 'text-economy' : 'text-gold';
+  const accentBg = currentAsset === 'Uranium' ? 'bg-uranium/10' : currentAsset === 'Solana' ? 'bg-solana/10' : currentAsset === 'Copper' ? 'bg-copper/10' : currentAsset === 'Economy' ? 'bg-economy/10' : 'bg-gold/10';
+  const accentDot = currentAsset === 'Uranium' ? 'bg-uranium' : currentAsset === 'Solana' ? 'bg-solana' : currentAsset === 'Copper' ? 'bg-copper' : currentAsset === 'Economy' ? 'bg-economy' : 'bg-gold';
+  const accentLine = currentAsset === 'Uranium' ? 'bg-uranium' : currentAsset === 'Solana' ? 'bg-solana' : currentAsset === 'Copper' ? 'bg-copper' : currentAsset === 'Economy' ? 'bg-economy' : 'bg-gold';
+  const accentRing = currentAsset === 'Uranium' ? 'ring-uranium/40 text-uranium bg-uranium/15' : currentAsset === 'Solana' ? 'ring-solana/40 text-solana bg-solana/15' : currentAsset === 'Copper' ? 'ring-copper/40 text-copper bg-copper/15' : currentAsset === 'Economy' ? 'ring-economy/40 text-economy bg-economy/15' : 'ring-gold/40 text-gold bg-gold/15';
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-b border-border">
