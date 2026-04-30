@@ -67,6 +67,10 @@
     --copper: 20 90% 52%;
     --copper-light: 20 85% 65%;
 
+    /* Economy tokens */
+    --economy: 199 89% 48%;
+    --economy-light: 199 89% 62%;
+
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
