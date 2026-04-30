@@ -11,6 +11,7 @@ const assets = [
   { label: 'Uranium', active: true, path: '/uranium' },
   { label: 'Solana', active: true, path: '/solana' },
   { label: 'Copper', active: true, path: '/copper' },
+  { label: 'Economy', active: true, path: '/economy' },
   { label: 'Oil', active: false, path: '/oil' },
   { label: 'Strategy', active: false, path: '/strategy' },
 ];
@@ -20,6 +21,7 @@ function getCurrentAsset(pathname: string) {
   if (pathname.startsWith('/uranium')) return 'Uranium';
   if (pathname.startsWith('/solana')) return 'Solana';
   if (pathname.startsWith('/copper')) return 'Copper';
+  if (pathname.startsWith('/economy')) return 'Economy';
   return 'Gold';
 }
 
@@ -42,6 +44,11 @@ function getLayerTabs(asset: string) {
   if (asset === 'Copper') {
     return [
       { to: '/copper', label: 'The Signal', key: '1' },
+    ];
+  }
+  if (asset === 'Economy') {
+    return [
+      { to: '/economy', label: 'The Dashboard', key: '1' },
     ];
   }
   return [
@@ -79,11 +86,11 @@ const AppNav = () => {
   }, [navigate, toggleGuideMode, layers]);
 
   // Determine accent color based on asset
-  const accentClass = currentAsset === 'Uranium' ? 'text-uranium' : currentAsset === 'Solana' ? 'text-solana' : currentAsset === 'Copper' ? 'text-copper' : 'text-gold';
-  const accentBg = currentAsset === 'Uranium' ? 'bg-uranium/10' : currentAsset === 'Solana' ? 'bg-solana/10' : currentAsset === 'Copper' ? 'bg-copper/10' : 'bg-gold/10';
-  const accentDot = currentAsset === 'Uranium' ? 'bg-uranium' : currentAsset === 'Solana' ? 'bg-solana' : currentAsset === 'Copper' ? 'bg-copper' : 'bg-gold';
-  const accentLine = currentAsset === 'Uranium' ? 'bg-uranium' : currentAsset === 'Solana' ? 'bg-solana' : currentAsset === 'Copper' ? 'bg-copper' : 'bg-gold';
-  const accentRing = currentAsset === 'Uranium' ? 'ring-uranium/40 text-uranium bg-uranium/15' : currentAsset === 'Solana' ? 'ring-solana/40 text-solana bg-solana/15' : currentAsset === 'Copper' ? 'ring-copper/40 text-copper bg-copper/15' : 'ring-gold/40 text-gold bg-gold/15';
+  const accentClass = currentAsset === 'Uranium' ? 'text-uranium' : currentAsset === 'Solana' ? 'text-solana' : currentAsset === 'Copper' ? 'text-copper' : currentAsset === 'Economy' ? 'text-economy' : 'text-gold';
+  const accentBg = currentAsset === 'Uranium' ? 'bg-uranium/10' : currentAsset === 'Solana' ? 'bg-solana/10' : currentAsset === 'Copper' ? 'bg-copper/10' : currentAsset === 'Economy' ? 'bg-economy/10' : 'bg-gold/10';
+  const accentDot = currentAsset === 'Uranium' ? 'bg-uranium' : currentAsset === 'Solana' ? 'bg-solana' : currentAsset === 'Copper' ? 'bg-copper' : currentAsset === 'Economy' ? 'bg-economy' : 'bg-gold';
+  const accentLine = currentAsset === 'Uranium' ? 'bg-uranium' : currentAsset === 'Solana' ? 'bg-solana' : currentAsset === 'Copper' ? 'bg-copper' : currentAsset === 'Economy' ? 'bg-economy' : 'bg-gold';
+  const accentRing = currentAsset === 'Uranium' ? 'ring-uranium/40 text-uranium bg-uranium/15' : currentAsset === 'Solana' ? 'ring-solana/40 text-solana bg-solana/15' : currentAsset === 'Copper' ? 'ring-copper/40 text-copper bg-copper/15' : currentAsset === 'Economy' ? 'ring-economy/40 text-economy bg-economy/15' : 'ring-gold/40 text-gold bg-gold/15';
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-b border-border">
@@ -107,7 +114,7 @@ const AppNav = () => {
                   className={cn(
                     'px-2.5 py-1 text-xs font-medium rounded-sm transition-colors whitespace-nowrap',
                     a.active && currentAsset === a.label
-                      ? `${a.label === 'Uranium' ? 'text-uranium bg-uranium/10' : a.label === 'Solana' ? 'text-solana bg-solana/10' : a.label === 'Copper' ? 'text-copper bg-copper/10' : 'text-gold bg-gold/10'}`
+                      ? `${a.label === 'Uranium' ? 'text-uranium bg-uranium/10' : a.label === 'Solana' ? 'text-solana bg-solana/10' : a.label === 'Copper' ? 'text-copper bg-copper/10' : a.label === 'Economy' ? 'text-economy bg-economy/10' : 'text-gold bg-gold/10'}`
                       : a.active
                       ? 'text-muted-foreground hover:text-foreground'
                       : 'text-muted-foreground/40 cursor-not-allowed'
@@ -170,7 +177,7 @@ const AppNav = () => {
             <NavLink
               key={l.to}
               to={l.to}
-              end={l.to === '/' || l.to === '/uranium' || l.to === '/solana' || l.to === '/copper'}
+              end={l.to === '/' || l.to === '/uranium' || l.to === '/solana' || l.to === '/copper' || l.to === '/economy'}
               className={({ isActive }) =>
                 cn(
                   'px-4 py-1.5 text-sm font-medium transition-colors relative',
@@ -197,12 +204,12 @@ const AppNav = () => {
               <NavLink
                 key={l.to}
                 to={l.to}
-                end={l.to === '/' || l.to === '/uranium' || l.to === '/solana' || l.to === '/copper'}
+                end={l.to === '/' || l.to === '/uranium' || l.to === '/solana' || l.to === '/copper' || l.to === '/economy'}
                 className={({ isActive }) =>
                   cn(
                     'block px-4 py-2.5 text-sm font-medium rounded-md transition-colors',
                     isActive
-                      ? `${accentClass} ${accentBg} border-l-2 ${currentAsset === 'Uranium' ? 'border-uranium' : currentAsset === 'Solana' ? 'border-solana' : currentAsset === 'Copper' ? 'border-copper' : 'border-gold'}`
+                      ? `${accentClass} ${accentBg} border-l-2 ${currentAsset === 'Uranium' ? 'border-uranium' : currentAsset === 'Solana' ? 'border-solana' : currentAsset === 'Copper' ? 'border-copper' : currentAsset === 'Economy' ? 'border-economy' : 'border-gold'}`
                       : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
                   )
                 }
