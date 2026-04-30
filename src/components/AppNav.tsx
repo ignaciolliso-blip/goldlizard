@@ -11,6 +11,7 @@ const assets = [
   { label: 'Uranium', active: true, path: '/uranium' },
   { label: 'Solana', active: true, path: '/solana' },
   { label: 'Copper', active: true, path: '/copper' },
+  { label: 'Economy', active: true, path: '/economy' },
   { label: 'Oil', active: false, path: '/oil' },
   { label: 'Strategy', active: false, path: '/strategy' },
 ];
@@ -20,6 +21,7 @@ function getCurrentAsset(pathname: string) {
   if (pathname.startsWith('/uranium')) return 'Uranium';
   if (pathname.startsWith('/solana')) return 'Solana';
   if (pathname.startsWith('/copper')) return 'Copper';
+  if (pathname.startsWith('/economy')) return 'Economy';
   return 'Gold';
 }
 
