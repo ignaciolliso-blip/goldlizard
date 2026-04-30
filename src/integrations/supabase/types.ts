@@ -451,6 +451,144 @@ export type Database = {
         }
         Relationships: []
       }
+      economy_cache_meta: {
+        Row: {
+          error_message: string | null
+          fetch_status: string | null
+          indicator_id: string
+          last_fetched: string | null
+          last_observation_date: string | null
+          region: string
+        }
+        Insert: {
+          error_message?: string | null
+          fetch_status?: string | null
+          indicator_id: string
+          last_fetched?: string | null
+          last_observation_date?: string | null
+          region: string
+        }
+        Update: {
+          error_message?: string | null
+          fetch_status?: string | null
+          indicator_id?: string
+          last_fetched?: string | null
+          last_observation_date?: string | null
+          region?: string
+        }
+        Relationships: []
+      }
+      economy_forecasts: {
+        Row: {
+          created_at: string | null
+          forecast_date: string
+          id: number
+          indicator_id: string
+          publication_round: string | null
+          region: string
+          source: string | null
+          unit: string | null
+          updated_at: string | null
+          value: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          forecast_date: string
+          id?: number
+          indicator_id: string
+          publication_round?: string | null
+          region: string
+          source?: string | null
+          unit?: string | null
+          updated_at?: string | null
+          value?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          forecast_date?: string
+          id?: number
+          indicator_id?: string
+          publication_round?: string | null
+          region?: string
+          source?: string | null
+          unit?: string | null
+          updated_at?: string | null
+          value?: number | null
+        }
+        Relationships: []
+      }
+      economy_indicator_config: {
+        Row: {
+          category: string
+          chart_type: string | null
+          description: string | null
+          display_order: number | null
+          indicator_id: string
+          label: string
+          notes: string | null
+          unit_label: string | null
+        }
+        Insert: {
+          category: string
+          chart_type?: string | null
+          description?: string | null
+          display_order?: number | null
+          indicator_id: string
+          label: string
+          notes?: string | null
+          unit_label?: string | null
+        }
+        Update: {
+          category?: string
+          chart_type?: string | null
+          description?: string | null
+          display_order?: number | null
+          indicator_id?: string
+          label?: string
+          notes?: string | null
+          unit_label?: string | null
+        }
+        Relationships: []
+      }
+      economy_observations: {
+        Row: {
+          created_at: string | null
+          id: number
+          indicator_id: string
+          observation_date: string
+          region: string
+          source: string | null
+          source_series_id: string | null
+          unit: string | null
+          updated_at: string | null
+          value: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          indicator_id: string
+          observation_date: string
+          region: string
+          source?: string | null
+          source_series_id?: string | null
+          unit?: string | null
+          updated_at?: string | null
+          value?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          indicator_id?: string
+          observation_date?: string
+          region?: string
+          source?: string | null
+          source_series_id?: string | null
+          unit?: string | null
+          updated_at?: string | null
+          value?: number | null
+        }
+        Relationships: []
+      }
       etf_flows: {
         Row: {
           created_at: string
