@@ -227,18 +227,26 @@ const CustomTooltip = forwardRef<HTMLDivElement, CustomTooltipProps>(function Cu
       <div className="mt-1 space-y-0.5">
         {payload.map((p: any) => {
           const isForecast = p.dataKey === 'forecast';
+          const isYoY = p.dataKey === 'yoyPct';
           const src = p.payload?.forecastSource;
+          const labelText = isYoY
+            ? 'YoY %'
+            : isForecast
+            ? `Forecast${src ? ` (${src})` : ''}`
+            : p.name || 'Value';
           return (
             <div key={p.dataKey} className="flex items-center gap-2">
               <span
                 className="inline-block h-2 w-2 rounded-full"
                 style={{ background: p.color }}
               />
-              <span className="text-muted-foreground">
-                {isForecast ? `Forecast${src ? ` (${src})` : ''}` : p.name || 'Value'}:
-              </span>
+              <span className="text-muted-foreground">{labelText}:</span>
               <span className="font-mono text-foreground">
-                {p.value != null ? `${formatYAxis(p.value, unit)} ${unit}` : '—'}
+                {p.value != null
+                  ? isYoY
+                    ? `${(p.value as number).toFixed(2)}%`
+                    : `${formatYAxis(p.value, unit)} ${unit}`
+                  : '—'}
               </span>
             </div>
           );
