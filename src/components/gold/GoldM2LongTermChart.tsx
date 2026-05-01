@@ -121,7 +121,7 @@ function ChartTooltip({ active, payload }: any) {
 
 interface Props {
   currentGoldPrice?: number;
-  currentM2Billions?: number;
+  currentG5M2Billions?: number;  // G5 Global M2 = live FRED US M2 × 4.6
 }
 
 type RangeKey = '100y' | '50y' | '20y' | '10y' | '5y' | '3y' | '1y' | 'ytd';
@@ -136,15 +136,23 @@ const RANGES: { key: RangeKey; label: string; years: number | 'ytd' }[] = [
   { key: 'ytd',  label: 'YTD',  years: 'ytd' },
 ];
 
-export default function GoldM2LongTermChart({ currentGoldPrice }: Props) {
+export default function GoldM2LongTermChart({ currentGoldPrice, currentG5M2Billions }: Props) {
   const isMobile = useIsMobile();
   const [showAnnotations, setShowAnnotations] = useState(true);
   const [range, setRange] = useState<RangeKey>('100y');
 
   const allData = useMemo(() => {
-    return RAW_DATA.map(r => {
+    const rows = [...RAW_DATA];
+    const last = rows[rows.length - 1];
+    rows[rows.length - 1] = {
+      ...last,
+      goldPriceAvg:  currentGoldPrice   ?? last.goldPriceAvg,
+      g5M2_T:        currentG5M2Billions ? currentG5M2Billions / 1000 : last.g5M2_T,
+      confidence:    'verified' as const,
+    };
+    return rows.map(r => {
       const oz = r.goldTonnes * OZ_PER_TONNE;
-      const price = (r.year === 2025 && currentGoldPrice) ? currentGoldPrice : r.goldPriceAvg;
+      const price = r.goldPriceAvg;
       const goldMarketCap = price * oz;
       const g5M2 = r.g5M2_T * 1e12;
       const ratio = (goldMarketCap / g5M2) * 100;
@@ -158,7 +166,7 @@ export default function GoldM2LongTermChart({ currentGoldPrice }: Props) {
         confidence: r.confidence,
       };
     });
-  }, [currentGoldPrice]);
+  }, [currentGoldPrice, currentG5M2Billions]);
 
   const chartData = useMemo(() => {
     if (range === 'ytd') {

@@ -20,6 +20,23 @@ export const TOTAL_OZ = TOTAL_ABOVE_GROUND_TONNES * TROY_OZ_PER_TONNE; // 6.953B
 // Update annually when CB data is reconciled.
 export const G5_US_M2_MULTIPLIER = 4.6;
 
+// ─── MANUAL UPDATE SCHEDULE ──────────────────────────────────────────────────
+// Two constants below require annual human review. They cannot be fetched
+// automatically because no free API publishes them in real-time.
+//
+// TOTAL_ABOVE_GROUND_TONNES: update each February when WGC publishes
+//   Gold Demand Trends Q4 report. https://www.gold.org/goldhub/research/gold-demand-trends
+//   Last updated: end-2024 (216,265t). Next due: February 2026.
+//
+// G5_US_M2_MULTIPLIER: review each January using prior December CB releases.
+//   US share has been 21–24% since 2020. Recalculate as:
+//   (US M2 Dec) / (US + Euro + China + Japan + UK M2 Dec, all in USD)
+//   Last reviewed: 2024 data. Next due: January 2026.
+//
+// If today's date is past the due date, a staleness warning appears in the Anchor card.
+export const CONSTANTS_LAST_UPDATED  = '2024-12-31'; // ISO date of last manual review
+export const CONSTANTS_NEXT_REVIEW   = '2026-01-31'; // show warning after this date
+
 // G5 M2 growth rate (2007–2024 CAGR = 5.1%/yr in USD terms)
 // Using 5.0%/yr going forward (slightly conservative)
 // Gold supply growth: ~1.5%/yr (WGC mine production ~3,500t/yr on 216,000t stock)

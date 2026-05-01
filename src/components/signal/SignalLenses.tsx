@@ -85,6 +85,15 @@ function AnchorCard({ anchor }: { anchor: AnchorResult | null }) {
         <p className="text-xs text-muted-foreground/70 text-center">
           G5 Global M2 (US+Euro+China+Japan+UK) ÷ all mined oz. Parity grows ~3.5%/yr (G5 M2 +5%, gold supply +1.5%). Mean 12.7%, median 12.3% (2007–2024).
         </p>
+        {(() => {
+          const nextReview = new Date('2026-01-31');
+          const isStale = new Date() > nextReview;
+          return isStale ? (
+            <p className="text-[10px] text-yellow-500/80 text-center mt-1 border border-yellow-500/20 rounded px-2 py-1">
+              ⚠ Gold stock and G5 multiplier constants due for annual review. Check WGC Q4 report and CB data.
+            </p>
+          ) : null;
+        })()}
       </div>
     </CardShell>
   );

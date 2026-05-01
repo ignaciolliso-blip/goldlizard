@@ -179,12 +179,14 @@ const Index = () => {
           currentGDXPrice={currentGDXPrice}
         />
 
-        {/* 100-Year Gold Market Cap vs M2 Chart */}
+        {/* 100-Year Gold Market Cap vs G5 M2 Chart */}
         <GoldM2LongTermChart
           currentGoldPrice={currentGoldPrice}
-          currentM2Billions={rawData?.fredResults['WM2NS']?.length
-            ? rawData.fredResults['WM2NS'][rawData.fredResults['WM2NS'].length - 1].value
-            : undefined}
+          currentG5M2Billions={
+            rawData?.fredResults['WM2NS']?.length
+              ? rawData.fredResults['WM2NS'][rawData.fredResults['WM2NS'].length - 1].value * 4.6
+              : undefined
+          }
         />
 
         {/* Band 2: Projection Table */}
