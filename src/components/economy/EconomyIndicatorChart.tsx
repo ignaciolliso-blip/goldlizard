@@ -342,7 +342,12 @@ export default function EconomyIndicatorChart({
   sourceUrl,
   chartType,
   notes,
+  cardTitle,
+  emptyStateNote,
+  regionNote,
 }: EconomyIndicatorChartProps) {
+  const displayTitle = cardTitle || label;
+  const isNotApplicable = sourceLabel === 'N/A';
   const [zoom, setZoom] = useState<ZoomMode>('full');
   const [expanded, setExpanded] = useState(false);
 
@@ -350,6 +355,7 @@ export default function EconomyIndicatorChart({
     queryKey: ['economy-chart', indicatorId, region],
     queryFn: () => fetchChartData(indicatorId, region),
     staleTime: 5 * 60 * 1000,
+    enabled: !isNotApplicable,
   });
 
   const { series, hasForecast, isEmpty } = useMemo(() => {
@@ -380,19 +386,22 @@ export default function EconomyIndicatorChart({
   }
 
   // Empty / not applicable state
-  if (isError || isEmpty) {
+  if (isNotApplicable || isError || isEmpty) {
+    const message = emptyStateNote || (isNotApplicable
+      ? `Not applicable for ${regionLabel}`
+      : `No data available for ${regionLabel}`);
     return (
       <div className="bg-card/50 border border-border/60 rounded-xl p-4 flex flex-col">
         <div className="flex items-start justify-between mb-3">
           <div>
-            <div className="text-sm font-medium text-muted-foreground">{label}</div>
+            <div className="text-sm font-medium text-muted-foreground">{displayTitle}</div>
             <div className="text-xs text-muted-foreground/70">{regionLabel}</div>
           </div>
         </div>
         <div className="flex-1 min-h-[220px] flex flex-col items-center justify-center text-center px-6">
           <Info className="h-6 w-6 text-muted-foreground/60 mb-2" />
-          <div className="text-sm text-muted-foreground">Not applicable for {regionLabel}</div>
-          {notes && (
+          <div className="text-sm text-muted-foreground">{message}</div>
+          {notes && !emptyStateNote && (
             <div className="text-xs text-muted-foreground/70 mt-1 italic max-w-xs">{notes}</div>
           )}
         </div>
@@ -404,7 +413,7 @@ export default function EconomyIndicatorChart({
     <div className="flex items-start justify-between gap-3">
       {!inDialog && (
         <div className="min-w-0">
-          <div className="text-sm font-medium text-foreground truncate">{label}</div>
+          <div className="text-sm font-medium text-foreground truncate">{displayTitle}</div>
           <div className="text-xs text-muted-foreground">{regionLabel}</div>
         </div>
       )}
@@ -454,8 +463,10 @@ export default function EconomyIndicatorChart({
           hasForecast={hasForecast}
         />
         <div className="flex items-center justify-between gap-3 pt-1">
-          {notes ? (
-            <div className="text-xs italic text-muted-foreground">{notes}</div>
+          {notes || regionNote ? (
+            <div className="text-xs italic text-muted-foreground">
+              {regionNote || notes}
+            </div>
           ) : (
             <div />
           )}
