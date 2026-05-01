@@ -224,6 +224,23 @@ export default function GoldM2LongTermChart({ currentGoldPrice }: Props) {
         </div>
       </div>
 
+      {/* Range selector */}
+      <div className="flex flex-wrap items-center gap-1">
+        {RANGES.map(r => (
+          <button
+            key={r.key}
+            onClick={() => setRange(r.key)}
+            className={`text-xs px-2 py-1 rounded border transition-colors ${
+              range === r.key
+                ? 'bg-primary/15 border-primary/50 text-foreground font-semibold'
+                : 'border-border/60 text-muted-foreground hover:text-foreground hover:border-border'
+            }`}
+          >
+            {r.label}
+          </button>
+        ))}
+      </div>
+
       {/* Chart */}
       <div className="w-full" style={{ height: isMobile ? 320 : 420 }}>
         <ResponsiveContainer width="100%" height="100%">
