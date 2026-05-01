@@ -293,10 +293,28 @@ export default function GoldM2LongTermChart({ currentGoldPrice, currentM2Billion
         </ResponsiveContainer>
       </div>
 
-      <div className="text-[11px] text-muted-foreground/80 space-y-0.5 pt-2 border-t border-border/40">
-        <div>Gold stock: WGC / GFMS cumulative mined estimates (~1.6%/yr growth)</div>
-        <div>M2: FRED M2SL (1959–) + Friedman-Schwartz estimates (pre-1959)</div>
-        <div>Ratio = (gold price × all mined oz) ÷ US M2</div>
+      <div className="border-t border-border/40 pt-3 space-y-2">
+        <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider">Sources</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1 text-[10px] text-muted-foreground/70 font-mono">
+          <a href="https://fred.stlouisfed.org/series/GOLDAMGBD228NLBM" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors truncate">
+            Gold spot price (1968–) — FRED GOLDAMGBD228NLBM ↗
+          </a>
+          <a href="https://fred.stlouisfed.org/series/M2SL" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors truncate">
+            M2 money supply (1959–) — FRED M2SL ↗
+          </a>
+          <a href="https://www.gold.org/goldhub/data/above-ground-stocks" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors truncate">
+            Above-ground gold stock — World Gold Council ↗
+          </a>
+          <a href="https://www.nber.org/books-and-chapters/monetary-history-united-states-1867-1960" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors truncate">
+            Pre-1959 M2 estimates — Friedman & Schwartz (NBER) ↗
+          </a>
+          <a href="https://www.kitco.com/charts/historicalgold.html" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors truncate">
+            Historical gold prices (pre-1968) — Kitco ↗
+          </a>
+          <span className="text-muted-foreground/50">
+            Ratio = (gold price × all mined oz) ÷ US M2
+          </span>
+        </div>
       </div>
     </div>
   );
