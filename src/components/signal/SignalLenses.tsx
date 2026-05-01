@@ -123,7 +123,7 @@ function ForcesCard({ gdiResult, currentGDI }: { gdiResult: GDIResult | null; cu
       <div className="space-y-4">
         <div className="text-center">
           <span className={`font-mono text-3xl font-bold ${signalColor}`}>
-            {currentGDI >= 0 ? '+' : ''}{currentGDI.toFixed(1)}
+            {currentGDI >= 0 ? '+' : ''}{currentGDI.toFixed(2)}
           </span>
           <p className={`text-sm font-semibold mt-1 ${signalColor}`}>{signal}</p>
         </div>

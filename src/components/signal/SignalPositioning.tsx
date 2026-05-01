@@ -91,7 +91,7 @@ export default function SignalPositioning({
     }
   }
 
-  const narrative = `Gold at ${pctParity.toFixed(0)}% of investable parity (${zoneInfo?.label || '—'}). The GDI reads ${currentGDI >= 0 ? '+' : ''}${currentGDI.toFixed(1)} / ${gdiSignal.toUpperCase()}, driven primarily by ${keyDriver?.name || 'multiple factors'}. Miners at ${sectorPNAV.toFixed(2)}× P/NAV — ${pnavDesc} (hist. avg ${HISTORICAL_AVG_PNAV}×). 5-year expected CAGR: ${goldCagr5y} gold, ${gdxCagr5y} GDX.`;
+  const narrative = `Gold at ${pctParity.toFixed(0)}% of investable parity (${zoneInfo?.label || '—'}). The GDI reads ${currentGDI >= 0 ? '+' : ''}${currentGDI.toFixed(2)} / ${gdiSignal.toUpperCase()}, driven primarily by ${keyDriver?.name || 'multiple factors'}. Miners at ${sectorPNAV.toFixed(2)}× P/NAV — ${pnavDesc} (hist. avg ${HISTORICAL_AVG_PNAV}×). 5-year expected CAGR: ${goldCagr5y} gold, ${gdxCagr5y} GDX.`;
 
   return (
     <div className={`bg-card border border-border ${borderColorMap[positioning.color]} border-l-4 rounded-xl p-6 sm:p-7 space-y-4`}>
