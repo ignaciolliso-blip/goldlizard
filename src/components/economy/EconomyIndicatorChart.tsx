@@ -255,17 +255,41 @@ const ChartBody = forwardRef<HTMLDivElement, ChartBodyProps>(function ChartBody(
   const gridStroke = 'hsl(var(--border))';
   const tickStyle = { fontSize: 11, fill: 'hsl(var(--muted-foreground))' };
 
+  // Build numeric time domain so Recharts can space ticks evenly across the
+  // full range instead of treating each daily date as a categorical label.
+  const timestamps = data
+    .map((d) => parseISODate(d.date)?.getTime())
+    .filter((t): t is number => typeof t === 'number');
+  const xDomain: [number, number] | undefined =
+    timestamps.length > 0 ? [Math.min(...timestamps), Math.max(...timestamps)] : undefined;
+  const xTickFormatter = (ts: number) => {
+    const iso = new Date(ts).toISOString().slice(0, 10);
+    return formatDateShort(iso);
+  };
+  const tooltipLabelFormatter = (ts: any) => {
+    if (typeof ts === 'number') return new Date(ts).toISOString().slice(0, 10);
+    return String(ts);
+  };
+  const xAxisProps = {
+    dataKey: 'ts' as const,
+    type: 'number' as const,
+    scale: 'time' as const,
+    domain: xDomain ?? ['dataMin', 'dataMax'],
+    tickFormatter: xTickFormatter,
+    tick: tickStyle,
+    stroke: gridStroke,
+    minTickGap: 40,
+  };
+
+  // Augment data with numeric timestamp
+  const numericData = data.map((d) => ({ ...d, ts: parseISODate(d.date)?.getTime() ?? 0 }));
+
   if (chartType === 'stacked_area') {
     return (
       <ResponsiveContainer width="100%" height={height}>
-        <AreaChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
+        <AreaChart data={numericData} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
           <CartesianGrid stroke={gridStroke} strokeOpacity={0.4} vertical={false} />
-          <XAxis
-            dataKey="date"
-            tickFormatter={formatDateShort}
-            tick={tickStyle}
-            stroke={gridStroke}
-          />
+          <XAxis {...xAxisProps} />
           <YAxis
             tick={tickStyle}
             stroke={gridStroke}
@@ -277,7 +301,7 @@ const ChartBody = forwardRef<HTMLDivElement, ChartBodyProps>(function ChartBody(
               style: { fontSize: 11, fill: 'hsl(var(--muted-foreground))', textAnchor: 'middle' },
             }}
           />
-          <Tooltip content={<CustomTooltip unit={unit} />} />
+          <Tooltip content={<CustomTooltip unit={unit} />} labelFormatter={tooltipLabelFormatter} />
           {subCategories.map((sc, i) => (
             <Area
               key={sc}
@@ -297,14 +321,9 @@ const ChartBody = forwardRef<HTMLDivElement, ChartBodyProps>(function ChartBody(
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
+      <LineChart data={numericData} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
         <CartesianGrid stroke={gridStroke} strokeOpacity={0.4} vertical={false} />
-        <XAxis
-          dataKey="date"
-          tickFormatter={formatDateShort}
-          tick={tickStyle}
-          stroke={gridStroke}
-        />
+        <XAxis {...xAxisProps} />
         <YAxis
           tick={tickStyle}
           stroke={gridStroke}
@@ -316,7 +335,7 @@ const ChartBody = forwardRef<HTMLDivElement, ChartBodyProps>(function ChartBody(
             style: { fontSize: 11, fill: 'hsl(var(--muted-foreground))', textAnchor: 'middle' },
           }}
         />
-        <Tooltip content={<CustomTooltip unit={unit} />} />
+        <Tooltip content={<CustomTooltip unit={unit} />} labelFormatter={tooltipLabelFormatter} />
         <Line
           type="monotone"
           dataKey="actual"
