@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { INDICATOR_DEFINITIONS, REGION_ORDER, type EconomyRegion } from './economyConfig';
 
 export interface EconomyObservation {
   id: number;
@@ -39,7 +40,6 @@ export async function fetchAllEconomyData(): Promise<{
   forecasts: EconomyForecast[];
   config: EconomyIndicatorConfig[];
 }> {
-  // Pull pages of 1000 to bypass row limit
   async function fetchAll<T>(table: string, orderCol: string): Promise<T[]> {
     const all: T[] = [];
     let from = 0;
@@ -76,14 +76,69 @@ export async function fetchAllEconomyData(): Promise<{
   };
 }
 
-export async function triggerEconomyRefresh(): Promise<{
-  fetched?: number;
-  errors?: string[];
-  duration_ms?: number;
-}> {
-  const { data, error } = await supabase.functions.invoke('fetch-economy-data', {
-    body: {},
-  });
-  if (error) throw error;
-  return data ?? {};
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+export interface RefreshSummary {
+  total: number;
+  succeeded: number;
+  failed: number;
+  errors: string[];
+  duration_ms: number;
+}
+
+/**
+ * Trigger a refresh by invoking the edge function once per indicator+region
+ * combination. Skips combinations where the source is 'N/A' (not applicable).
+ * Calls are sequential with a 200ms delay to avoid overwhelming the runtime.
+ */
+export async function triggerEconomyRefresh(
+  options: { forceRefresh?: boolean; onProgress?: (done: number, total: number) => void } = {},
+): Promise<RefreshSummary> {
+  const startedAt = Date.now();
+  const combos: { indicator_id: string; region: EconomyRegion }[] = [];
+
+  for (const def of INDICATOR_DEFINITIONS) {
+    for (const region of REGION_ORDER) {
+      if (def.sourceLabel[region] === 'N/A') continue;
+      combos.push({ indicator_id: def.id, region });
+    }
+  }
+
+  let succeeded = 0;
+  let failed = 0;
+  const errors: string[] = [];
+
+  for (let i = 0; i < combos.length; i++) {
+    const c = combos[i];
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-economy-data', {
+        body: { indicator_id: c.indicator_id, region: c.region, force_refresh: !!options.forceRefresh },
+      });
+      if (error) {
+        failed++;
+        errors.push(`${c.indicator_id}/${c.region}: ${error.message}`);
+      } else {
+        const errs = (data as any)?.errors as string[] | undefined;
+        if (errs && errs.length) {
+          failed++;
+          errors.push(...errs);
+        } else {
+          succeeded++;
+        }
+      }
+    } catch (e: any) {
+      failed++;
+      errors.push(`${c.indicator_id}/${c.region}: ${e?.message || String(e)}`);
+    }
+    options.onProgress?.(i + 1, combos.length);
+    if (i < combos.length - 1) await sleep(200);
+  }
+
+  return {
+    total: combos.length,
+    succeeded,
+    failed,
+    errors,
+    duration_ms: Date.now() - startedAt,
+  };
 }

@@ -224,10 +224,30 @@ serve(async (req) => {
   let body: { indicator_id?: string; region?: string; force_refresh?: boolean } = {};
   try { body = await req.json(); } catch (_) { /* allow empty */ }
 
-  // Determine job set
-  let jobs = JOBS;
-  if (body.indicator_id && body.region) {
-    jobs = JOBS.filter((j) => j.indicator_id === body.indicator_id && j.region === body.region);
+  // REQUIRED: process only one indicator+region per invocation to avoid CPU timeout
+  if (!body.indicator_id || !body.region) {
+    return new Response(
+      JSON.stringify({
+        error: "indicator_id and region are required",
+        hint: "Call this function once per indicator+region combination.",
+      }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
+  const jobs = JOBS.filter(
+    (j) => j.indicator_id === body.indicator_id && j.region === body.region,
+  );
+
+  if (jobs.length === 0) {
+    return new Response(
+      JSON.stringify({
+        fetched: 0,
+        errors: [`No job defined for ${body.indicator_id}/${body.region}`],
+        duration_ms: Date.now() - startedAt,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
 
   // Load cache meta for TTL filtering
