@@ -255,9 +255,10 @@ interface ChartBodyProps {
   unit: string;
   height: number;
   hasForecast: boolean;
+  showYoYPercent?: boolean;
 }
 const ChartBody = forwardRef<HTMLDivElement, ChartBodyProps>(function ChartBody(
-  { data, subCategories, chartType, unit, height, hasForecast },
+  { data, subCategories, chartType, unit, height, hasForecast, showYoYPercent },
   ref,
 ) {
   const gridStroke = 'hsl(var(--border))';
