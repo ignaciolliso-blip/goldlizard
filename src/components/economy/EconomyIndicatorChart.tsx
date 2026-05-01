@@ -195,10 +195,13 @@ interface CustomTooltipProps {
   label?: string;
   unit: string;
 }
-function CustomTooltip({ active, payload, label, unit }: CustomTooltipProps) {
+const CustomTooltip = forwardRef<HTMLDivElement, CustomTooltipProps>(function CustomTooltip(
+  { active, payload, label, unit },
+  ref,
+) {
   if (!active || !payload || !payload.length) return null;
   return (
-    <div className="rounded-md border border-border bg-background px-3 py-2 text-xs shadow-lg">
+    <div ref={ref} className="rounded-md border border-border bg-background px-3 py-2 text-xs shadow-lg">
       <div className="font-medium text-foreground">{label ? formatDateFull(label) : ''}</div>
       <div className="mt-1 space-y-0.5">
         {payload.map((p: any) => {
@@ -222,7 +225,7 @@ function CustomTooltip({ active, payload, label, unit }: CustomTooltipProps) {
       </div>
     </div>
   );
-}
+});
 
 interface ChartBodyProps {
   data: ChartDatum[];
@@ -232,7 +235,10 @@ interface ChartBodyProps {
   height: number;
   hasForecast: boolean;
 }
-function ChartBody({ data, subCategories, chartType, unit, height, hasForecast }: ChartBodyProps) {
+const ChartBody = forwardRef<HTMLDivElement, ChartBodyProps>(function ChartBody(
+  { data, subCategories, chartType, unit, height, hasForecast },
+  ref,
+) {
   const gridStroke = 'hsl(var(--border))';
   const tickStyle = { fontSize: 11, fill: 'hsl(var(--muted-foreground))' };
 
