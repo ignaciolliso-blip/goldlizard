@@ -62,11 +62,17 @@ function formatYAxis(value: number, unit: string): string {
 }
 
 // Parse YYYY-MM-DD as UTC to avoid timezone shifting the displayed day.
-function parseISODate(iso: string): Date | null {
-  if (!iso) return null;
-  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (!m) {
+function parseISODate(iso: unknown): Date | null {
+  if (iso == null) return null;
+  if (iso instanceof Date) return Number.isNaN(iso.getTime()) ? null : iso;
+  if (typeof iso === 'number') {
     const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const s = String(iso);
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) {
+    const d = new Date(s);
     return Number.isNaN(d.getTime()) ? null : d;
   }
   return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
