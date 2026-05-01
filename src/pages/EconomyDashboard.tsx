@@ -117,6 +117,7 @@ export default function EconomyDashboard() {
                   cardTitle={indicator.cardTitle?.[region]}
                   emptyStateNote={indicator.emptyStateNote?.[region]}
                   regionNote={indicator.regionNote?.[region]}
+                  showYoYPercent={indicator.showYoYPercent}
                 />
               ))}
             </div>
