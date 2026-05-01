@@ -124,11 +124,24 @@ interface Props {
   currentM2Billions?: number;
 }
 
+type RangeKey = '100y' | '50y' | '20y' | '10y' | '5y' | '3y' | '1y' | 'ytd';
+const RANGES: { key: RangeKey; label: string; years: number | 'ytd' }[] = [
+  { key: '100y', label: '100Y', years: 100 },
+  { key: '50y',  label: '50Y',  years: 50 },
+  { key: '20y',  label: '20Y',  years: 20 },
+  { key: '10y',  label: '10Y',  years: 10 },
+  { key: '5y',   label: '5Y',   years: 5 },
+  { key: '3y',   label: '3Y',   years: 3 },
+  { key: '1y',   label: '1Y',   years: 1 },
+  { key: 'ytd',  label: 'YTD',  years: 'ytd' },
+];
+
 export default function GoldM2LongTermChart({ currentGoldPrice }: Props) {
   const isMobile = useIsMobile();
   const [showAnnotations, setShowAnnotations] = useState(true);
+  const [range, setRange] = useState<RangeKey>('100y');
 
-  const chartData = useMemo(() => {
+  const allData = useMemo(() => {
     return RAW_DATA.map(r => {
       const oz = r.goldTonnes * OZ_PER_TONNE;
       const price = (r.year === 2025 && currentGoldPrice) ? currentGoldPrice : r.goldPriceAvg;
