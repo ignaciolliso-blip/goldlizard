@@ -18,6 +18,7 @@ import Footer from '@/components/Footer';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { FRED_SERIES } from '@/lib/constants';
+import GoldM2LongTermChart from '@/components/gold/GoldM2LongTermChart';
 
 const Index = () => {
   const [loading, setLoading] = useState(true);
@@ -176,6 +177,14 @@ const Index = () => {
           leverageResult={leverageResult}
           currentGDI={currentGDI}
           currentGDXPrice={currentGDXPrice}
+        />
+
+        {/* 100-Year Gold Market Cap vs M2 Chart */}
+        <GoldM2LongTermChart
+          currentGoldPrice={currentGoldPrice}
+          currentM2Billions={rawData?.fredResults['WM2NS']?.length
+            ? rawData.fredResults['WM2NS'][rawData.fredResults['WM2NS'].length - 1].value
+            : undefined}
         />
 
         {/* Band 2: Projection Table */}
