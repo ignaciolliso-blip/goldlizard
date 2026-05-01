@@ -28,13 +28,13 @@ function AnchorCard({ anchor }: { anchor: AnchorResult | null }) {
   const clamp = (pct: number) => Math.max(0, Math.min(100, (pct / gaugeTop) * 100));
 
   const levels = [
-    { pct: 100, label: 'FULL PARITY', price: fmt(investableParity), color: 'text-blue-400', highlight: false },
-    { pct: 60, label: '1980 PEAK (60%)', price: '', color: 'text-bearish', highlight: false },
+    { pct: 100, label: 'G5 FULL PARITY', price: fmt(investableParity), color: 'text-blue-400', highlight: false },
+    { pct: 50.7, label: '1980 MANIA (51%)', price: '', color: 'text-bearish', highlight: false },
     { pct: pctOfInvestableParity, label: `● TODAY (${pctOfInvestableParity.toFixed(0)}%)`, price: fmt(currentGoldPrice), color: 'text-primary', highlight: true },
-    { pct: 45, label: '2011 (45%)', price: '', color: 'text-muted-foreground', highlight: false },
+    { pct: 15.2, label: '2011 PEAK (15%)', price: '', color: 'text-muted-foreground', highlight: false },
     { pct: HISTORICAL_MEAN_PCT, label: `MEAN (${HISTORICAL_MEAN_PCT}%)`, price: '', color: 'text-neutral', highlight: false },
     { pct: HISTORICAL_MEDIAN_PCT, label: `MEDIAN (${HISTORICAL_MEDIAN_PCT}%)`, price: '', color: 'text-bullish', highlight: false },
-    { pct: 10, label: '1999 (10%)', price: '', color: 'text-muted-foreground', highlight: false },
+    { pct: 6.3, label: '1999 LOW (6%)', price: '', color: 'text-muted-foreground', highlight: false },
   ];
 
   const goldAtMedian = investableParity * (HISTORICAL_MEDIAN_PCT / 100);
@@ -65,11 +65,11 @@ function AnchorCard({ anchor }: { anchor: AnchorResult | null }) {
         <div className="space-y-1 text-sm font-mono border-t border-border pt-3">
           <div className="flex justify-between">
             <span className="text-blue-400">{fmt(investableParity)}</span>
-            <span className="text-muted-foreground">Investable parity</span>
+            <span className="text-muted-foreground">G5 total parity</span>
           </div>
           <div className="flex justify-between">
             <span className="text-primary font-semibold">{fmt(currentGoldPrice)}</span>
-            <span className="text-muted-foreground">Gold spot ({pctOfInvestableParity.toFixed(0)}%)</span>
+            <span className="text-muted-foreground">Gold spot ({pctOfInvestableParity.toFixed(0)}% of parity)</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">{fmt(goldAtMean)}</span>
@@ -83,7 +83,7 @@ function AnchorCard({ anchor }: { anchor: AnchorResult | null }) {
         <p className={`text-sm font-semibold text-center ${conclusion.color}`}>{conclusion.text}</p>
         <p className="text-xs text-muted-foreground text-center leading-relaxed">{conclusion.detail}</p>
         <p className="text-xs text-muted-foreground/70 text-center">
-          Parity rises ~4.5%/yr as M2 grows 6% and gold supply grows only 1.5%.
+          G5 Global M2 (US+Euro+China+Japan+UK) ÷ all mined oz. Parity grows ~3.5%/yr (G5 M2 +5%, gold supply +1.5%). Mean 12.7%, median 12.3% (2007–2024).
         </p>
       </div>
     </CardShell>

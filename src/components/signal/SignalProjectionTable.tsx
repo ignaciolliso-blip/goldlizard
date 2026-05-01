@@ -101,8 +101,8 @@ export default function SignalProjectionTable({ anchorResult, leverageResult, sc
           <tbody>
             <tr className="border-b border-border">
               <td className="px-4 py-3 text-sm text-muted-foreground">
-                <GuideTooltip id="proj-total-parity" text="Total parity = M2 money supply ÷ all gold ever mined. The absolute floor — if every ounce of gold (including jewellery) backed the money supply equally.">
-                  Total Parity (M2 ÷ all oz)
+                <GuideTooltip id="proj-total-parity" text="G5 total parity = G5 Global M2 (US+Euro+China+Japan+UK) ÷ all 216,265 tonnes of gold ever mined. The price gold would need to reach for total gold market cap to equal G5 money supply. Sources: FRED, ECB, PBoC, BoJ, BoE.">
+                  G5 Parity (G5 M2 ÷ all oz)
                 </GuideTooltip>
               </td>
               {totalParityRow.map((v, i) => (
@@ -111,8 +111,8 @@ export default function SignalProjectionTable({ anchorResult, leverageResult, sc
             </tr>
             <tr className="border-b border-border">
               <td className="px-4 py-3 text-sm text-muted-foreground">
-                <GuideTooltip id="proj-inv-parity" text="Investable parity = M2 ÷ gold available for investment (bars, coins, ETFs + central bank reserves). The structural ceiling.">
-                  Investable Parity (M2 ÷ inv. oz)
+                <GuideTooltip id="proj-inv-parity" text="G5 total parity projected forward at 3.5%/yr net growth (G5 M2 +5%/yr minus gold supply +1.5%/yr). This is the structural ceiling for gold price if the money supply relationship holds.">
+                  G5 Parity (projected)
                 </GuideTooltip>
               </td>
               {invParityRow.map((v, i) => (
