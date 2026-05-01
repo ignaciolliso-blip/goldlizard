@@ -160,10 +160,23 @@ export default function GoldM2LongTermChart({ currentGoldPrice }: Props) {
     });
   }, [currentGoldPrice]);
 
+  const chartData = useMemo(() => {
+    if (range === 'ytd') {
+      const currentYear = new Date().getFullYear();
+      const filtered = allData.filter(d => d.year >= currentYear);
+      return filtered.length ? filtered : allData.slice(-1);
+    }
+    const years = RANGES.find(r => r.key === range)?.years as number;
+    const cutoff = (allData[allData.length - 1]?.year ?? new Date().getFullYear()) - years;
+    const filtered = allData.filter(d => d.year >= cutoff);
+    return filtered.length >= 2 ? filtered : allData.slice(-2);
+  }, [allData, range]);
+
   const maxAbsolute = useMemo(() => Math.max(...chartData.map(d => Math.max(d.goldMarketCap, d.g5M2))), [chartData]);
   const maxRatio    = useMemo(() => Math.max(...chartData.map(d => d.ratio)) * 1.2, [chartData]);
   const currentRatio = chartData[chartData.length - 1]?.ratio ?? 0;
   const ratioColor = currentRatio > 25 ? 'text-red-400' : currentRatio < 8 ? 'text-green-400' : 'text-yellow-400';
+  const xInterval = chartData.length > 40 ? (isMobile ? 9 : 4) : chartData.length > 15 ? 2 : chartData.length > 6 ? 1 : 0;
 
   return (
     <div className="bg-card border border-border rounded-xl p-5 sm:p-7 space-y-4">
