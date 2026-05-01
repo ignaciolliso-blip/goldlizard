@@ -34,6 +34,8 @@ export interface EconomyIndicatorChartProps {
   /** Footnote rendered beneath the chart (e.g. Euro Area data caveat). */
   regionNote?: string;
   accentColor?: string;
+  /** When true, overlay a YoY % change line on a secondary right Y-axis. */
+  showYoYPercent?: boolean;
 }
 
 type ZoomMode = 'full' | 'ltm';
