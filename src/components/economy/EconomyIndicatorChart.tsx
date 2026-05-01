@@ -27,6 +27,12 @@ export interface EconomyIndicatorChartProps {
   sourceUrl: string;
   chartType: 'line' | 'stacked_area';
   notes?: string;
+  /** Optional override for the small card title; defaults to `label`. */
+  cardTitle?: string;
+  /** Custom message shown when the indicator is intentionally not applicable for this region. */
+  emptyStateNote?: string;
+  /** Footnote rendered beneath the chart (e.g. Euro Area data caveat). */
+  regionNote?: string;
   accentColor?: string;
 }
 
