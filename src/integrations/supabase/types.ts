@@ -458,6 +458,7 @@ export type Database = {
           indicator_id: string
           last_fetched: string | null
           last_observation_date: string | null
+          notes: string | null
           region: string
         }
         Insert: {
@@ -466,6 +467,7 @@ export type Database = {
           indicator_id: string
           last_fetched?: string | null
           last_observation_date?: string | null
+          notes?: string | null
           region: string
         }
         Update: {
@@ -474,6 +476,7 @@ export type Database = {
           indicator_id?: string
           last_fetched?: string | null
           last_observation_date?: string | null
+          notes?: string | null
           region?: string
         }
         Relationships: []
@@ -559,6 +562,7 @@ export type Database = {
           region: string
           source: string | null
           source_series_id: string | null
+          sub_category: string | null
           unit: string | null
           updated_at: string | null
           value: number | null
@@ -571,6 +575,7 @@ export type Database = {
           region: string
           source?: string | null
           source_series_id?: string | null
+          sub_category?: string | null
           unit?: string | null
           updated_at?: string | null
           value?: number | null
@@ -583,6 +588,7 @@ export type Database = {
           region?: string
           source?: string | null
           source_series_id?: string | null
+          sub_category?: string | null
           unit?: string | null
           updated_at?: string | null
           value?: number | null
