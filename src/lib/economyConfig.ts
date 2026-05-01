@@ -50,6 +50,7 @@ export const INDICATOR_DEFINITIONS: IndicatorDefinition[] = [
       spain: IMF_WEO,
     },
     regionNote: { europe: EUROPE_FOOTNOTE },
+    showYoYPercent: true,
   },
   {
     id: 'debt_absolute',
