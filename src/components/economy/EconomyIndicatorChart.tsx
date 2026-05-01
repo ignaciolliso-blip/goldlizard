@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { forwardRef, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   ResponsiveContainer,
@@ -330,7 +330,7 @@ const ChartBody = forwardRef<HTMLDivElement, ChartBodyProps>(function ChartBody(
       </LineChart>
     </ResponsiveContainer>
   );
-}
+});
 
 export default function EconomyIndicatorChart({
   indicatorId,
