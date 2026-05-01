@@ -215,7 +215,7 @@ export default function GoldM2LongTermChart({ currentGoldPrice }: Props) {
           <span className="text-muted-foreground">G5 Global M2 (L)</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="inline-block w-3 h-2 bg-[hsl(40_80%_60%)] opacity-30" />
+          <span className="inline-block w-3 h-2 bg-[hsl(0_80%_75%)] opacity-30" />
           <span className="text-muted-foreground">Gold Cap / G5 M2 % (R)</span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -264,7 +264,7 @@ export default function GoldM2LongTermChart({ currentGoldPrice }: Props) {
             <YAxis
               yAxisId="right"
               orientation="right"
-              stroke="hsl(40 80% 60%)"
+              stroke="hsl(0 80% 75%)"
               tick={{ fontSize: 11 }}
               tickFormatter={(v) => v.toFixed(0) + '%'}
               domain={[0, maxRatio]}
@@ -274,9 +274,9 @@ export default function GoldM2LongTermChart({ currentGoldPrice }: Props) {
               yAxisId="right"
               type="monotone"
               dataKey="ratio"
-              stroke="hsl(40 80% 60%)"
+              stroke="hsl(0 80% 75%)"
               strokeWidth={1}
-              fill="hsl(40 80% 60%)"
+              fill="hsl(0 80% 75%)"
               fillOpacity={0.15}
               name="Gold Cap / G5 M2 %"
             />
