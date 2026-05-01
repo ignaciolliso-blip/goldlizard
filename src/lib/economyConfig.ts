@@ -24,6 +24,8 @@ export interface IndicatorDefinition {
   emptyStateNote?: Partial<Record<EconomyRegion, string>>;
   /** Optional per-region footnote shown beneath the chart */
   regionNote?: Partial<Record<EconomyRegion, string>>;
+  /** When true, overlay a YoY % change line on a secondary right Y-axis. */
+  showYoYPercent?: boolean;
 }
 
 const IMF_WEO = 'https://www.imf.org/en/Publications/WEO';
@@ -48,6 +50,7 @@ export const INDICATOR_DEFINITIONS: IndicatorDefinition[] = [
       spain: IMF_WEO,
     },
     regionNote: { europe: EUROPE_FOOTNOTE },
+    showYoYPercent: true,
   },
   {
     id: 'debt_absolute',

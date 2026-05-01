@@ -34,6 +34,8 @@ export interface EconomyIndicatorChartProps {
   /** Footnote rendered beneath the chart (e.g. Euro Area data caveat). */
   regionNote?: string;
   accentColor?: string;
+  /** When true, overlay a YoY % change line on a secondary right Y-axis. */
+  showYoYPercent?: boolean;
 }
 
 type ZoomMode = 'full' | 'ltm';
@@ -225,18 +227,26 @@ const CustomTooltip = forwardRef<HTMLDivElement, CustomTooltipProps>(function Cu
       <div className="mt-1 space-y-0.5">
         {payload.map((p: any) => {
           const isForecast = p.dataKey === 'forecast';
+          const isYoY = p.dataKey === 'yoyPct';
           const src = p.payload?.forecastSource;
+          const labelText = isYoY
+            ? 'YoY %'
+            : isForecast
+            ? `Forecast${src ? ` (${src})` : ''}`
+            : p.name || 'Value';
           return (
             <div key={p.dataKey} className="flex items-center gap-2">
               <span
                 className="inline-block h-2 w-2 rounded-full"
                 style={{ background: p.color }}
               />
-              <span className="text-muted-foreground">
-                {isForecast ? `Forecast${src ? ` (${src})` : ''}` : p.name || 'Value'}:
-              </span>
+              <span className="text-muted-foreground">{labelText}:</span>
               <span className="font-mono text-foreground">
-                {p.value != null ? `${formatYAxis(p.value, unit)} ${unit}` : '—'}
+                {p.value != null
+                  ? isYoY
+                    ? `${(p.value as number).toFixed(2)}%`
+                    : `${formatYAxis(p.value, unit)} ${unit}`
+                  : '—'}
               </span>
             </div>
           );
@@ -253,9 +263,10 @@ interface ChartBodyProps {
   unit: string;
   height: number;
   hasForecast: boolean;
+  showYoYPercent?: boolean;
 }
 const ChartBody = forwardRef<HTMLDivElement, ChartBodyProps>(function ChartBody(
-  { data, subCategories, chartType, unit, height, hasForecast },
+  { data, subCategories, chartType, unit, height, hasForecast, showYoYPercent },
   ref,
 ) {
   const gridStroke = 'hsl(var(--border))';
@@ -287,8 +298,33 @@ const ChartBody = forwardRef<HTMLDivElement, ChartBodyProps>(function ChartBody(
     minTickGap: 40,
   };
 
-  // Augment data with numeric timestamp
-  const numericData = data.map((d) => ({ ...d, ts: parseISODate(d.date)?.getTime() ?? 0 }));
+  // Augment data with numeric timestamp + YoY % change (vs ~1y prior point)
+  const baseNumeric = data.map((d) => ({ ...d, ts: parseISODate(d.date)?.getTime() ?? 0 }));
+  const numericData = showYoYPercent
+    ? baseNumeric.map((d, i, arr) => {
+        const cur = d.actual ?? d.forecast;
+        if (cur == null || !Number.isFinite(cur as number)) return d;
+        // Find a prior row ~365 days before within ±45 day window
+        const target = (d.ts as number) - 365 * 24 * 3600 * 1000;
+        let best: any = null;
+        let bestDiff = Infinity;
+        for (let j = i - 1; j >= 0; j--) {
+          const diff = Math.abs((arr[j].ts as number) - target);
+          if (diff > 60 * 24 * 3600 * 1000) {
+            if ((arr[j].ts as number) < target - 60 * 24 * 3600 * 1000) break;
+            continue;
+          }
+          if (diff < bestDiff) {
+            bestDiff = diff;
+            best = arr[j];
+          }
+        }
+        const prev = best ? (best.actual ?? best.forecast) : null;
+        if (prev == null || prev === 0) return d;
+        const yoy = ((cur as number) - (prev as number)) / Math.abs(prev as number) * 100;
+        return { ...d, yoyPct: yoy };
+      })
+    : baseNumeric;
 
   if (chartType === 'stacked_area') {
     return (
@@ -327,10 +363,11 @@ const ChartBody = forwardRef<HTMLDivElement, ChartBodyProps>(function ChartBody(
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <LineChart data={numericData} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
+      <LineChart data={numericData} margin={{ top: 8, right: showYoYPercent ? 16 : 12, left: 0, bottom: 4 }}>
         <CartesianGrid stroke={gridStroke} strokeOpacity={0.4} vertical={false} />
         <XAxis {...xAxisProps} />
         <YAxis
+          yAxisId="left"
           tick={tickStyle}
           stroke={gridStroke}
           tickFormatter={(v) => formatYAxis(v, unit)}
@@ -341,8 +378,24 @@ const ChartBody = forwardRef<HTMLDivElement, ChartBodyProps>(function ChartBody(
             style: { fontSize: 11, fill: 'hsl(var(--muted-foreground))', textAnchor: 'middle' },
           }}
         />
+        {showYoYPercent && (
+          <YAxis
+            yAxisId="right"
+            orientation="right"
+            tick={tickStyle}
+            stroke={gridStroke}
+            tickFormatter={(v) => `${v.toFixed(0)}%`}
+            label={{
+              value: 'YoY %',
+              angle: 90,
+              position: 'insideRight',
+              style: { fontSize: 11, fill: 'hsl(var(--muted-foreground))', textAnchor: 'middle' },
+            }}
+          />
+        )}
         <Tooltip content={<CustomTooltip unit={unit} />} labelFormatter={tooltipLabelFormatter} />
         <Line
+          yAxisId="left"
           type="monotone"
           dataKey="actual"
           name="Actual"
@@ -354,12 +407,26 @@ const ChartBody = forwardRef<HTMLDivElement, ChartBodyProps>(function ChartBody(
         />
         {hasForecast && (
           <Line
+            yAxisId="left"
             type="monotone"
             dataKey="forecast"
             name="Forecast"
             stroke="hsl(var(--economy-light))"
             strokeWidth={1.5}
             strokeDasharray="5 4"
+            dot={false}
+            connectNulls
+            isAnimationActive={false}
+          />
+        )}
+        {showYoYPercent && (
+          <Line
+            yAxisId="right"
+            type="monotone"
+            dataKey="yoyPct"
+            name="YoY %"
+            stroke="hsl(40 80% 60%)"
+            strokeWidth={1.5}
             dot={false}
             connectNulls
             isAnimationActive={false}
@@ -383,6 +450,7 @@ export default function EconomyIndicatorChart({
   cardTitle,
   emptyStateNote,
   regionNote,
+  showYoYPercent,
 }: EconomyIndicatorChartProps) {
   const displayTitle = cardTitle || label;
   const isNotApplicable = sourceLabel === 'N/A';
@@ -499,6 +567,7 @@ export default function EconomyIndicatorChart({
           unit={unit}
           height={220}
           hasForecast={hasForecast}
+          showYoYPercent={showYoYPercent}
         />
         <div className="flex items-center justify-between gap-3 pt-1">
           {notes || regionNote ? (
@@ -530,6 +599,7 @@ export default function EconomyIndicatorChart({
               unit={unit}
               height={480}
               hasForecast={hasForecast}
+              showYoYPercent={showYoYPercent}
             />
             <div className="flex items-center justify-between gap-3 text-xs">
               <a
