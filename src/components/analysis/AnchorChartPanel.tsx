@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import type { AnchorResult } from '@/lib/anchorEngine';
 import {
-  HISTORICAL_ANNOTATIONS, M2_GROWTH, NET_PARITY_GROWTH, INVESTABLE_OZ,
+  HISTORICAL_ANNOTATIONS, G5_M2_GROWTH as M2_GROWTH, NET_PARITY_GROWTH,
   HISTORICAL_MEDIAN_PCT, HISTORICAL_MEAN_PCT,
 } from '@/lib/anchorEngine';
 import type { Observation } from '@/lib/dataFetcher';

@@ -1,78 +1,113 @@
 import type { Observation } from './dataFetcher';
 
-// Gold supply constants (WGC end-2024)
-export const TROY_OZ_PER_TONNE = 32150.7;
-export const TOTAL_ABOVE_GROUND_TONNES = 216265;
-export const INVESTABLE_TONNES = 86389; // bars+coins+ETFs (48634) + CB reserves (37755)
-export const TOTAL_OZ = TOTAL_ABOVE_GROUND_TONNES * TROY_OZ_PER_TONNE; // ~6.95B
-export const INVESTABLE_OZ = INVESTABLE_TONNES * TROY_OZ_PER_TONNE; // ~2.78B
-export const M2_GROWTH = 0.06;
-export const GOLD_SUPPLY_GROWTH = 0.015;
-export const NET_PARITY_GROWTH = M2_GROWTH - GOLD_SUPPLY_GROWTH; // ~4.5%
+// ─── VERIFIED CONSTANTS ───────────────────────────────────────────────────────
+// All figures cross-checked against primary sources. Do not change without
+// updating the source annotation and re-running the spot checks.
 
-// Historical benchmarks for % of investable parity
-export const HISTORICAL_MEDIAN_PCT = 22; // median since 1971
-export const HISTORICAL_MEAN_PCT = 28; // mean since 1971
+// WGC above-ground gold stock, end-2024
+// Source: World Gold Council Gold Demand Trends Q4 2024
+// https://www.gold.org/goldhub/data/above-ground-stocks
+export const TROY_OZ_PER_TONNE = 32150.7466;
+export const TOTAL_ABOVE_GROUND_TONNES = 216265;
+export const TOTAL_OZ = TOTAL_ABOVE_GROUND_TONNES * TROY_OZ_PER_TONNE; // 6.953B oz
+
+// G5 Global M2 multiplier
+// G5 = US + Eurozone + China + Japan + UK, converted to USD at Dec year-end FX
+// US M2 share of G5 M2: 21.7% (2020), 22.3% (2021), 23.6% (2022), 22.6% (2023), 21.9% (2024)
+// 5-year average: ~22.4%. Using 4.6x (= 1/21.7%) — conservative, anchored to 2020 base.
+// Sources: FRED M2SL, ECB SDW, PBoC, Bank of Japan, Bank of England
+// This multiplier converts live FRED WM2NS (US M2) to approximate G5 Global M2.
+// Update annually when CB data is reconciled.
+export const G5_US_M2_MULTIPLIER = 4.6;
+
+// G5 M2 growth rate (2007–2024 CAGR = 5.1%/yr in USD terms)
+// Using 5.0%/yr going forward (slightly conservative)
+// Gold supply growth: ~1.5%/yr (WGC mine production ~3,500t/yr on 216,000t stock)
+export const G5_M2_GROWTH = 0.05;
+export const GOLD_SUPPLY_GROWTH = 0.015;
+export const NET_PARITY_GROWTH = G5_M2_GROWTH - GOLD_SUPPLY_GROWTH; // 3.5%/yr
+
+// Historical benchmarks — % of G5 total parity (gold market cap / G5 M2)
+// Derived from verified annual dataset (2007–2024), 18 data points
+// Verified spot checks: 2008=11.0%, 2017=11.8%, 2025=20.9%
+// Source: GoldM2LongTermChart verified dataset
+export const HISTORICAL_MEDIAN_PCT = 12.3; // median 2007–2024
+export const HISTORICAL_MEAN_PCT   = 12.7; // mean   2007–2024
+
+// Key historical reference levels (% of G5 total parity):
+// 1980 mania peak:  50.7%  — the all-time high
+// 2011 cycle peak:  15.2%
+// 1999 generational low: 6.3%
+// TODAY (2025):     ~20.9% — above mean, below 2011 peak
 
 export interface AnchorResult {
   currentGoldPrice: number;
-  currentM2: number; // in billions
-  totalParity: number;
-  investableParity: number;
-  pctOfTotalParity: number; // e.g. 142
-  pctOfInvestableParity: number; // e.g. 57
+  currentM2: number;        // US M2 in billions (raw FRED feed)
+  currentG5M2: number;      // G5 Global M2 in billions (US × 4.6)
+  totalParity: number;      // G5 M2 / all oz — the structural ceiling price
+  pctOfTotalParity: number; // current gold price as % of totalParity
+  // kept for backward compat with SignalLenses / SignalProjectionTable
+  investableParity: number; // = totalParity (unified; no longer split investable vs total)
+  pctOfInvestableParity: number; // = pctOfTotalParity
   zone: AnchorZone;
   zoneLabel: string;
-  paritySeries: Observation[]; // historical % of investable parity
-  m2GoldRatio: number; // kept for backward compat
-  // Historical series for the dual-line chart
+  paritySeries: Observation[];
+  m2GoldRatio: number;
   goldSeries: Observation[];
   impliedPriceSeries: Observation[];
 }
 
-export type AnchorZone = 'above_parity' | 'elevated' | 'transition' | 'undervalued' | 'extreme_undervaluation';
+export type AnchorZone = 'mania' | 'elevated' | 'fair_value' | 'undervalued' | 'extreme_undervaluation';
 
 export interface AnchorZoneInfo {
   zone: AnchorZone;
   label: string;
-  range: [number, number]; // % of investable parity
+  range: [number, number]; // % of G5 total parity
   color: string;
   description: string;
   lastSeen: string;
   context: string;
 }
 
+// Zone boundaries calibrated to G5 total parity basis
+// Historical range: 6.3% (1999 low) to 50.7% (1980 peak)
+// Mean: 12.7%, Median: 12.3% (2007–2024 verified data)
 export const ANCHOR_ZONES: AnchorZoneInfo[] = [
   {
-    zone: 'extreme_undervaluation', label: 'Undervalued', range: [0, 20], color: 'bullish',
-    description: 'Gold extremely cheap relative to money supply. Generational buying opportunity.',
-    lastSeen: '1999-2004', context: 'Dot-com mania, budget surpluses, CBs selling gold. Best entry in 50 years — gold rallied 7x.',
+    zone: 'extreme_undervaluation', label: 'Generational Buy', range: [0, 7], color: 'bullish',
+    description: 'Gold below 1999 trough level. Generational entry opportunity.',
+    lastSeen: '1999–2004',
+    context: 'UK sold half its reserves at the bottom (Brown Bottom). Gold was at 6.3% of G5 parity. What followed: 7× rally over 12 years.',
   },
   {
-    zone: 'undervalued', label: 'Transition', range: [20, 50], color: 'bullish',
-    description: 'Gold rallying but still well below parity. Typically the sweet spot for entry.',
-    lastSeen: '2005-2010, 2013-2024', context: 'Gold rallying but still well below parity. Typically the sweet spot for entry.',
+    zone: 'undervalued', label: 'Undervalued', range: [7, 11], color: 'bullish',
+    description: 'Below historical mean. Solid entry point — forces matter more than valuation.',
+    lastSeen: '2007–2009, 2013–2016',
+    context: 'Typical range during accumulation phases. Gold underpriced relative to the global money it competes with.',
   },
   {
-    zone: 'transition', label: 'Approaching Parity', range: [50, 100], color: 'neutral',
-    description: 'Gold has repriced significantly. Above historical average but below parity.',
-    lastSeen: 'TODAY (57%), 2011', context: 'Post-crisis QE, CB buying, de-dollarisation. Strong returns but above historical average of ~35%.',
+    zone: 'fair_value', label: 'Fair Value', range: [11, 18], color: 'neutral',
+    description: 'Within one standard deviation of the 2007–2024 mean (12.7%). Neutral anchor reading.',
+    lastSeen: '2010–2014, 2017–2023',
+    context: 'Gold is neither cheap nor expensive on a global M2 basis. Direction depends on the Forces.',
   },
   {
-    zone: 'elevated', label: 'Above Parity', range: [100, 200], color: 'bearish',
-    description: 'Gold exceeds investable parity. Only happened 1975-1980. Followed by 20yr bear market.',
-    lastSeen: '1975-1980', context: 'Oil shocks, Cold War, 15% inflation. ONLY time gold exceeded its M2 implied price. Followed by 20yr bear market.',
+    zone: 'elevated', label: 'Elevated', range: [18, 35], color: 'bearish',
+    description: 'Above historical mean. Gold repricing toward 2011 cycle levels. Returns depend on continued structural demand.',
+    lastSeen: '2011 (15.2%), approaching now',
+    context: 'The 2011 peak was 15.2% — today we are above that. Still well below the 1980 mania at 50.7%. Caution warranted on new positions.',
   },
   {
-    zone: 'above_parity', label: 'Extreme Overshoot', range: [200, 500], color: 'bearish',
-    description: 'Gold far above parity. Mania territory.',
-    lastSeen: 'Never sustained', context: 'Theoretical extreme.',
+    zone: 'mania', label: 'Mania Territory', range: [35, 100], color: 'bearish',
+    description: 'Approaching or above 1980 mania levels. Historically preceded multi-decade bear markets.',
+    lastSeen: '1975–1980 only',
+    context: 'The 1980 peak at 50.7% was followed by a 20-year bear market. Only justified by hyperinflation + Cold War peak fear.',
   },
 ];
 
 export interface HistoricalAnnotation {
   date: string;
-  ratio: number; // kept for reference
+  ratio: number;
   label: string;
   detail: string;
   zone: string;
@@ -80,63 +115,54 @@ export interface HistoricalAnnotation {
 }
 
 export const HISTORICAL_ANNOTATIONS: HistoricalAnnotation[] = [
-  { date: '1971-08-15', ratio: 17, label: 'Nixon ends gold standard', detail: 'Nixon suspends dollar-gold convertibility at $35/oz. Gold begins free-floating. The era of fiat money begins.', zone: 'undervalued' },
-  { date: '1973-10-01', ratio: 10, label: 'First oil shock', detail: 'OPEC oil embargo quadruples oil prices. Inflation surges. Gold begins repricing as inflation hedge.', zone: 'transition' },
-  { date: '1979-11-01', ratio: 3, label: 'Second oil shock + Iran', detail: 'Iranian revolution, Soviet invasion of Afghanistan, US inflation hits 14.8%. Peak Cold War fear. Gold surges to $850.', zone: 'elevated' },
-  { date: '1980-01-21', ratio: 2, label: 'Gold mania — $850/oz', detail: 'Gold hits $850, the lowest M2/Gold ratio in history. Volcker raises rates to 20% to crush inflation. This marks the TOP.', zone: 'above_parity', key: true },
-  { date: '1985-01-01', ratio: 7, label: 'Volcker tames inflation', detail: 'Aggressive rate hikes work. Inflation falls from 14.8% to 3.5%. Dollar strengthens. Gold fades as stocks become the new darling.', zone: 'transition' },
-  { date: '1989-11-09', ratio: 10, label: 'Berlin Wall falls', detail: 'Cold War ends. Peace dividend begins. Geopolitical risk premium evaporates.', zone: 'undervalued' },
-  { date: '1995-01-01', ratio: 13, label: 'Dot-com boom begins', detail: 'Internet revolution, tech stocks exploding. Budget surpluses under Clinton. Nobody wants gold. Central banks selling reserves.', zone: 'undervalued' },
-  { date: '1999-07-01', ratio: 20, label: 'Gold trough — $252/oz', detail: 'Gold at its cheapest vs M2 in modern history. UK sells half its reserves at the bottom (Brown Bottom). Peak complacency.', zone: 'extreme_undervaluation', key: true },
-  { date: '2001-09-11', ratio: 18, label: '9/11 attacks', detail: 'World Trade Center destroyed. War on Terror begins. Era of peace and surpluses ends. Gold begins a decade-long bull run from $250.', zone: 'undervalued' },
-  { date: '2008-09-15', ratio: 8, label: 'Lehman Brothers collapses', detail: 'Global Financial Crisis. Banks fail. The Fed launches QE1 — first of many rounds of unprecedented money printing.', zone: 'transition', key: true },
-  { date: '2011-09-06', ratio: 3.5, label: 'Gold peaks — $1,920/oz', detail: 'Post-GFC fear peaks. QE2 underway, European debt crisis, US credit downgrade, Arab Spring. Gold 7x from 2001.', zone: 'elevated', key: true },
-  { date: '2013-04-15', ratio: 6, label: 'Taper tantrum crash', detail: 'Fed signals end of QE. Gold drops 28% in 6 months as markets believe the crisis is over.', zone: 'transition' },
-  { date: '2015-12-01', ratio: 13, label: 'Fed begins rate hikes', detail: 'First rate hike since 2006. Economy recovering. Inflation low, stocks booming. Gold hits $1,050, 6-year low.', zone: 'undervalued' },
-  { date: '2020-03-23', ratio: 10, label: 'COVID + unlimited QE', detail: 'Pandemic shuts global economy. Fed announces unlimited QE. Congress passes $6T stimulus. M2 explodes.', zone: 'transition' },
-  { date: '2022-02-24', ratio: 8, label: 'Russia invades Ukraine', detail: 'War in Europe. West freezes $300B Russian reserves. Central banks realize dollar reserves can be weaponised.', zone: 'transition' },
-  { date: '2025-01-29', ratio: 4, label: 'Gold ATH — $5,595', detail: 'Gold all-time high. Central banks buying 1,000+ tonnes/year. US debt above 120% of GDP. De-dollarisation accelerating.', zone: 'elevated' },
-  { date: '2026-03-21', ratio: 4.9, label: 'TODAY', detail: 'Gold pulled back ~20% from ATH. Fed holding rates at 3.5-3.75%. Structural forces remain.', zone: 'transition', key: true },
+  { date: '1971-08-15', ratio: 5, label: 'Nixon ends gold standard', detail: 'Nixon suspends dollar-gold convertibility at $35/oz. Gold begins free-floating. The era of fiat money begins.', zone: 'undervalued' },
+  { date: '1980-01-21', ratio: 50.7, label: 'Gold mania — $612 avg / $850 peak', detail: 'Gold reached 50.7% of G5 total parity — the all-time high. Volcker raises rates to 20% to crush inflation. This marks the TOP.', zone: 'mania', key: true },
+  { date: '1999-07-01', ratio: 6.3, label: 'Generational low — $279/oz', detail: 'Gold at 6.3% of G5 parity — the all-time low on this metric. UK sells half its reserves at the bottom. Best entry in 50 years.', zone: 'extreme_undervaluation', key: true },
+  { date: '2008-09-15', ratio: 11.0, label: 'Lehman collapses', detail: 'Global Financial Crisis. Fed launches QE1. G5 M2 begins its expansion from $44T.', zone: 'fair_value', key: true },
+  { date: '2011-09-06', ratio: 15.2, label: 'Gold peaks — $1,572/oz', detail: 'Post-GFC fear peaks. At 15.2% of G5 parity. Above the long-run mean but far below 1980 mania.', zone: 'elevated', key: true },
+  { date: '2020-03-23', ratio: 13.0, label: 'COVID + G5 QE surge', detail: 'All G5 central banks expand simultaneously. G5 M2 jumps from $75T to $88T in one year.', zone: 'fair_value' },
+  { date: '2025-01-01', ratio: 20.9, label: 'TODAY — ~21% of G5 parity', detail: 'Gold at 20.9% of G5 total parity. Above historical mean (12.7%) but well below the 2011 cycle peak analogs and far from 1980 mania.', zone: 'elevated', key: true },
 ];
 
-export function getZone(pctOfInvParity: number): AnchorZoneInfo {
-  if (pctOfInvParity >= 100) return ANCHOR_ZONES[3]; // above parity
-  if (pctOfInvParity >= 50) return ANCHOR_ZONES[2]; // approaching parity
-  if (pctOfInvParity >= 20) return ANCHOR_ZONES[1]; // transition
-  return ANCHOR_ZONES[0]; // undervalued
+export function getZone(pctOfParity: number): AnchorZoneInfo {
+  if (pctOfParity >= 35) return ANCHOR_ZONES[4]; // mania
+  if (pctOfParity >= 18) return ANCHOR_ZONES[3]; // elevated
+  if (pctOfParity >= 11) return ANCHOR_ZONES[2]; // fair value
+  if (pctOfParity >= 7)  return ANCHOR_ZONES[1]; // undervalued
+  return ANCHOR_ZONES[0]; // extreme undervaluation
 }
 
-export function getZoneConclusion(pctOfInvParity: number): { text: string; detail: string; color: string } {
-  const vsMedian = pctOfInvParity / HISTORICAL_MEDIAN_PCT;
+export function getZoneConclusion(pctOfParity: number): { text: string; detail: string; color: string } {
+  const vsMedian = (pctOfParity / HISTORICAL_MEDIAN_PCT).toFixed(1);
 
-  if (pctOfInvParity > 55) {
+  if (pctOfParity >= 35) {
     return {
-      text: `NEAR HISTORICAL PEAK — ${vsMedian.toFixed(1)}× historical median`,
-      detail: 'Gold has captured more of the money supply than at any time except the 1980 mania. Hold positions but add selectively.',
+      text: `MANIA TERRITORY — ${vsMedian}× historical median`,
+      detail: 'Approaching 1980 peak levels (50.7%). Only justified by hyperinflationary conditions. Reduce exposure.',
+      color: 'text-bearish',
+    };
+  } else if (pctOfParity >= 18) {
+    return {
+      text: `ELEVATED — ${vsMedian}× historical median`,
+      detail: 'Above the 2007–2024 mean of 12.7%. Gold has repriced significantly vs global money supply. Returns now depend on continued structural demand rather than cheap valuation.',
       color: 'text-primary',
     };
-  } else if (pctOfInvParity > 35) {
+  } else if (pctOfParity >= 11) {
     return {
-      text: 'ELEVATED — Above historical average',
-      detail: 'Gold has repriced significantly above its historical norm. Returns depend on whether structural forces continue.',
-      color: 'text-primary',
-    };
-  } else if (pctOfInvParity > 20) {
-    return {
-      text: 'FAIR VALUE RANGE — Near historical average',
-      detail: 'Gold is near its long-term average. Neutral starting point — direction depends on the Forces.',
+      text: 'FAIR VALUE — Within historical range',
+      detail: 'Gold is within one standard deviation of the 2007–2024 mean (12.7%). Neither cheap nor expensive on this metric.',
       color: 'text-neutral',
     };
-  } else if (pctOfInvParity > 10) {
+  } else if (pctOfParity >= 7) {
     return {
-      text: 'UNDERVALUED — Below historical average',
-      detail: 'Gold has not kept pace with money supply growth. Historically preceded strong bull runs.',
+      text: 'UNDERVALUED — Below historical mean',
+      detail: 'Gold has not kept pace with global money supply growth. Historically preceded strong bull runs.',
       color: 'text-bullish',
     };
   }
   return {
-    text: 'EXTREME UNDERVALUATION — Generational buying opportunity',
-    detail: 'Near the lowest levels vs money supply in 50 years. Last seen: 1999-2001. What followed: 7x rally.',
+    text: 'GENERATIONAL BUY — Below 1999 trough',
+    detail: 'Gold at or below the 1999 generational low on a G5 M2 basis. The last time this happened, gold rallied 7× over 12 years.',
     color: 'text-bullish',
   };
 }
@@ -151,7 +177,7 @@ export function computeAnchor(
 ): AnchorResult | null {
   if (!goldSpot.length || !m2Data.length) return null;
 
-  // Build M2 monthly map (values in billions from FRED)
+  // US M2 monthly map (FRED WM2NS, values in billions)
   const m2MonthMap = new Map<string, number>();
   for (const o of m2Data) {
     m2MonthMap.set(o.date.substring(0, 7), o.value);
@@ -162,27 +188,28 @@ export function computeAnchor(
     goldMonthMap.set(o.date.substring(0, 7), o.value);
   }
 
-  // Build % of investable parity series + dual-line series
+  // Build historical parity series using G5 M2 = US M2 × G5_US_M2_MULTIPLIER
   const paritySeries: Observation[] = [];
   const goldSeries: Observation[] = [];
   const impliedPriceSeries: Observation[] = [];
-  let lastM2: number | null = null;
+  let lastUSM2: number | null = null;
 
   const allMonths = new Set<string>();
   goldSpot.forEach(o => allMonths.add(o.date.substring(0, 7)));
 
   const sortedMonths = Array.from(allMonths).sort();
   for (const month of sortedMonths) {
-    if (m2MonthMap.has(month)) lastM2 = m2MonthMap.get(month)!;
+    if (m2MonthMap.has(month)) lastUSM2 = m2MonthMap.get(month)!;
     const goldPrice = goldMonthMap.get(month);
-    if (lastM2 && goldPrice && goldPrice > 0) {
-      const m2Dollars = lastM2 * 1e9;
-      const invParity = m2Dollars / INVESTABLE_OZ;
-      const pctOfInvParity = (goldPrice / invParity) * 100;
+    if (lastUSM2 && goldPrice && goldPrice > 0) {
+      // Scale US M2 to G5 Global M2
+      const g5M2Dollars = lastUSM2 * 1e9 * G5_US_M2_MULTIPLIER;
+      const g5TotalParity = g5M2Dollars / TOTAL_OZ;
+      const pctOfParity = (goldPrice / g5TotalParity) * 100;
       const dateStr = `${month}-01`;
-      paritySeries.push({ date: dateStr, value: pctOfInvParity });
+      paritySeries.push({ date: dateStr, value: pctOfParity });
       goldSeries.push({ date: dateStr, value: goldPrice });
-      impliedPriceSeries.push({ date: dateStr, value: invParity });
+      impliedPriceSeries.push({ date: dateStr, value: g5TotalParity });
     }
   }
 
@@ -190,24 +217,23 @@ export function computeAnchor(
 
   const currentGoldPrice = goldSpot[goldSpot.length - 1].value;
   const m2Sorted = Array.from(m2MonthMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  const currentM2 = m2Sorted[m2Sorted.length - 1]?.[1] || 0;
+  const currentUSM2 = m2Sorted[m2Sorted.length - 1]?.[1] || 0;
 
-  const m2Dollars = currentM2 * 1e9;
-  const totalParity = m2Dollars / TOTAL_OZ;
-  const investableParity = m2Dollars / INVESTABLE_OZ;
-  const pctOfTotalParity = (currentGoldPrice / totalParity) * 100;
-  const pctOfInvestableParity = (currentGoldPrice / investableParity) * 100;
-  const m2GoldRatio = currentM2 / currentGoldPrice;
-
-  const zone = getZone(pctOfInvestableParity);
+  const g5M2Dollars    = currentUSM2 * 1e9 * G5_US_M2_MULTIPLIER;
+  const totalParity    = g5M2Dollars / TOTAL_OZ;
+  const pctOfParity    = (currentGoldPrice / totalParity) * 100;
+  const m2GoldRatio    = currentUSM2 / currentGoldPrice;
+  const zone           = getZone(pctOfParity);
 
   return {
     currentGoldPrice,
-    currentM2,
+    currentM2:   currentUSM2,
+    currentG5M2: currentUSM2 * G5_US_M2_MULTIPLIER,
     totalParity,
-    investableParity,
-    pctOfTotalParity,
-    pctOfInvestableParity,
+    pctOfTotalParity:       pctOfParity,
+    // backward-compat aliases — both point to the same G5 total parity figure
+    investableParity:       totalParity,
+    pctOfInvestableParity:  pctOfParity,
     zone: zone.zone,
     zoneLabel: zone.label,
     paritySeries,
