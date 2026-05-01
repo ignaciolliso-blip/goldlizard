@@ -251,7 +251,7 @@ export default function GoldM2LongTermChart({ currentGoldPrice }: Props) {
               stroke="hsl(var(--muted-foreground))"
               tick={{ fontSize: 11 }}
               tickFormatter={(v) => String(v)}
-              interval={isMobile ? 4 : 2}
+              interval={xInterval}
             />
             <YAxis
               yAxisId="left"
