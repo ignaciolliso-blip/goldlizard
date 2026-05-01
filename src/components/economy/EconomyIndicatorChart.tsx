@@ -335,7 +335,7 @@ const ChartBody = forwardRef<HTMLDivElement, ChartBodyProps>(function ChartBody(
             style: { fontSize: 11, fill: 'hsl(var(--muted-foreground))', textAnchor: 'middle' },
           }}
         />
-        <Tooltip content={<CustomTooltip unit={unit} />} />
+        <Tooltip content={<CustomTooltip unit={unit} />} labelFormatter={tooltipLabelFormatter} />
         <Line
           type="monotone"
           dataKey="actual"
