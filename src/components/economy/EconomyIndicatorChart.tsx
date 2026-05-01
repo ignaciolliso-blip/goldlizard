@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { forwardRef, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   ResponsiveContainer,
@@ -27,6 +27,12 @@ export interface EconomyIndicatorChartProps {
   sourceUrl: string;
   chartType: 'line' | 'stacked_area';
   notes?: string;
+  /** Optional override for the small card title; defaults to `label`. */
+  cardTitle?: string;
+  /** Custom message shown when the indicator is intentionally not applicable for this region. */
+  emptyStateNote?: string;
+  /** Footnote rendered beneath the chart (e.g. Euro Area data caveat). */
+  regionNote?: string;
   accentColor?: string;
 }
 
@@ -189,10 +195,13 @@ interface CustomTooltipProps {
   label?: string;
   unit: string;
 }
-function CustomTooltip({ active, payload, label, unit }: CustomTooltipProps) {
+const CustomTooltip = forwardRef<HTMLDivElement, CustomTooltipProps>(function CustomTooltip(
+  { active, payload, label, unit },
+  ref,
+) {
   if (!active || !payload || !payload.length) return null;
   return (
-    <div className="rounded-md border border-border bg-background px-3 py-2 text-xs shadow-lg">
+    <div ref={ref} className="rounded-md border border-border bg-background px-3 py-2 text-xs shadow-lg">
       <div className="font-medium text-foreground">{label ? formatDateFull(label) : ''}</div>
       <div className="mt-1 space-y-0.5">
         {payload.map((p: any) => {
@@ -216,7 +225,7 @@ function CustomTooltip({ active, payload, label, unit }: CustomTooltipProps) {
       </div>
     </div>
   );
-}
+});
 
 interface ChartBodyProps {
   data: ChartDatum[];
@@ -226,7 +235,10 @@ interface ChartBodyProps {
   height: number;
   hasForecast: boolean;
 }
-function ChartBody({ data, subCategories, chartType, unit, height, hasForecast }: ChartBodyProps) {
+const ChartBody = forwardRef<HTMLDivElement, ChartBodyProps>(function ChartBody(
+  { data, subCategories, chartType, unit, height, hasForecast },
+  ref,
+) {
   const gridStroke = 'hsl(var(--border))';
   const tickStyle = { fontSize: 11, fill: 'hsl(var(--muted-foreground))' };
 
@@ -318,7 +330,7 @@ function ChartBody({ data, subCategories, chartType, unit, height, hasForecast }
       </LineChart>
     </ResponsiveContainer>
   );
-}
+});
 
 export default function EconomyIndicatorChart({
   indicatorId,
@@ -330,7 +342,12 @@ export default function EconomyIndicatorChart({
   sourceUrl,
   chartType,
   notes,
+  cardTitle,
+  emptyStateNote,
+  regionNote,
 }: EconomyIndicatorChartProps) {
+  const displayTitle = cardTitle || label;
+  const isNotApplicable = sourceLabel === 'N/A';
   const [zoom, setZoom] = useState<ZoomMode>('full');
   const [expanded, setExpanded] = useState(false);
 
@@ -338,6 +355,7 @@ export default function EconomyIndicatorChart({
     queryKey: ['economy-chart', indicatorId, region],
     queryFn: () => fetchChartData(indicatorId, region),
     staleTime: 5 * 60 * 1000,
+    enabled: !isNotApplicable,
   });
 
   const { series, hasForecast, isEmpty } = useMemo(() => {
@@ -368,19 +386,22 @@ export default function EconomyIndicatorChart({
   }
 
   // Empty / not applicable state
-  if (isError || isEmpty) {
+  if (isNotApplicable || isError || isEmpty) {
+    const message = emptyStateNote || (isNotApplicable
+      ? `Not applicable for ${regionLabel}`
+      : `No data available for ${regionLabel}`);
     return (
       <div className="bg-card/50 border border-border/60 rounded-xl p-4 flex flex-col">
         <div className="flex items-start justify-between mb-3">
           <div>
-            <div className="text-sm font-medium text-muted-foreground">{label}</div>
+            <div className="text-sm font-medium text-muted-foreground">{displayTitle}</div>
             <div className="text-xs text-muted-foreground/70">{regionLabel}</div>
           </div>
         </div>
         <div className="flex-1 min-h-[220px] flex flex-col items-center justify-center text-center px-6">
           <Info className="h-6 w-6 text-muted-foreground/60 mb-2" />
-          <div className="text-sm text-muted-foreground">Not applicable for {regionLabel}</div>
-          {notes && (
+          <div className="text-sm text-muted-foreground">{message}</div>
+          {notes && !emptyStateNote && (
             <div className="text-xs text-muted-foreground/70 mt-1 italic max-w-xs">{notes}</div>
           )}
         </div>
@@ -392,7 +413,7 @@ export default function EconomyIndicatorChart({
     <div className="flex items-start justify-between gap-3">
       {!inDialog && (
         <div className="min-w-0">
-          <div className="text-sm font-medium text-foreground truncate">{label}</div>
+          <div className="text-sm font-medium text-foreground truncate">{displayTitle}</div>
           <div className="text-xs text-muted-foreground">{regionLabel}</div>
         </div>
       )}
@@ -442,8 +463,10 @@ export default function EconomyIndicatorChart({
           hasForecast={hasForecast}
         />
         <div className="flex items-center justify-between gap-3 pt-1">
-          {notes ? (
-            <div className="text-xs italic text-muted-foreground">{notes}</div>
+          {notes || regionNote ? (
+            <div className="text-xs italic text-muted-foreground">
+              {regionNote || notes}
+            </div>
           ) : (
             <div />
           )}

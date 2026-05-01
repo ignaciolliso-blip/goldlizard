@@ -1,5 +1,6 @@
-// fetch-economy-data: pulls macro indicators from FRED, ECB, IMF and UN
+// fetch-economy-data: pulls macro indicators from FRED, ECB, IMF, World Bank
 // and stores them in economy_observations / economy_forecasts.
+// Processes ONE indicator+region per invocation to stay under CPU limits.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
@@ -13,24 +14,27 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
 type Obs = { date: string; value: number };
 
-// ---------- Job catalogue ----------
-type JobSource = "fred" | "ecb" | "imf" | "un_pop" | "computed";
+type JobSource = "fred" | "ecb" | "imf" | "wb" | "computed" | "alias";
 interface Job {
   indicator_id: string;
   region: string; // global | us | europe | spain
   source: JobSource;
-  // source-specific:
   fred_series?: string;
-  ecb_path?: string; // e.g. FM/B.U2.EUR.4F.KR.MRR_FR.LEV
+  ecb_path?: string;
   imf_indicator?: string;
   imf_country?: string;
-  un_location?: number;
+  wb_country?: string;
+  wb_indicator?: string;
+  alias_region?: string; // for aliasing one region to another's data
   transform?: (obs: Obs[]) => Obs[];
   notes?: string;
+  source_label?: string;
   // computed:
   compute?: (
     fetcher: (j: Job) => Promise<Obs[]>,
   ) => Promise<Obs[]>;
+  // multi sub-category (e.g. population by age)
+  multi?: (apiKey: string) => Promise<{ subCat: string; obs: Obs[] }[]>;
 }
 
 const divideBy = (n: number) => (obs: Obs[]) =>
@@ -52,7 +56,7 @@ const yoyPct = (obs: Obs[]): Obs[] => {
   return out;
 };
 
-const subtractSeries = (a: Obs[], b: Obs[]): Obs[] => {
+const subtractByMonth = (a: Obs[], b: Obs[]): Obs[] => {
   const bMap = new Map(b.map((o) => [o.date.slice(0, 7), o.value]));
   const out: Obs[] = [];
   for (const o of a) {
@@ -62,64 +66,144 @@ const subtractSeries = (a: Obs[], b: Obs[]): Obs[] => {
   return out;
 };
 
+// ---------- Job catalogue ----------
 const JOBS: Job[] = [
-  // ---- FRED: US ----
-  { indicator_id: "gdp_absolute", region: "us", source: "fred", fred_series: "GDP", transform: divideBy(1000) },
-  { indicator_id: "debt_pct_gdp", region: "us", source: "fred", fred_series: "GFDEGDQ188S" },
-  { indicator_id: "gdp_per_capita", region: "us", source: "fred", fred_series: "A939RX0Q048SBEA" },
-  { indicator_id: "unemployment_youth", region: "us", source: "fred", fred_series: "LNU04024887" },
-  { indicator_id: "unemployment_total", region: "us", source: "fred", fred_series: "UNRATE" },
-  { indicator_id: "cpi_yoy", region: "us", source: "fred", fred_series: "CPIAUCSL", transform: yoyPct },
-  { indicator_id: "policy_rate", region: "us", source: "fred", fred_series: "DFF" },
-  { indicator_id: "m2_absolute", region: "us", source: "fred", fred_series: "WM2NS", transform: divideBy(1000) },
-  { indicator_id: "bond_yield_10y", region: "us", source: "fred", fred_series: "DGS10" },
-  { indicator_id: "yield_curve", region: "us", source: "fred", fred_series: "T10Y2Y" },
+  // ===== GDP ABSOLUTE (USD trillions) =====
+  // US: FRED nominal GDP, billions → trillions
+  { indicator_id: "gdp_absolute", region: "us", source: "fred", fred_series: "GDP", transform: divideBy(1000), source_label: "FRED/BEA" },
+  // Global / Europe / Spain: IMF WEO NGDPD (current USD billions) → trillions
+  { indicator_id: "gdp_absolute", region: "global", source: "imf", imf_indicator: "NGDPD", imf_country: "WEOWORLD", transform: divideBy(1000), source_label: "IMF WEO" },
+  { indicator_id: "gdp_absolute", region: "europe", source: "imf", imf_indicator: "NGDPD", imf_country: "EURO", transform: divideBy(1000), source_label: "IMF WEO (Euro Area)" },
+  { indicator_id: "gdp_absolute", region: "spain", source: "imf", imf_indicator: "NGDPD", imf_country: "ESP", transform: divideBy(1000), source_label: "IMF WEO" },
 
-  // ---- FRED: Europe / Spain bonds ----
-  { indicator_id: "bond_yield_10y", region: "europe", source: "fred", fred_series: "IRLTLT01DEM156N" },
-  { indicator_id: "bond_yield_10y", region: "spain", source: "fred", fred_series: "IRLTLT01ESM156N" },
-
-  // ---- FRED: Spain proxy via OECD ----
-  { indicator_id: "unemployment_total", region: "spain", source: "fred", fred_series: "LRHUTTTTESM156S",
-    notes: "Source: IMF/OECD proxy for INE data" },
-  { indicator_id: "unemployment_youth", region: "spain", source: "fred", fred_series: "LRUN24TTESM156S",
-    notes: "Source: IMF/OECD proxy for INE data" },
-
-  // ---- Yield curve EUROPE (computed) ----
+  // ===== GOVERNMENT DEBT ABSOLUTE (USD trillions) =====
+  // US: FRED federal debt (millions of $) → trillions = ÷ 1,000,000
+  { indicator_id: "debt_absolute", region: "us", source: "fred", fred_series: "GFDEBTNQ", transform: divideBy(1_000_000), source_label: "FRED" },
+  // Others: derived from IMF WEO debt%GDP * GDP — handled via computed jobs
   {
-    indicator_id: "yield_curve", region: "europe", source: "computed",
+    indicator_id: "debt_absolute", region: "global", source: "computed", source_label: "IMF WEO (derived)",
     compute: async (fetcher) => {
-      const long = await fetcher({ indicator_id: "_eu_10y", region: "europe", source: "fred", fred_series: "IRLTLT01DEM156N" });
-      const short = await fetcher({ indicator_id: "_eu_3m", region: "europe", source: "fred", fred_series: "IRSTCI01DEM156N" });
-      return subtractSeries(long, short);
+      const gdp = await fetcher({ indicator_id: "_gdp", region: "global", source: "imf", imf_indicator: "NGDPD", imf_country: "WEOWORLD" });
+      const ratio = await fetcher({ indicator_id: "_dbt", region: "global", source: "imf", imf_indicator: "GGXWDG_NGDP", imf_country: "WEOWORLD" });
+      const rMap = new Map(ratio.map((o) => [o.date, o.value]));
+      const out: Obs[] = [];
+      for (const g of gdp) {
+        const r = rMap.get(g.date);
+        if (r != null) out.push({ date: g.date, value: (g.value * r / 100) / 1000 }); // billions → trillions
+      }
+      return out;
+    },
+  },
+  {
+    indicator_id: "debt_absolute", region: "europe", source: "computed", source_label: "IMF WEO (derived)",
+    compute: async (fetcher) => {
+      const gdp = await fetcher({ indicator_id: "_gdp", region: "europe", source: "imf", imf_indicator: "NGDPD", imf_country: "EURO" });
+      const ratio = await fetcher({ indicator_id: "_dbt", region: "europe", source: "imf", imf_indicator: "GGXWDG_NGDP", imf_country: "EURO" });
+      const rMap = new Map(ratio.map((o) => [o.date, o.value]));
+      const out: Obs[] = [];
+      for (const g of gdp) {
+        const r = rMap.get(g.date);
+        if (r != null) out.push({ date: g.date, value: (g.value * r / 100) / 1000 });
+      }
+      return out;
+    },
+  },
+  {
+    indicator_id: "debt_absolute", region: "spain", source: "computed", source_label: "IMF WEO (derived)",
+    compute: async (fetcher) => {
+      const gdp = await fetcher({ indicator_id: "_gdp", region: "spain", source: "imf", imf_indicator: "NGDPD", imf_country: "ESP" });
+      const ratio = await fetcher({ indicator_id: "_dbt", region: "spain", source: "imf", imf_indicator: "GGXWDG_NGDP", imf_country: "ESP" });
+      const rMap = new Map(ratio.map((o) => [o.date, o.value]));
+      const out: Obs[] = [];
+      for (const g of gdp) {
+        const r = rMap.get(g.date);
+        if (r != null) out.push({ date: g.date, value: (g.value * r / 100) / 1000 });
+      }
+      return out;
     },
   },
 
-  // ---- ECB ----
-  { indicator_id: "policy_rate", region: "europe", source: "ecb", ecb_path: "FM/B.U2.EUR.4F.KR.MRR_FR.LEV" },
-  { indicator_id: "m2_absolute", region: "europe", source: "ecb", ecb_path: "BSI/M.U2.Y.V.M20.X.1.U2.2300.Z01.E", transform: divideBy(1000) },
-  { indicator_id: "unemployment_total", region: "europe", source: "ecb", ecb_path: "LFSI/M.I8.S.UNEHRT.TOTAL0.15_74.T" },
-  { indicator_id: "unemployment_youth", region: "europe", source: "ecb", ecb_path: "LFSI/M.I8.S.UNEHRT.AGE_Y15_24.PCT_ACT_T" },
-  { indicator_id: "cpi_yoy", region: "europe", source: "ecb", ecb_path: "ICP/M.U2.N.000000.4.ANR" },
+  // ===== DEBT % OF GDP =====
+  { indicator_id: "debt_pct_gdp", region: "us", source: "fred", fred_series: "GFDEGDQ188S", source_label: "FRED" },
+  { indicator_id: "debt_pct_gdp", region: "global", source: "imf", imf_indicator: "GGXWDG_NGDP", imf_country: "WEOWORLD", source_label: "IMF WEO" },
+  { indicator_id: "debt_pct_gdp", region: "europe", source: "imf", imf_indicator: "GGXWDG_NGDP", imf_country: "EURO", source_label: "IMF WEO (Euro Area)" },
+  { indicator_id: "debt_pct_gdp", region: "spain", source: "imf", imf_indicator: "GGXWDG_NGDP", imf_country: "ESP", source_label: "IMF WEO" },
 
-  // ---- IMF WEO (actuals + forecasts) ----
-  { indicator_id: "gdp_absolute", region: "global", source: "imf", imf_indicator: "NGDPD", imf_country: "WEOWORLD", transform: divideBy(1000) },
-  { indicator_id: "gdp_absolute", region: "spain", source: "imf", imf_indicator: "NGDPD", imf_country: "ESP", transform: divideBy(1000) },
-  { indicator_id: "debt_pct_gdp", region: "global", source: "imf", imf_indicator: "GGXWDG_NGDP", imf_country: "WEOWORLD" },
-  { indicator_id: "debt_pct_gdp", region: "europe", source: "imf", imf_indicator: "GGXWDG_NGDP", imf_country: "EUR" },
-  { indicator_id: "debt_pct_gdp", region: "spain", source: "imf", imf_indicator: "GGXWDG_NGDP", imf_country: "ESP" },
-  { indicator_id: "gdp_per_capita", region: "global", source: "imf", imf_indicator: "NGDPDPC", imf_country: "WEOWORLD" },
-  { indicator_id: "gdp_per_capita", region: "europe", source: "imf", imf_indicator: "NGDPDPC", imf_country: "EUR" },
-  { indicator_id: "gdp_per_capita", region: "spain", source: "imf", imf_indicator: "NGDPDPC", imf_country: "ESP" },
-  { indicator_id: "cpi_yoy", region: "global", source: "imf", imf_indicator: "PCPIPCH", imf_country: "WEOWORLD" },
-  { indicator_id: "cpi_yoy", region: "spain", source: "imf", imf_indicator: "PCPIPCH", imf_country: "ESP",
-    notes: "Source: IMF/OECD proxy for INE data" },
+  // ===== GDP PER CAPITA (current USD, store raw) =====
+  { indicator_id: "gdp_per_capita", region: "us", source: "fred", fred_series: "A939RX0Q048SBEA", source_label: "FRED/BEA" },
+  { indicator_id: "gdp_per_capita", region: "global", source: "imf", imf_indicator: "NGDPDPC", imf_country: "WEOWORLD", source_label: "IMF WEO" },
+  { indicator_id: "gdp_per_capita", region: "europe", source: "imf", imf_indicator: "NGDPDPC", imf_country: "EURO", source_label: "IMF WEO (Euro Area)" },
+  { indicator_id: "gdp_per_capita", region: "spain", source: "imf", imf_indicator: "NGDPDPC", imf_country: "ESP", source_label: "IMF WEO" },
 
-  // ---- UN Population by age (annual, multi sub_category) ----
-  { indicator_id: "population_age", region: "global", source: "un_pop", un_location: 900 },
-  { indicator_id: "population_age", region: "us", source: "un_pop", un_location: 840 },
-  { indicator_id: "population_age", region: "europe", source: "un_pop", un_location: 908 },
-  { indicator_id: "population_age", region: "spain", source: "un_pop", un_location: 724 },
+  // ===== POPULATION BY AGE GROUP — World Bank (3 buckets: 0-14, 15-64, 65+) =====
+  ...(["global", "us", "europe", "spain"].map((region) => {
+    const wbCountry = { global: "1W", us: "US", europe: "Z4", spain: "ES" }[region as "global"|"us"|"europe"|"spain"]!;
+    return {
+      indicator_id: "population_age",
+      region,
+      source: "wb" as JobSource,
+      wb_country: wbCountry,
+      source_label: "World Bank",
+      multi: async (_apiKey: string) => fetchWorldBankPopulationAge(wbCountry),
+    } satisfies Job;
+  })),
+
+  // ===== YOUTH UNEMPLOYMENT (15-24) =====
+  { indicator_id: "unemployment_youth", region: "us", source: "fred", fred_series: "LNU04024887", source_label: "FRED/BLS" },
+  { indicator_id: "unemployment_youth", region: "global", source: "wb", wb_country: "1W", wb_indicator: "SL.UEM.1524.ZS", source_label: "World Bank" },
+  { indicator_id: "unemployment_youth", region: "europe", source: "wb", wb_country: "Z4", wb_indicator: "SL.UEM.1524.ZS", source_label: "World Bank (Euro Area)" },
+  { indicator_id: "unemployment_youth", region: "spain", source: "wb", wb_country: "ES", wb_indicator: "SL.UEM.1524.ZS", source_label: "World Bank" },
+
+  // ===== UNEMPLOYMENT TOTAL =====
+  { indicator_id: "unemployment_total", region: "us", source: "fred", fred_series: "UNRATE", source_label: "FRED/BLS" },
+  // ECB Euro Area unemployment — fixed I8 → I9
+  { indicator_id: "unemployment_total", region: "europe", source: "ecb", ecb_path: "LFSI/M.I9.S.UNEHRT.TOTAL0.15_74.T", source_label: "ECB SDW (Euro Area)" },
+  { indicator_id: "unemployment_total", region: "spain", source: "fred", fred_series: "LRHUTTTTESM156S", source_label: "OECD via FRED" },
+  // Global unemployment from World Bank (annual)
+  { indicator_id: "unemployment_total", region: "global", source: "wb", wb_country: "1W", wb_indicator: "SL.UEM.TOTL.ZS", source_label: "World Bank/ILO" },
+
+  // ===== CPI YoY =====
+  { indicator_id: "cpi_yoy", region: "us", source: "fred", fred_series: "CPIAUCSL", transform: yoyPct, source_label: "FRED/BLS" },
+  { indicator_id: "cpi_yoy", region: "europe", source: "ecb", ecb_path: "ICP/M.U2.N.000000.4.ANR", source_label: "ECB SDW (Euro Area)" },
+  { indicator_id: "cpi_yoy", region: "global", source: "imf", imf_indicator: "PCPIPCH", imf_country: "WEOWORLD", source_label: "IMF WEO" },
+  { indicator_id: "cpi_yoy", region: "spain", source: "imf", imf_indicator: "PCPIPCH", imf_country: "ESP", source_label: "IMF WEO/INE" },
+
+  // ===== POLICY RATE =====
+  { indicator_id: "policy_rate", region: "us", source: "fred", fred_series: "DFF", source_label: "FRED/Fed" },
+  { indicator_id: "policy_rate", region: "europe", source: "ecb", ecb_path: "FM/B.U2.EUR.4F.KR.MRR_FR.LEV", source_label: "ECB" },
+  // Spain alias → reuses Europe data (no extra API call)
+  { indicator_id: "policy_rate", region: "spain", source: "alias", alias_region: "europe", source_label: "ECB (Spain uses ECB rate)" },
+
+  // ===== M2 MONEY SUPPLY =====
+  { indicator_id: "m2_absolute", region: "us", source: "fred", fred_series: "WM2NS", transform: divideBy(1000), source_label: "FRED/Fed (USD trillions)" },
+  { indicator_id: "m2_absolute", region: "europe", source: "ecb", ecb_path: "BSI/M.U2.Y.V.M20.X.1.U2.2300.Z01.E", transform: divideBy(1000), source_label: "ECB SDW (EUR trillions)" },
+  // Spain M2 from FRED (millions EUR → billions EUR ÷1000)
+  { indicator_id: "m2_absolute", region: "spain", source: "fred", fred_series: "MYAGM2ESM189N", transform: divideBy(1_000_000), source_label: "FRED (EUR trillions)" },
+
+  // ===== 10Y BOND YIELD =====
+  { indicator_id: "bond_yield_10y", region: "us", source: "fred", fred_series: "DGS10", source_label: "FRED" },
+  { indicator_id: "bond_yield_10y", region: "europe", source: "fred", fred_series: "IRLTLT01DEM156N", source_label: "FRED (German Bund)" },
+  { indicator_id: "bond_yield_10y", region: "spain", source: "fred", fred_series: "IRLTLT01ESM156N", source_label: "FRED (Spanish Bono)" },
+
+  // ===== YIELD CURVE =====
+  { indicator_id: "yield_curve", region: "us", source: "fred", fred_series: "T10Y2Y", source_label: "FRED (10Y-2Y)" },
+  {
+    indicator_id: "yield_curve", region: "europe", source: "computed", source_label: "FRED (Bund 10Y - 3M)",
+    compute: async (fetcher) => {
+      const long = await fetcher({ indicator_id: "_eu_10y", region: "europe", source: "fred", fred_series: "IRLTLT01DEM156N" });
+      const short = await fetcher({ indicator_id: "_eu_3m", region: "europe", source: "fred", fred_series: "IRSTCI01DEM156N" });
+      return subtractByMonth(long, short);
+    },
+  },
+  // Spain: 10Y Bono - 10Y Bund (sovereign spread, in percentage points)
+  {
+    indicator_id: "yield_curve", region: "spain", source: "computed", source_label: "FRED (Bono - Bund spread)",
+    compute: async (fetcher) => {
+      const bono = await fetcher({ indicator_id: "_es", region: "spain", source: "fred", fred_series: "IRLTLT01ESM156N" });
+      const bund = await fetcher({ indicator_id: "_de", region: "spain", source: "fred", fred_series: "IRLTLT01DEM156N" });
+      return subtractByMonth(bono, bund);
+    },
+  },
 ];
 
 // ---------- Fetchers ----------
@@ -139,8 +223,6 @@ async function fetchEcb(path: string): Promise<Obs[]> {
   const r = await fetch(url, { headers: { Accept: "application/json" } });
   if (!r.ok) throw new Error(`ECB ${path} HTTP ${r.status}`);
   const j = await r.json();
-  // ECB JSON: dataSets[0].series[<key>].observations -> { "0": [value], "1": [value] }
-  // structure.dimensions.observation[0].values[i].id provides time period
   const ds = j?.dataSets?.[0];
   const timeDim = j?.structure?.dimensions?.observation?.find((d: any) => d.id === "TIME_PERIOD")
     || j?.structure?.dimensions?.observation?.[0];
@@ -153,7 +235,6 @@ async function fetchEcb(path: string): Promise<Obs[]> {
     const period = periods[i];
     const val = (arr as any[])?.[0];
     if (!period || val === null || val === undefined || isNaN(Number(val))) continue;
-    // Normalise period (e.g. "2024-03" or "2024-Q1") to YYYY-MM-01
     let date = period;
     if (/^\d{4}-\d{2}$/.test(period)) date = `${period}-01`;
     else if (/^\d{4}-Q[1-4]$/.test(period)) {
@@ -171,7 +252,10 @@ async function fetchImf(indicator: string, country: string): Promise<{ actuals: 
   const r = await fetch(url);
   if (!r.ok) throw new Error(`IMF ${indicator}/${country} HTTP ${r.status}`);
   const j = await r.json();
-  const obj = j?.values?.[indicator]?.[country] || {};
+  const obj = j?.values?.[indicator]?.[country];
+  if (!obj || typeof obj !== "object") {
+    throw new Error(`IMF ${indicator}/${country} returned no series for that country code`);
+  }
   const currentYear = new Date().getUTCFullYear();
   const actuals: Obs[] = [];
   const forecasts: Obs[] = [];
@@ -187,27 +271,44 @@ async function fetchImf(indicator: string, country: string): Promise<{ actuals: 
   return { actuals, forecasts };
 }
 
-async function fetchUnPop(location: number): Promise<{ subCat: string; obs: Obs[] }[]> {
-  // Indicator 47: population by broad age groups
-  const url = `https://population.un.org/dataportalapi/api/v1/data/indicators/47/locations/${location}/start/2000/end/2030?format=json`;
+async function fetchWorldBank(country: string, indicator: string): Promise<Obs[]> {
+  const url = `https://api.worldbank.org/v2/country/${country}/indicator/${indicator}?format=json&per_page=200&mrv=60`;
   const r = await fetch(url);
-  if (!r.ok) throw new Error(`UN pop ${location} HTTP ${r.status}`);
+  if (!r.ok) throw new Error(`WorldBank ${indicator}/${country} HTTP ${r.status}`);
   const j = await r.json();
-  const rows: any[] = j?.data || [];
-  const groups: Record<string, Obs[]> = {};
+  if (!Array.isArray(j) || j.length < 2) throw new Error(`WorldBank ${indicator}/${country} unexpected shape`);
+  const rows: any[] = j[1] || [];
+  const out: Obs[] = [];
   for (const row of rows) {
-    if (row.variant && row.variant !== "Median") continue;
-    if (row.sex && row.sex !== "Both sexes") continue;
-    const ageLabel: string = row.ageLabel || row.ageStart + "-" + row.ageEnd;
-    const date = `${row.timeLabel || row.year}-12-31`;
-    const value = Number(row.value);
-    if (isNaN(value)) continue;
-    (groups[ageLabel] ||= []).push({ date, value });
+    if (row?.value == null) continue;
+    const year = parseInt(row.date, 10);
+    if (Number.isNaN(year)) continue;
+    out.push({ date: `${year}-12-31`, value: Number(row.value) });
   }
-  return Object.entries(groups).map(([subCat, obs]) => ({
-    subCat,
-    obs: obs.sort((a, b) => a.date.localeCompare(b.date)),
-  }));
+  return out.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+async function fetchWorldBankPopulationAge(country: string): Promise<{ subCat: string; obs: Obs[] }[]> {
+  const [pct014, pct1564, pct65, total] = await Promise.all([
+    fetchWorldBank(country, "SP.POP.0014.TO.ZS"),
+    fetchWorldBank(country, "SP.POP.1564.TO.ZS"),
+    fetchWorldBank(country, "SP.POP.65UP.TO.ZS"),
+    fetchWorldBank(country, "SP.POP.TOTL"),
+  ]);
+  const totalMap = new Map(total.map((o) => [o.date, o.value]));
+  const buildAbs = (pct: Obs[]) => {
+    const out: Obs[] = [];
+    for (const p of pct) {
+      const t = totalMap.get(p.date);
+      if (t != null) out.push({ date: p.date, value: (p.value / 100) * t });
+    }
+    return out;
+  };
+  return [
+    { subCat: "0-14", obs: buildAbs(pct014) },
+    { subCat: "15-64", obs: buildAbs(pct1564) },
+    { subCat: "65+", obs: buildAbs(pct65) },
+  ];
 }
 
 // ---------- Main handler ----------
@@ -224,7 +325,6 @@ serve(async (req) => {
   let body: { indicator_id?: string; region?: string; force_refresh?: boolean } = {};
   try { body = await req.json(); } catch (_) { /* allow empty */ }
 
-  // REQUIRED: process only one indicator+region per invocation to avoid CPU timeout
   if (!body.indicator_id || !body.region) {
     return new Response(
       JSON.stringify({
@@ -243,38 +343,37 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         fetched: 0,
-        errors: [`No job defined for ${body.indicator_id}/${body.region}`],
+        errors: [],
+        skipped: `No job defined for ${body.indicator_id}/${body.region} (intentionally not applicable)`,
         duration_ms: Date.now() - startedAt,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 
-  // Load cache meta for TTL filtering
+  // Cache TTL check
   const { data: cacheRows } = await supabase
     .from("economy_cache_meta")
-    .select("indicator_id, region, last_fetched, fetch_status");
-  const cacheMap = new Map<string, { last_fetched: string | null; fetch_status: string | null }>();
-  for (const r of cacheRows || []) {
-    cacheMap.set(`${r.indicator_id}|${r.region}`, {
-      last_fetched: r.last_fetched,
-      fetch_status: r.fetch_status,
-    });
-  }
+    .select("indicator_id, region, last_fetched, fetch_status")
+    .eq("indicator_id", body.indicator_id)
+    .eq("region", body.region);
+  const cached = cacheRows?.[0];
 
   const fetchedSeries: string[] = [];
   const errors: string[] = [];
 
-  // Reusable raw fetcher used by computed jobs
   const rawFetch = async (j: Job): Promise<Obs[]> => {
     if (j.source === "fred") return fetchFred(j.fred_series!, fredKey);
     if (j.source === "ecb") return fetchEcb(j.ecb_path!);
+    if (j.source === "imf") {
+      const { actuals } = await fetchImf(j.imf_indicator!, j.imf_country!);
+      return actuals;
+    }
     throw new Error(`raw fetch unsupported for ${j.source}`);
   };
 
   for (const job of jobs) {
     const key = `${job.indicator_id}|${job.region}`;
-    const cached = cacheMap.get(key);
     if (!body.force_refresh && cached?.last_fetched && cached.fetch_status === "ok") {
       const age = Date.now() - new Date(cached.last_fetched).getTime();
       if (age < CACHE_TTL_MS) continue;
@@ -283,10 +382,28 @@ serve(async (req) => {
     try {
       let observations: Obs[] = [];
       let forecasts: Obs[] = [];
-      let isAgeGrouped = false;
-      let ageGroups: { subCat: string; obs: Obs[] }[] = [];
+      let isMulti = false;
+      let multiGroups: { subCat: string; obs: Obs[] }[] = [];
 
-      if (job.source === "fred") {
+      if (job.source === "alias") {
+        // Copy observations from another region (no API call)
+        const { data, error } = await supabase
+          .from("economy_observations")
+          .select("observation_date,value")
+          .eq("indicator_id", job.indicator_id)
+          .eq("region", job.alias_region!);
+        if (error) throw error;
+        observations = (data || []).map((r: any) => ({
+          date: r.observation_date,
+          value: Number(r.value),
+        }));
+        if (observations.length === 0) {
+          throw new Error(`alias source ${job.alias_region} has no data yet — fetch it first`);
+        }
+      } else if (job.multi) {
+        multiGroups = await job.multi(fredKey);
+        isMulti = true;
+      } else if (job.source === "fred") {
         if (!fredKey) throw new Error("FRED_API_KEY not configured");
         observations = await fetchFred(job.fred_series!, fredKey);
       } else if (job.source === "ecb") {
@@ -295,26 +412,26 @@ serve(async (req) => {
         const { actuals, forecasts: fc } = await fetchImf(job.imf_indicator!, job.imf_country!);
         observations = actuals;
         forecasts = fc;
-      } else if (job.source === "un_pop") {
-        ageGroups = await fetchUnPop(job.un_location!);
-        isAgeGrouped = true;
+      } else if (job.source === "wb") {
+        observations = await fetchWorldBank(job.wb_country!, job.wb_indicator!);
       } else if (job.source === "computed") {
         observations = await job.compute!(rawFetch);
       }
 
       if (job.transform) observations = job.transform(observations);
 
-      // Upsert observations
-      if (isAgeGrouped) {
-        for (const g of ageGroups) {
+      const sourceTag = (job.source_label || job.source).toUpperCase();
+
+      if (isMulti) {
+        for (const g of multiGroups) {
           const rows = g.obs.map((o) => ({
             indicator_id: job.indicator_id,
             region: job.region,
             observation_date: o.date,
             value: o.value,
             sub_category: g.subCat,
-            source: "UN WPP",
-            source_series_id: `47/${job.un_location}`,
+            source: sourceTag,
+            source_series_id: job.wb_country || null,
             updated_at: new Date().toISOString(),
           }));
           if (rows.length) {
@@ -331,8 +448,8 @@ serve(async (req) => {
           observation_date: o.date,
           value: o.value,
           sub_category: '',
-          source: job.source.toUpperCase(),
-          source_series_id: job.fred_series || job.ecb_path || job.imf_indicator || null,
+          source: sourceTag,
+          source_series_id: job.fred_series || job.ecb_path || job.imf_indicator || job.wb_indicator || null,
           updated_at: new Date().toISOString(),
         }));
         const { error } = await supabase
@@ -341,7 +458,6 @@ serve(async (req) => {
         if (error) throw error;
       }
 
-      // Forecasts
       if (forecasts.length) {
         const rows = forecasts.map((o) => ({
           indicator_id: job.indicator_id,
@@ -358,9 +474,8 @@ serve(async (req) => {
         if (error) throw error;
       }
 
-      // Cache meta success
-      const lastObs = isAgeGrouped
-        ? ageGroups.flatMap((g) => g.obs).map((o) => o.date).sort().pop() || null
+      const lastObs = isMulti
+        ? multiGroups.flatMap((g) => g.obs).map((o) => o.date).sort().pop() || null
         : observations.map((o) => o.date).sort().pop() || null;
 
       await supabase.from("economy_cache_meta").upsert({

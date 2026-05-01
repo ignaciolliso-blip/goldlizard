@@ -3,7 +3,7 @@ export type EconomyRegion = 'global' | 'us' | 'europe' | 'spain';
 export const REGION_LABELS: Record<EconomyRegion, string> = {
   global: 'Global',
   us: 'United States',
-  europe: 'Europe',
+  europe: 'Europe (Euro Area)',
   spain: 'Spain',
 };
 
@@ -18,10 +18,20 @@ export interface IndicatorDefinition {
   notes?: string;
   sourceLabel: Record<EconomyRegion, string>;
   sourceUrl: Record<EconomyRegion, string>;
+  /** Optional per-region card title override (e.g. "Fed Funds Rate — United States") */
+  cardTitle?: Partial<Record<EconomyRegion, string>>;
+  /** Optional per-region empty-state explanation (used when sourceLabel === 'N/A') */
+  emptyStateNote?: Partial<Record<EconomyRegion, string>>;
+  /** Optional per-region footnote shown beneath the chart */
+  regionNote?: Partial<Record<EconomyRegion, string>>;
 }
 
 const IMF_WEO = 'https://www.imf.org/en/Publications/WEO';
 const ECB_API = 'https://data-api.ecb.europa.eu';
+const WORLD_BANK = 'https://data.worldbank.org';
+
+const EUROPE_FOOTNOTE =
+  'Data represents the Euro Area (ECB/IMF definition). Where Euro Area data is unavailable, Germany is used as proxy.';
 
 export const INDICATOR_DEFINITIONS: IndicatorDefinition[] = [
   {
@@ -30,13 +40,14 @@ export const INDICATOR_DEFINITIONS: IndicatorDefinition[] = [
     description: 'Nominal Gross Domestic Product in current US dollars.',
     unit: 'USD Trillions',
     chartType: 'line',
-    sourceLabel: { global: 'IMF WEO', us: 'FRED / BEA', europe: 'IMF WEO', spain: 'IMF WEO' },
+    sourceLabel: { global: 'IMF WEO', us: 'FRED / BEA', europe: 'IMF WEO (Euro Area)', spain: 'IMF WEO' },
     sourceUrl: {
       global: IMF_WEO,
       us: 'https://fred.stlouisfed.org/series/GDP',
       europe: IMF_WEO,
       spain: IMF_WEO,
     },
+    regionNote: { europe: EUROPE_FOOTNOTE },
   },
   {
     id: 'debt_absolute',
@@ -44,13 +55,15 @@ export const INDICATOR_DEFINITIONS: IndicatorDefinition[] = [
     description: 'Total general government gross debt outstanding.',
     unit: 'USD Trillions',
     chartType: 'line',
-    sourceLabel: { global: 'IMF WEO', us: 'FRED', europe: 'IMF WEO', spain: 'IMF WEO' },
+    notes: 'Global / Europe / Spain derived from IMF debt-to-GDP × nominal GDP. US is direct from FRED.',
+    sourceLabel: { global: 'IMF WEO (derived)', us: 'FRED', europe: 'IMF WEO (derived, Euro Area)', spain: 'IMF WEO (derived)' },
     sourceUrl: {
       global: IMF_WEO,
       us: 'https://fred.stlouisfed.org/series/GFDEBTNQ',
       europe: IMF_WEO,
       spain: IMF_WEO,
     },
+    regionNote: { europe: EUROPE_FOOTNOTE },
   },
   {
     id: 'debt_pct_gdp',
@@ -58,13 +71,14 @@ export const INDICATOR_DEFINITIONS: IndicatorDefinition[] = [
     description: 'Government gross debt as a percentage of GDP.',
     unit: '% of GDP',
     chartType: 'line',
-    sourceLabel: { global: 'IMF WEO', us: 'FRED', europe: 'IMF WEO', spain: 'IMF WEO' },
+    sourceLabel: { global: 'IMF WEO', us: 'FRED', europe: 'IMF WEO (Euro Area)', spain: 'IMF WEO' },
     sourceUrl: {
       global: IMF_WEO,
       us: 'https://fred.stlouisfed.org/series/GFDEGDQ188S',
       europe: IMF_WEO,
       spain: IMF_WEO,
     },
+    regionNote: { europe: EUROPE_FOOTNOTE },
   },
   {
     id: 'gdp_per_capita',
@@ -72,32 +86,35 @@ export const INDICATOR_DEFINITIONS: IndicatorDefinition[] = [
     description: 'Nominal GDP divided by total population.',
     unit: 'USD',
     chartType: 'line',
-    sourceLabel: { global: 'IMF WEO', us: 'FRED / BEA', europe: 'IMF WEO', spain: 'IMF WEO' },
+    sourceLabel: { global: 'IMF WEO', us: 'FRED / BEA', europe: 'IMF WEO (Euro Area)', spain: 'IMF WEO' },
     sourceUrl: {
       global: IMF_WEO,
       us: 'https://fred.stlouisfed.org/series/A939RX0Q048SBEA',
       europe: IMF_WEO,
       spain: IMF_WEO,
     },
+    regionNote: { europe: EUROPE_FOOTNOTE },
   },
   {
     id: 'population_age',
     label: 'Population by Age Group',
-    description: 'Demographic breakdown by broad age cohorts.',
+    description: 'Demographic breakdown by broad age cohorts (0-14, 15-64, 65+).',
     unit: 'People',
     chartType: 'stacked_area',
+    notes: 'World Bank annual data. Three buckets shown (0-14, 15-64, 65+). Finer age splits are not available from free public APIs at this granularity.',
     sourceLabel: {
-      global: 'UN Pop. Division',
-      us: 'UN Pop. Division',
-      europe: 'UN Pop. Division',
-      spain: 'UN Pop. Division',
+      global: 'World Bank',
+      us: 'World Bank',
+      europe: 'World Bank (Euro Area)',
+      spain: 'World Bank',
     },
     sourceUrl: {
-      global: 'https://population.un.org/wpp/',
-      us: 'https://population.un.org/wpp/',
-      europe: 'https://population.un.org/wpp/',
-      spain: 'https://population.un.org/wpp/',
+      global: WORLD_BANK,
+      us: WORLD_BANK,
+      europe: WORLD_BANK,
+      spain: WORLD_BANK,
     },
+    regionNote: { europe: EUROPE_FOOTNOTE },
   },
   {
     id: 'unemployment_youth',
@@ -106,17 +123,18 @@ export const INDICATOR_DEFINITIONS: IndicatorDefinition[] = [
     unit: '%',
     chartType: 'line',
     sourceLabel: {
-      global: 'ILO / World Bank',
+      global: 'World Bank / ILO',
       us: 'FRED / BLS',
-      europe: 'ECB SDW',
-      spain: 'FRED / OECD',
+      europe: 'World Bank (Euro Area)',
+      spain: 'World Bank',
     },
     sourceUrl: {
       global: 'https://data.worldbank.org/indicator/SL.UEM.1524.ZS',
       us: 'https://fred.stlouisfed.org/series/LNU04024887',
-      europe: ECB_API,
-      spain: 'https://fred.stlouisfed.org/series/LRUN24TTESM156S',
+      europe: 'https://data.worldbank.org/indicator/SL.UEM.1524.ZS',
+      spain: 'https://data.worldbank.org/indicator/SL.UEM.1524.ZS',
     },
+    regionNote: { europe: EUROPE_FOOTNOTE },
   },
   {
     id: 'unemployment_total',
@@ -125,10 +143,10 @@ export const INDICATOR_DEFINITIONS: IndicatorDefinition[] = [
     unit: '%',
     chartType: 'line',
     sourceLabel: {
-      global: 'ILO / World Bank',
+      global: 'World Bank / ILO',
       us: 'FRED / BLS',
-      europe: 'ECB SDW',
-      spain: 'FRED / OECD',
+      europe: 'ECB SDW (Euro Area)',
+      spain: 'OECD via FRED',
     },
     sourceUrl: {
       global: 'https://data.worldbank.org/indicator/SL.UEM.TOTL.ZS',
@@ -136,6 +154,7 @@ export const INDICATOR_DEFINITIONS: IndicatorDefinition[] = [
       europe: ECB_API,
       spain: 'https://fred.stlouisfed.org/series/LRHUTTTTESM156S',
     },
+    regionNote: { europe: EUROPE_FOOTNOTE },
   },
   {
     id: 'cpi_yoy',
@@ -146,7 +165,7 @@ export const INDICATOR_DEFINITIONS: IndicatorDefinition[] = [
     sourceLabel: {
       global: 'IMF WEO',
       us: 'FRED / BLS',
-      europe: 'ECB SDW',
+      europe: 'ECB SDW (Euro Area)',
       spain: 'IMF WEO / INE',
     },
     sourceUrl: {
@@ -155,6 +174,7 @@ export const INDICATOR_DEFINITIONS: IndicatorDefinition[] = [
       europe: ECB_API,
       spain: IMF_WEO,
     },
+    regionNote: { europe: EUROPE_FOOTNOTE },
   },
   {
     id: 'policy_rate',
@@ -162,12 +182,10 @@ export const INDICATOR_DEFINITIONS: IndicatorDefinition[] = [
     description: 'Central bank policy rate.',
     unit: '%',
     chartType: 'line',
-    notes:
-      'No single global policy rate exists. Spain is a Eurozone member and uses the ECB rate.',
     sourceLabel: {
       global: 'N/A',
       us: 'FRED / Fed',
-      europe: 'ECB SDW',
+      europe: 'ECB',
       spain: 'ECB (Spain uses ECB rate)',
     },
     sourceUrl: {
@@ -176,24 +194,43 @@ export const INDICATOR_DEFINITIONS: IndicatorDefinition[] = [
       europe: ECB_API,
       spain: ECB_API,
     },
+    cardTitle: {
+      us: 'Fed Funds Rate — United States',
+      europe: 'ECB Main Refinancing Rate — Euro Area',
+      spain: 'ECB Rate — Spain (Eurozone)',
+    },
+    emptyStateNote: {
+      global: 'No single global rate. See US (Fed) and Europe (ECB) below.',
+    },
+    regionNote: {
+      europe: EUROPE_FOOTNOTE,
+      spain: 'Spain is a Eurozone member. The ECB rate applies.',
+    },
   },
   {
     id: 'm2_absolute',
     label: 'M2 Money Supply (Absolute)',
     description: 'Broad money supply aggregate.',
-    unit: 'USD Trillions',
+    unit: 'Trillions',
     chartType: 'line',
     sourceLabel: {
       global: 'N/A',
-      us: 'FRED / Fed',
-      europe: 'ECB SDW',
-      spain: 'Banco de España / ECB',
+      us: 'FRED / Fed (USD)',
+      europe: 'ECB SDW (EUR, Euro Area)',
+      spain: 'FRED (EUR)',
     },
     sourceUrl: {
       global: '',
       us: 'https://fred.stlouisfed.org/series/WM2NS',
       europe: ECB_API,
-      spain: ECB_API,
+      spain: 'https://fred.stlouisfed.org/series/MYAGM2ESM189N',
+    },
+    emptyStateNote: {
+      global: 'No single global M2 aggregate exists. Showing US Fed and ECB Euro Area.',
+    },
+    regionNote: {
+      europe: EUROPE_FOOTNOTE,
+      spain: 'Denominated in EUR. Eurozone-wide M2 shown in Europe column.',
     },
   },
   {
@@ -215,6 +252,10 @@ export const INDICATOR_DEFINITIONS: IndicatorDefinition[] = [
       europe: ECB_API,
       spain: ECB_API,
     },
+    emptyStateNote: {
+      global: 'No single global M2 aggregate exists.',
+    },
+    regionNote: { europe: EUROPE_FOOTNOTE },
   },
   {
     id: 'bond_yield_10y',
@@ -234,18 +275,20 @@ export const INDICATOR_DEFINITIONS: IndicatorDefinition[] = [
       europe: 'https://fred.stlouisfed.org/series/IRLTLT01DEM156N',
       spain: 'https://fred.stlouisfed.org/series/IRLTLT01ESM156N',
     },
+    emptyStateNote: {
+      global: 'Sovereign bond yields are country-specific. See US Treasuries and German Bund columns.',
+    },
+    regionNote: { europe: EUROPE_FOOTNOTE },
   },
   {
     id: 'yield_curve',
     label: 'Yield Curve (10Y–2Y Spread)',
     description: 'Spread between long and short-term sovereign yields.',
-    unit: 'bps',
+    unit: '%',
     chartType: 'line',
-    notes:
-      'US: 10Y–2Y Treasury spread. Europe: 10Y–3M Bund spread. Spain: 10Y Bono minus 10Y Bund (sovereign risk premium, not a true yield curve).',
     sourceLabel: {
       global: 'N/A',
-      us: 'FRED',
+      us: 'FRED (10Y–2Y)',
       europe: 'FRED (Bund 10Y–3M)',
       spain: 'FRED (Bono–Bund spread)',
     },
@@ -254,6 +297,16 @@ export const INDICATOR_DEFINITIONS: IndicatorDefinition[] = [
       us: 'https://fred.stlouisfed.org/series/T10Y2Y',
       europe: 'https://fred.stlouisfed.org/series/IRLTLT01DEM156N',
       spain: 'https://fred.stlouisfed.org/series/IRLTLT01ESM156N',
+    },
+    cardTitle: {
+      spain: 'Spain Sovereign Spread vs Bund',
+    },
+    emptyStateNote: {
+      global: 'Yield curves are country-specific.',
+    },
+    regionNote: {
+      europe: EUROPE_FOOTNOTE,
+      spain: 'Sovereign risk premium (10Y Bono − 10Y Bund), not a true yield curve.',
     },
   },
 ];
