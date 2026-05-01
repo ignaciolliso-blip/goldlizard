@@ -61,20 +61,33 @@ function formatYAxis(value: number, unit: string): string {
   return `${value.toFixed(1)}`;
 }
 
+// Parse YYYY-MM-DD as UTC to avoid timezone shifting the displayed day.
+function parseISODate(iso: string): Date | null {
+  if (!iso) return null;
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) {
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+}
+
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 function formatDateShort(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  // If month is January and day is 1, it's likely annual
+  const d = parseISODate(iso);
+  if (!d) return iso;
+  // Annual data convention: Jan 1 → show only the year
   if (d.getUTCMonth() === 0 && d.getUTCDate() === 1) {
     return `${d.getUTCFullYear()}`;
   }
-  return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+  return `${MONTHS_SHORT[d.getUTCMonth()]} '${String(d.getUTCFullYear()).slice(-2)}`;
 }
 
 function formatDateFull(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const d = parseISODate(iso);
+  if (!d) return iso;
+  return `${MONTHS_SHORT[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
 }
 
 interface ObservationRow {
