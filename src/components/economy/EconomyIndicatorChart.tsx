@@ -290,8 +290,33 @@ const ChartBody = forwardRef<HTMLDivElement, ChartBodyProps>(function ChartBody(
     minTickGap: 40,
   };
 
-  // Augment data with numeric timestamp
-  const numericData = data.map((d) => ({ ...d, ts: parseISODate(d.date)?.getTime() ?? 0 }));
+  // Augment data with numeric timestamp + YoY % change (vs ~1y prior point)
+  const baseNumeric = data.map((d) => ({ ...d, ts: parseISODate(d.date)?.getTime() ?? 0 }));
+  const numericData = showYoYPercent
+    ? baseNumeric.map((d, i, arr) => {
+        const cur = d.actual ?? d.forecast;
+        if (cur == null || !Number.isFinite(cur as number)) return d;
+        // Find a prior row ~365 days before within ±45 day window
+        const target = (d.ts as number) - 365 * 24 * 3600 * 1000;
+        let best: any = null;
+        let bestDiff = Infinity;
+        for (let j = i - 1; j >= 0; j--) {
+          const diff = Math.abs((arr[j].ts as number) - target);
+          if (diff > 60 * 24 * 3600 * 1000) {
+            if ((arr[j].ts as number) < target - 60 * 24 * 3600 * 1000) break;
+            continue;
+          }
+          if (diff < bestDiff) {
+            bestDiff = diff;
+            best = arr[j];
+          }
+        }
+        const prev = best ? (best.actual ?? best.forecast) : null;
+        if (prev == null || prev === 0) return d;
+        const yoy = ((cur as number) - (prev as number)) / Math.abs(prev as number) * 100;
+        return { ...d, yoyPct: yoy };
+      })
+    : baseNumeric;
 
   if (chartType === 'stacked_area') {
     return (
