@@ -450,6 +450,7 @@ export default function EconomyIndicatorChart({
   cardTitle,
   emptyStateNote,
   regionNote,
+  showYoYPercent,
 }: EconomyIndicatorChartProps) {
   const displayTitle = cardTitle || label;
   const isNotApplicable = sourceLabel === 'N/A';
