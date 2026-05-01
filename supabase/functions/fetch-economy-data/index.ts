@@ -418,7 +418,12 @@ serve(async (req) => {
         observations = await job.compute!(rawFetch);
       }
 
-      if (job.transform) observations = job.transform(observations);
+      if (job.transform) {
+        observations = job.transform(observations);
+        // Apply the same unit transform to forecasts so units stay consistent
+        // between the actual series and IMF projections.
+        if (forecasts.length) forecasts = job.transform(forecasts);
+      }
 
       const sourceTag = (job.source_label || job.source).toUpperCase();
 
