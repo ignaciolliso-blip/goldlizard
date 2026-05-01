@@ -562,7 +562,7 @@ export type Database = {
           region: string
           source: string | null
           source_series_id: string | null
-          sub_category: string | null
+          sub_category: string
           unit: string | null
           updated_at: string | null
           value: number | null
@@ -575,7 +575,7 @@ export type Database = {
           region: string
           source?: string | null
           source_series_id?: string | null
-          sub_category?: string | null
+          sub_category?: string
           unit?: string | null
           updated_at?: string | null
           value?: number | null
@@ -588,7 +588,7 @@ export type Database = {
           region?: string
           source?: string | null
           source_series_id?: string | null
-          sub_category?: string | null
+          sub_category?: string
           unit?: string | null
           updated_at?: string | null
           value?: number | null
