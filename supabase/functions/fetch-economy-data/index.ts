@@ -330,7 +330,7 @@ serve(async (req) => {
           region: job.region,
           observation_date: o.date,
           value: o.value,
-          sub_category: null,
+          sub_category: '',
           source: job.source.toUpperCase(),
           source_series_id: job.fred_series || job.ecb_path || job.imf_indicator || null,
           updated_at: new Date().toISOString(),
