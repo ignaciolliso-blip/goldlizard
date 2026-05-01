@@ -124,11 +124,24 @@ interface Props {
   currentM2Billions?: number;
 }
 
+type RangeKey = '100y' | '50y' | '20y' | '10y' | '5y' | '3y' | '1y' | 'ytd';
+const RANGES: { key: RangeKey; label: string; years: number | 'ytd' }[] = [
+  { key: '100y', label: '100Y', years: 100 },
+  { key: '50y',  label: '50Y',  years: 50 },
+  { key: '20y',  label: '20Y',  years: 20 },
+  { key: '10y',  label: '10Y',  years: 10 },
+  { key: '5y',   label: '5Y',   years: 5 },
+  { key: '3y',   label: '3Y',   years: 3 },
+  { key: '1y',   label: '1Y',   years: 1 },
+  { key: 'ytd',  label: 'YTD',  years: 'ytd' },
+];
+
 export default function GoldM2LongTermChart({ currentGoldPrice }: Props) {
   const isMobile = useIsMobile();
   const [showAnnotations, setShowAnnotations] = useState(true);
+  const [range, setRange] = useState<RangeKey>('100y');
 
-  const chartData = useMemo(() => {
+  const allData = useMemo(() => {
     return RAW_DATA.map(r => {
       const oz = r.goldTonnes * OZ_PER_TONNE;
       const price = (r.year === 2025 && currentGoldPrice) ? currentGoldPrice : r.goldPriceAvg;
@@ -147,10 +160,23 @@ export default function GoldM2LongTermChart({ currentGoldPrice }: Props) {
     });
   }, [currentGoldPrice]);
 
+  const chartData = useMemo(() => {
+    if (range === 'ytd') {
+      const currentYear = new Date().getFullYear();
+      const filtered = allData.filter(d => d.year >= currentYear);
+      return filtered.length ? filtered : allData.slice(-1);
+    }
+    const years = RANGES.find(r => r.key === range)?.years as number;
+    const cutoff = (allData[allData.length - 1]?.year ?? new Date().getFullYear()) - years;
+    const filtered = allData.filter(d => d.year >= cutoff);
+    return filtered.length >= 2 ? filtered : allData.slice(-2);
+  }, [allData, range]);
+
   const maxAbsolute = useMemo(() => Math.max(...chartData.map(d => Math.max(d.goldMarketCap, d.g5M2))), [chartData]);
   const maxRatio    = useMemo(() => Math.max(...chartData.map(d => d.ratio)) * 1.2, [chartData]);
   const currentRatio = chartData[chartData.length - 1]?.ratio ?? 0;
   const ratioColor = currentRatio > 25 ? 'text-red-400' : currentRatio < 8 ? 'text-green-400' : 'text-yellow-400';
+  const xInterval = chartData.length > 40 ? (isMobile ? 9 : 4) : chartData.length > 15 ? 2 : chartData.length > 6 ? 1 : 0;
 
   return (
     <div className="bg-card border border-border rounded-xl p-5 sm:p-7 space-y-4">
@@ -198,6 +224,23 @@ export default function GoldM2LongTermChart({ currentGoldPrice }: Props) {
         </div>
       </div>
 
+      {/* Range selector */}
+      <div className="flex flex-wrap items-center gap-1">
+        {RANGES.map(r => (
+          <button
+            key={r.key}
+            onClick={() => setRange(r.key)}
+            className={`text-xs px-2 py-1 rounded border transition-colors ${
+              range === r.key
+                ? 'bg-primary/15 border-primary/50 text-foreground font-semibold'
+                : 'border-border/60 text-muted-foreground hover:text-foreground hover:border-border'
+            }`}
+          >
+            {r.label}
+          </button>
+        ))}
+      </div>
+
       {/* Chart */}
       <div className="w-full" style={{ height: isMobile ? 320 : 420 }}>
         <ResponsiveContainer width="100%" height="100%">
@@ -208,7 +251,7 @@ export default function GoldM2LongTermChart({ currentGoldPrice }: Props) {
               stroke="hsl(var(--muted-foreground))"
               tick={{ fontSize: 11 }}
               tickFormatter={(v) => String(v)}
-              interval={isMobile ? 4 : 2}
+              interval={xInterval}
             />
             <YAxis
               yAxisId="left"
