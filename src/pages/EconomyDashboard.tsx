@@ -114,6 +114,9 @@ export default function EconomyDashboard() {
                   sourceUrl={indicator.sourceUrl[region]}
                   chartType={indicator.chartType}
                   notes={indicator.notes}
+                  cardTitle={indicator.cardTitle?.[region]}
+                  emptyStateNote={indicator.emptyStateNote?.[region]}
+                  regionNote={indicator.regionNote?.[region]}
                 />
               ))}
             </div>
