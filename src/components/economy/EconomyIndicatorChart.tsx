@@ -355,10 +355,11 @@ const ChartBody = forwardRef<HTMLDivElement, ChartBodyProps>(function ChartBody(
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <LineChart data={numericData} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
+      <LineChart data={numericData} margin={{ top: 8, right: showYoYPercent ? 16 : 12, left: 0, bottom: 4 }}>
         <CartesianGrid stroke={gridStroke} strokeOpacity={0.4} vertical={false} />
         <XAxis {...xAxisProps} />
         <YAxis
+          yAxisId="left"
           tick={tickStyle}
           stroke={gridStroke}
           tickFormatter={(v) => formatYAxis(v, unit)}
@@ -369,8 +370,24 @@ const ChartBody = forwardRef<HTMLDivElement, ChartBodyProps>(function ChartBody(
             style: { fontSize: 11, fill: 'hsl(var(--muted-foreground))', textAnchor: 'middle' },
           }}
         />
+        {showYoYPercent && (
+          <YAxis
+            yAxisId="right"
+            orientation="right"
+            tick={tickStyle}
+            stroke={gridStroke}
+            tickFormatter={(v) => `${v.toFixed(0)}%`}
+            label={{
+              value: 'YoY %',
+              angle: 90,
+              position: 'insideRight',
+              style: { fontSize: 11, fill: 'hsl(var(--muted-foreground))', textAnchor: 'middle' },
+            }}
+          />
+        )}
         <Tooltip content={<CustomTooltip unit={unit} />} labelFormatter={tooltipLabelFormatter} />
         <Line
+          yAxisId="left"
           type="monotone"
           dataKey="actual"
           name="Actual"
@@ -382,12 +399,26 @@ const ChartBody = forwardRef<HTMLDivElement, ChartBodyProps>(function ChartBody(
         />
         {hasForecast && (
           <Line
+            yAxisId="left"
             type="monotone"
             dataKey="forecast"
             name="Forecast"
             stroke="hsl(var(--economy-light))"
             strokeWidth={1.5}
             strokeDasharray="5 4"
+            dot={false}
+            connectNulls
+            isAnimationActive={false}
+          />
+        )}
+        {showYoYPercent && (
+          <Line
+            yAxisId="right"
+            type="monotone"
+            dataKey="yoyPct"
+            name="YoY %"
+            stroke="hsl(40 80% 60%)"
+            strokeWidth={1.5}
             dot={false}
             connectNulls
             isAnimationActive={false}
