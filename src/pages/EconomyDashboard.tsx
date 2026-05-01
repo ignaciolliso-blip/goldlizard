@@ -27,7 +27,7 @@ export default function EconomyDashboard() {
       if (!silent) {
         toast({
           title: 'Data refreshed',
-          description: `Updated ${res.fetched ?? 0} series${
+          description: `Updated ${res.succeeded}/${res.total} series${
             res.errors?.length ? ` (${res.errors.length} errors)` : ''
           }.`,
         });
