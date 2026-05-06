@@ -137,9 +137,12 @@ export default function GoldHistoricalPNAVChart({ data, currentPNAV, currentGold
 
       {/* Cycle comparison table */}
       <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-border">
+        <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-3 flex-wrap">
           <p className="text-xs text-muted-foreground tracking-widest uppercase">
             How Today Compares to Previous Gold Miner Cycles
+          </p>
+          <p className="text-[10px] text-muted-foreground/70 font-mono">
+            TODAY P/NAV as of {publishedDateLabel} (latest published)
           </p>
         </div>
         <div className="overflow-x-auto">
