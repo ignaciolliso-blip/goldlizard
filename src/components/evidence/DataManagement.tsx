@@ -245,11 +245,16 @@ export default function DataManagement({ physicalDemand, etfFlows, minerPrices, 
                   <th className="text-left px-3 py-2">Month</th>
                   <th className="text-right px-3 py-2">Flows ($B)</th>
                   <th className="text-right px-3 py-2">Holdings (t)</th>
+                  <th className="text-right px-3 py-2">Δ Tonnes</th>
                   <th className="w-16" />
                 </tr>
               </thead>
               <tbody>
-                {sortedEtf.map((row, i) => (
+                {sortedEtf.map((row, i) => {
+                  // sortedEtf is descending by month, so the next item is the prior month
+                  const prior = sortedEtf[i + 1];
+                  const deltaT = prior ? row.holdings_tonnes - prior.holdings_tonnes : null;
+                  return (
                   <tr key={row.month} className={`border-b border-border/30 ${i % 2 ? 'bg-secondary/5' : ''}`}>
                     <td className="px-3 py-2 font-mono text-foreground">{row.month}</td>
                     {editingMonth === row.month ? (
