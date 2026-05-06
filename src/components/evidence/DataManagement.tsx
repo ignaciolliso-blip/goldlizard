@@ -245,17 +245,23 @@ export default function DataManagement({ physicalDemand, etfFlows, minerPrices, 
                   <th className="text-left px-3 py-2">Month</th>
                   <th className="text-right px-3 py-2">Flows ($B)</th>
                   <th className="text-right px-3 py-2">Holdings (t)</th>
+                  <th className="text-right px-3 py-2">Δ Tonnes</th>
                   <th className="w-16" />
                 </tr>
               </thead>
               <tbody>
-                {sortedEtf.map((row, i) => (
+                {sortedEtf.map((row, i) => {
+                  // sortedEtf is descending by month, so the next item is the prior month
+                  const prior = sortedEtf[i + 1];
+                  const deltaT = prior ? row.holdings_tonnes - prior.holdings_tonnes : null;
+                  return (
                   <tr key={row.month} className={`border-b border-border/30 ${i % 2 ? 'bg-secondary/5' : ''}`}>
                     <td className="px-3 py-2 font-mono text-foreground">{row.month}</td>
                     {editingMonth === row.month ? (
                       <>
                         <td className="px-2 py-1.5"><input type="number" step="0.1" value={editFlows} onChange={e => setEditFlows(Number(e.target.value))} className={`${inputCls} w-20 text-right`} /></td>
                         <td className="px-2 py-1.5"><input type="number" value={editHoldings} onChange={e => setEditHoldings(Number(e.target.value))} className={`${inputCls} w-20 text-right`} /></td>
+                        <td className="px-3 py-2 text-right font-mono text-muted-foreground">—</td>
                         <td className="px-2 py-2 text-right">
                           <button onClick={() => saveEtfEdit(row.month)} className="text-bullish mr-1"><Check className="w-3 h-3 inline" /></button>
                           <button onClick={() => setEditingMonth(null)} className="text-destructive"><X className="w-3 h-3 inline" /></button>
@@ -267,13 +273,17 @@ export default function DataManagement({ physicalDemand, etfFlows, minerPrices, 
                           {row.flows_usd_bn > 0 ? '+' : ''}{row.flows_usd_bn.toFixed(1)}
                         </td>
                         <td className="px-3 py-2 text-right font-mono text-foreground">{Math.round(row.holdings_tonnes).toLocaleString()}</td>
+                        <td className={`px-3 py-2 text-right font-mono ${deltaT === null ? 'text-muted-foreground' : deltaT > 0 ? 'text-bullish' : deltaT < 0 ? 'text-destructive' : 'text-foreground'}`}>
+                          {deltaT === null ? '—' : `${deltaT > 0 ? '+' : ''}${Math.round(deltaT).toLocaleString()}`}
+                        </td>
                         <td className="px-2 py-2 text-right">
                           <button onClick={() => { setEditingMonth(row.month); setEditFlows(row.flows_usd_bn); setEditHoldings(row.holdings_tonnes); }} className="text-muted-foreground hover:text-foreground"><Pencil className="w-3 h-3" /></button>
                         </td>
                       </>
                     )}
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
