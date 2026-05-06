@@ -16,7 +16,12 @@ interface Props {
 
 export default function GoldHistoricalPNAVChart({ data, currentPNAV, currentGoldPrice }: Props) {
   const isMobile = useIsMobile();
-  const GOLD_CYCLE_TABLE = useMemo(() => buildGoldCycleTable(currentGoldPrice ?? 0, currentPNAV), [currentGoldPrice, currentPNAV]);
+  // Use the latest published P/NAV annotation so the cycle table reconciles with the chart above.
+  const latestAnnotation = GOLD_PNAV_ANNOTATIONS[GOLD_PNAV_ANNOTATIONS.length - 1];
+  const publishedPNAV = latestAnnotation.pnav;
+  const publishedDate = latestAnnotation.date; // e.g. "2026-03"
+  const publishedDateLabel = new Date(publishedDate + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  const GOLD_CYCLE_TABLE = useMemo(() => buildGoldCycleTable(currentGoldPrice ?? 0, publishedPNAV), [currentGoldPrice, publishedPNAV]);
 
   const chartData = useMemo(() => {
     if (data.length > 0) {
