@@ -257,9 +257,6 @@ export default function DataManagement({ physicalDemand, etfFlows, minerPrices, 
                   return (
                   <tr key={row.month} className={`border-b border-border/30 ${i % 2 ? 'bg-secondary/5' : ''}`}>
                     <td className="px-3 py-2 font-mono text-foreground">{row.month}</td>
-                  return (
-                  <tr key={row.month} className={`border-b border-border/30 ${i % 2 ? 'bg-secondary/5' : ''}`}>
-                    <td className="px-3 py-2 font-mono text-foreground">{row.month}</td>
                     {editingMonth === row.month ? (
                       <>
                         <td className="px-2 py-1.5"><input type="number" step="0.1" value={editFlows} onChange={e => setEditFlows(Number(e.target.value))} className={`${inputCls} w-20 text-right`} /></td>
