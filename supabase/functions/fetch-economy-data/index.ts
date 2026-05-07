@@ -362,6 +362,16 @@ serve(async (req) => {
   const fetchedSeries: string[] = [];
   const errors: string[] = [];
 
+  // Quick cache short-circuit: if all jobs are fresh, return immediately without doing work.
+  const allFresh = !body.force_refresh && cached?.last_fetched && cached.fetch_status === "ok"
+    && (Date.now() - new Date(cached.last_fetched).getTime() < CACHE_TTL_MS);
+  if (allFresh) {
+    return new Response(
+      JSON.stringify({ fetched: 0, cached: true, errors: [], duration_ms: Date.now() - startedAt }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
   const rawFetch = async (j: Job): Promise<Obs[]> => {
     if (j.source === "fred") return fetchFred(j.fred_series!, fredKey);
     if (j.source === "ecb") return fetchEcb(j.ecb_path!);
