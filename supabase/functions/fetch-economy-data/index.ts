@@ -518,13 +518,17 @@ serve(async (req) => {
         notes: job.notes || null,
       }, { onConflict: "indicator_id,region" });
     }
-  }
+  };
+
+  // Run job processing in the background so we return immediately and avoid CPU time limit.
+  // @ts-ignore - EdgeRuntime is available in Supabase Edge Functions
+  EdgeRuntime.waitUntil(processJobs().catch((e) => console.error("processJobs failed:", e)));
 
   return new Response(
     JSON.stringify({
-      fetched: fetchedSeries.length,
-      series: fetchedSeries,
-      errors,
+      queued: true,
+      indicator_id: body.indicator_id,
+      region: body.region,
       duration_ms: Date.now() - startedAt,
     }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } },
