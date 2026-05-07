@@ -362,6 +362,16 @@ serve(async (req) => {
   const fetchedSeries: string[] = [];
   const errors: string[] = [];
 
+  // Quick cache short-circuit: if all jobs are fresh, return immediately without doing work.
+  const allFresh = !body.force_refresh && cached?.last_fetched && cached.fetch_status === "ok"
+    && (Date.now() - new Date(cached.last_fetched).getTime() < CACHE_TTL_MS);
+  if (allFresh) {
+    return new Response(
+      JSON.stringify({ fetched: 0, cached: true, errors: [], duration_ms: Date.now() - startedAt }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
   const rawFetch = async (j: Job): Promise<Obs[]> => {
     if (j.source === "fred") return fetchFred(j.fred_series!, fredKey);
     if (j.source === "ecb") return fetchEcb(j.ecb_path!);
@@ -372,6 +382,7 @@ serve(async (req) => {
     throw new Error(`raw fetch unsupported for ${j.source}`);
   };
 
+  const processJobs = async () => {
   for (const job of jobs) {
     const key = `${job.indicator_id}|${job.region}`;
     if (!body.force_refresh && cached?.last_fetched && cached.fetch_status === "ok") {
@@ -507,13 +518,17 @@ serve(async (req) => {
         notes: job.notes || null,
       }, { onConflict: "indicator_id,region" });
     }
-  }
+  };
+
+  // Run job processing in the background so we return immediately and avoid CPU time limit.
+  // @ts-ignore - EdgeRuntime is available in Supabase Edge Functions
+  EdgeRuntime.waitUntil(processJobs().catch((e) => console.error("processJobs failed:", e)));
 
   return new Response(
     JSON.stringify({
-      fetched: fetchedSeries.length,
-      series: fetchedSeries,
-      errors,
+      queued: true,
+      indicator_id: body.indicator_id,
+      region: body.region,
       duration_ms: Date.now() - startedAt,
     }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } },
