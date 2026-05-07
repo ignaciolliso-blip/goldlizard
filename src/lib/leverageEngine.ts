@@ -42,11 +42,19 @@ export function computeLeverage(
 ): LeverageResult | null {
   if (!miners.length) return null;
 
-  // Weighted avg P/NAV (by nav_usd_bn, fallback equal weight)
+  // Prefer the latest PUBLISHED sector P/NAV from sector_pnav_history so
+  // every consumer (Signal lenses, Analysis leverage panel, Positioning,
+  // Projections, Narrator, Historical chart "TODAY" row) reads the same
+  // number. Fall back to NAV-weighted average of individual miner P/NAVs
+  // only if no published history row exists.
+  const latestPublished = pnavHistory.length > 0
+    ? [...pnavHistory].sort((a, b) => a.date.localeCompare(b.date)).pop()
+    : null;
   const totalNav = miners.reduce((s, m) => s + m.nav_usd_bn, 0);
-  const sectorPNAV = totalNav > 0
+  const computedFromMiners = totalNav > 0
     ? miners.reduce((s, m) => s + m.p_nav * m.nav_usd_bn, 0) / totalNav
     : miners.reduce((s, m) => s + m.p_nav, 0) / miners.length;
+  const sectorPNAV = latestPublished?.pnav ?? computedFromMiners;
 
   return {
     sectorPNAV,
