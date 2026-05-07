@@ -382,6 +382,7 @@ serve(async (req) => {
     throw new Error(`raw fetch unsupported for ${j.source}`);
   };
 
+  const processJobs = async () => {
   for (const job of jobs) {
     const key = `${job.indicator_id}|${job.region}`;
     if (!body.force_refresh && cached?.last_fetched && cached.fetch_status === "ok") {
