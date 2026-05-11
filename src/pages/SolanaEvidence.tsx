@@ -101,7 +101,7 @@ const SolanaEvidence = () => {
           stablecoin_supply: metrics.stablecoin_supply,
         },
       });
-      toast({ title: 'Forecast saved', description: 'Your forecast has been recorded' });
+      toast({ title: 'Forecast saved', description: 'Forecast has been recorded' });
       setTarget1y('');
       setTarget3y('');
       setForecastBasis('');
@@ -238,7 +238,7 @@ const SolanaEvidence = () => {
             <div className="bg-card border border-card-border rounded-xl p-5 space-y-5">
               <p className="text-[11px] font-mono tracking-[0.2em] text-solana uppercase">Forecast Log — Solana</p>
               <p className="text-xs text-muted-foreground">
-                Record your conviction. Track accuracy over time. Accountability prevents bias.
+                Record conviction. Track accuracy over time. Accountability prevents bias.
               </p>
 
               {/* Save new forecast */}

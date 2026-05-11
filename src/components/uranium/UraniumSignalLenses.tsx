@@ -361,7 +361,7 @@ function LeverageCard({ leverage, spotPriceOverride }: { leverage: UraniumLevera
           NAV = present value of uranium reserves at forward contract prices, minus production costs, discounted at 8-10%.
         </p>
         <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
-          A P/NAV of <span className="font-mono font-semibold text-foreground">1.0×</span> means you're paying exactly what the uranium in the ground is worth.
+          A P/NAV of <span className="font-mono font-semibold text-foreground">1.0×</span> means the market is paying exactly what the uranium in the ground is worth.
           Below 1.0× = buying at a discount. Above 1.0× = paying a premium for growth or jurisdiction.
         </p>
       </div>

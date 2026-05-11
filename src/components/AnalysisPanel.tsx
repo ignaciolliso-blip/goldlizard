@@ -169,7 +169,7 @@ const AnalysisPanel = ({
           <div className="p-3 sm:p-4 space-y-4 sm:space-y-5">
             {/* Probability Bar */}
             <div>
-              <GuideTooltip id="prob-bar" text="The GDI reading automatically maps to scenario probabilities using a Gaussian kernel function. A higher GDI shifts probability toward the bull scenario. These update every time the data refreshes — you never set them manually." position="bottom">
+              <GuideTooltip id="prob-bar" text="The GDI reading automatically maps to scenario probabilities using a Gaussian kernel function. A higher GDI shifts probability toward the bull scenario. These update every time the data refreshes — they are never set manually." position="bottom">
                 <h4 className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Probabilities</h4>
               </GuideTooltip>
               <div className="h-6 rounded-full overflow-hidden flex text-[10px] font-mono font-semibold">
@@ -234,7 +234,7 @@ const AnalysisPanel = ({
             {bull && base && bear && (
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <GuideTooltip id="ev-col" text="Expected Value = probability-weighted average of the three scenario prices. This is your single best estimate at each time horizon, accounting for all scenarios." position="bottom">
+                  <GuideTooltip id="ev-col" text="Expected Value = probability-weighted average of the three scenario prices. This is the single best estimate at each time horizon, accounting for all scenarios." position="bottom">
                     <h4 className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Expected Value & CAGR</h4>
                   </GuideTooltip>
                 </div>

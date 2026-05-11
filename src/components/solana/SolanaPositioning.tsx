@@ -100,7 +100,7 @@ function derivePositioning(anchor: SolanaAnchorResult, forces: SolanaForcesResul
   if (trend === 'expanding' && verdict === 'growing') {
     return {
       action: 'HOLD — MONITOR CLOSELY',
-      detail: 'Fundamentals are growing but the market is pricing in that growth aggressively. The FDV/Fee ratio is expanding, meaning you\'re paying more per dollar of fee revenue than before.',
+      detail: 'Fundamentals are growing but the market is pricing in that growth aggressively. The FDV/Fee ratio is expanding, meaning the market is paying more per dollar of fee revenue than before.',
       color: 'neutral',
     };
   }
@@ -159,7 +159,7 @@ function buildNarrative(anchor: SolanaAnchorResult, forces: SolanaForcesResult, 
   }
 
   if (verdict === 'contracting') {
-    return `Solana's network activity is contracting. TVL, stablecoin supply, and transaction volume are declining. The FDV/Fee ratio is ${ratioStr}, ${anchor.ratioTrend6m === 'expanding' ? 'and expanding — the market is paying MORE per dollar of fee revenue. This is the opposite of what you want to see.' : anchor.ratioTrend6m === 'compressing' ? 'though compressing as price adjusts to weaker fundamentals.' : 'and flat.'} SOL at ${formatUSD(solPrice)} reflects narrative premium, not fundamental value. Do not add to positions until metrics stabilise.`;
+    return `Solana's network activity is contracting. TVL, stablecoin supply, and transaction volume are declining. The FDV/Fee ratio is ${ratioStr}, ${anchor.ratioTrend6m === 'expanding' ? 'and expanding — the market is paying MORE per dollar of fee revenue. This is the opposite of a healthy setup.' : anchor.ratioTrend6m === 'compressing' ? 'though compressing as price adjusts to weaker fundamentals.' : 'and flat.'} SOL at ${formatUSD(solPrice)} reflects narrative premium, not fundamental value. Do not add to positions until metrics stabilise.`;
   }
 
   return `Solana is generating ${feesStr} in annualised fee revenue. The FDV/Fee ratio is ${ratioStr} (vs Ethereum at ${ethRatioStr}). The ratio is ${anchor.ratioTrend6m}, which ${anchor.ratioTrend6m === 'compressing' ? 'indicates fees are growing faster than price — a healthy sign' : anchor.ratioTrend6m === 'expanding' ? 'suggests the market is getting ahead of fundamentals' : 'shows no clear direction'}. Network activity is ${verdict}.`;

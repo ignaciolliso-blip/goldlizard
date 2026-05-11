@@ -144,7 +144,7 @@ export default function SignalProjectionTable({ anchorResult, leverageResult, sc
             </tr>
             <tr className="border-b border-border">
               <td className="px-4 py-3 text-sm text-muted-foreground">
-                <GuideTooltip id="proj-gold-cagr" text="Compound annual growth rate — what your investment would earn per year. Bold values exceed gold's long-run average of 7.9%.">
+                <GuideTooltip id="proj-gold-cagr" text="Compound annual growth rate — annualised return on the investment. Bold values exceed gold's long-run average of 7.9%.">
                   Gold Impl. CAGR
                 </GuideTooltip>
               </td>

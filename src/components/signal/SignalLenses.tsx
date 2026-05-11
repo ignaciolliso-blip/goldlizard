@@ -168,7 +168,7 @@ function LeverageCard({ leverage, currentGDXPrice }: { leverage: LeverageResult 
   const clampPct = (v: number) => Math.max(0, Math.min(100, ((v - gaugeMin) / (gaugeMax - gaugeMin)) * 100));
 
   return (
-    <CardShell title="THE LEVERAGE" subtitle="Are gold miners cheap or expensive based on the value of their gold in the ground?" icon={<Pickaxe size={16} />} guideId="lens-leverage" guideText="The Leverage lens measures P/NAV — whether you're paying a premium or discount for the gold in the ground. Below 0.8× = discount. 0.8-1.5× = fair value. Above 1.5× = premium.">
+    <CardShell title="THE LEVERAGE" subtitle="Are gold miners cheap or expensive based on the value of their gold in the ground?" icon={<Pickaxe size={16} />} guideId="lens-leverage" guideText="The Leverage lens measures P/NAV — whether the market is paying a premium or discount for the gold in the ground. Below 0.8× = discount. 0.8-1.5× = fair value. Above 1.5× = premium.">
       <div className="space-y-4">
         <div className="text-center space-y-1">
           <p className="text-sm text-muted-foreground">Sector P/NAV</p>

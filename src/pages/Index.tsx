@@ -148,7 +148,7 @@ const Index = () => {
         <PageIntro storageKey="signal_intro_dismissed">
           <h3 className="font-display text-foreground mb-3">How to Read This Page</h3>
           <p className="text-muted-foreground leading-relaxed mb-4">
-            This page answers one question: <span className="text-foreground font-medium">should you buy, hold, or sell gold and gold miners?</span>
+            This page answers one question: <span className="text-foreground font-medium">buy, hold, or sell gold and gold miners?</span>
           </p>
           <p className="text-muted-foreground leading-relaxed mb-2">It uses three independent lenses:</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
