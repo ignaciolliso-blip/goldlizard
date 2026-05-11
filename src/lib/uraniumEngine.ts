@@ -303,7 +303,7 @@ export const URANIUM_PROJECTIONS = {
 export function deriveLeverageConclusion(sectorPNAV: number): { text: string; detail: string; color: string } {
   if (sectorPNAV < 0.8) return {
     text: 'DEEPLY UNDERVALUED — Miners below NAV',
-    detail: 'You\'re buying uranium in the ground for less than it\'s worth. This level has historically preceded 2-3× rallies in miner equities.',
+    detail: 'The market is pricing uranium in the ground below intrinsic value. This level has historically preceded 2-3× rallies in miner equities.',
     color: 'bullish',
   };
   if (sectorPNAV < 1.0) return {

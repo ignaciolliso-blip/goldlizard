@@ -178,7 +178,7 @@ const HeroChart = ({
           </GuideTooltip>
         </div>
         <div className="flex items-center gap-3 text-[9px] sm:text-[10px] text-muted-foreground">
-          <GuideTooltip id="gold-line" text="Gold spot price in USD per ounce. This is the price you see quoted everywhere." position="bottom">
+          <GuideTooltip id="gold-line" text="Gold spot price in USD per ounce. This is the price quoted everywhere." position="bottom">
             <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-gold inline-block rounded" /> Gold</span>
           </GuideTooltip>
           <GuideTooltip id="gdi-line" text="The blue line is the GDI composite — when it's above gold (relatively), the macro says gold should be higher. When below, the macro says gold should be lower. Watch for divergences." position="bottom">

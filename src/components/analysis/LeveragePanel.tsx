@@ -103,7 +103,7 @@ export default function LeveragePanel({
             <p><span className="text-foreground">P/NAV</span> = Share Price ÷ Net Asset Value per share</p>
             <p><span className="text-foreground">NAV</span> = present value of gold reserves at forward prices,</p>
             <p className="ml-4">minus extraction costs (AISC), discounted at 5–8%.</p>
-            <p className="mt-2">A P/NAV of <span className="text-foreground">1.0×</span> means you're paying exactly what the gold in the ground is worth.</p>
+            <p className="mt-2">A P/NAV of <span className="text-foreground">1.0×</span> means the market is paying exactly what the gold in the ground is worth.</p>
             <p>Below 1.0× = buying gold reserves <span className="text-bullish">at a discount</span>.</p>
             <p>Above 1.0× = paying a <span className="text-bearish">premium</span> for growth or quality.</p>
           </div>
@@ -148,7 +148,7 @@ export default function LeveragePanel({
           </div>
           <p className="text-xs text-muted-foreground/60 mt-2 italic">
             Note: Royalty/streaming cos (FNV, WPM) always trade at higher P/NAV — no operating costs, no capex.
-            A 2.0–2.5× P/NAV for them is "fair." Producer P/NAVs tell you if the sector is cheap or expensive.
+            A 2.0–2.5× P/NAV for them is "fair." Producer P/NAVs indicate whether the sector is cheap or expensive.
           </p>
         </div>
 

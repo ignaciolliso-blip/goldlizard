@@ -34,7 +34,7 @@ export default function CopperHowToRead() {
               <div className="space-y-3 text-xs">
                 <div>
                   <p className="font-semibold text-foreground">Step 1: Anchor Gauge</p>
-                  <p>The Anchor Gap % tells you how far copper is below the price needed to build new mines. Gap &gt; 40% = the opportunity is large. Gap &lt; 25% = consider taking profits.</p>
+                  <p>The Anchor Gap % shows how far copper is below the price needed to build new mines. Gap &gt; 40% = the opportunity is large. Gap &lt; 25% = consider taking profits.</p>
                 </div>
                 <div>
                   <p className="font-semibold text-foreground">Step 2: Supply-Demand Charts</p>
@@ -46,7 +46,7 @@ export default function CopperHowToRead() {
                 </div>
                 <div>
                   <p className="font-semibold text-foreground">Step 4: Composite Signal Dashboard</p>
-                  <p>The decision table. Every equity name has a score combining Anchor (is copper cheap?) + Forces (conditions?) + Jurisdiction (country risk?) + Valuation (is this stock cheap?). The badge tells you what to do. The position sizing cap tells you how much. Red flags (insider selling, high leverage, cash burn) override the signal.</p>
+                  <p>The decision table. Every equity name has a score combining Anchor (is copper cheap?) + Forces (conditions?) + Jurisdiction (country risk?) + Valuation (is this stock cheap?). The badge indicates the recommended action. The position sizing cap indicates the maximum allocation. Red flags (insider selling, high leverage, cash burn) override the signal.</p>
                 </div>
                 <div>
                   <p className="font-semibold text-foreground">Step 5: Equity Cards</p>

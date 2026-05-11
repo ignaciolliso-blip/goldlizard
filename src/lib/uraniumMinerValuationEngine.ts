@@ -150,7 +150,7 @@ export function computeMinerValuations(
         value: valueCorrected,
         pctOfSpot,
         flag,
-        explanation: `You are paying $${fmt(valueCorrected)}/lb for every pound of uranium in the ground (${fmt(pctOfSpot * 100, 0)}% of the $${fmt(uraniumSpotPrice)}/lb spot price).`,
+        explanation: `Investors are paying $${fmt(valueCorrected)}/lb for every pound of uranium in the ground (${fmt(pctOfSpot * 100, 0)}% of the $${fmt(uraniumSpotPrice)}/lb spot price).`,
       };
     }
 

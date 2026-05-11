@@ -89,7 +89,7 @@ export function deriveLeverageConclusion(sectorPNAV: number): {
   if (sectorPNAV < 0.8) {
     return {
       text: 'UNDERVALUED — buying gold reserves at a discount',
-      detail: `At ${sectorPNAV.toFixed(1)}× P/NAV, you're paying less than what the gold in the ground is worth. Strong risk-reward.`,
+      detail: `At ${sectorPNAV.toFixed(1)}× P/NAV, the market is pricing miners below the value of the gold in the ground. Strong risk-reward.`,
       color: 'text-bullish',
     };
   }

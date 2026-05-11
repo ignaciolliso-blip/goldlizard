@@ -65,7 +65,7 @@ function deriveAnchorConclusion(
   if (solanaRatio > 10000) {
     return {
       text: 'EXTREMELY EXPENSIVE',
-      detail: `Solana trades at ${Math.round(vsEth)}× Ethereum's fee multiple. At current fee levels, you'd wait ${Math.round(solanaRatio).toLocaleString()} years to earn back your investment from fees alone. This is only justified if you believe fee revenue will grow 30-50× from here.`,
+      detail: `Solana trades at ${Math.round(vsEth)}× Ethereum's fee multiple. At current fee levels, an investor would wait ${Math.round(solanaRatio).toLocaleString()} years to earn back the investment from fees alone. This is only justified if fee revenue is expected to grow 30-50× from here.`,
       color: 'bearish',
     };
   }

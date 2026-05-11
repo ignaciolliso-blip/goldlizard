@@ -71,7 +71,7 @@ const SolanaSignal = () => {
             </div>
             <div className="bg-secondary/30 rounded-lg p-3">
               <span className="text-solana font-semibold">THE LEVERAGE</span>
-              <span className="text-muted-foreground ml-2">How should you get exposure — SOL, ETF, or ecosystem tokens?</span>
+              <span className="text-muted-foreground ml-2">How to get exposure — SOL, ETF, or ecosystem tokens?</span>
             </div>
           </div>
           <p className="text-muted-foreground text-sm mt-3">

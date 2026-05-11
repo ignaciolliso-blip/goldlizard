@@ -6,7 +6,7 @@ interface Props {
 }
 
 const exposureOptions = [
-  { option: 'SOL directly', vehicle: 'Self-custody wallet (Phantom, Solflare)', risk: 'HIGH', suit: 'Crypto-native investors. Full upside + downside. You manage keys.' },
+  { option: 'SOL directly', vehicle: 'Self-custody wallet (Phantom, Solflare)', risk: 'HIGH', suit: 'Crypto-native investors. Full upside + downside. Self-managed keys.' },
   { option: 'SOL Spot ETF', vehicle: 'BSOL (Bitwise), FSOL (Fidelity)', risk: 'MED', suit: 'Regulated, custodied. No key management. Accessible via European brokers.' },
   { option: 'Solana staking', vehicle: 'Via wallet or ETF w/ staking', risk: 'MED', suit: 'Earn ~6-7% yield on SOL. Reduces effective cost basis. 2-3 day unstaking cooldown.' },
   { option: 'Ecosystem tokens', vehicle: 'JTO, JUP, BONK, etc.', risk: 'V.HIGH', suit: 'Higher beta. Can outperform or go to zero.' },
