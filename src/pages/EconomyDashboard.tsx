@@ -118,6 +118,7 @@ export default function EconomyDashboard() {
                   emptyStateNote={indicator.emptyStateNote?.[region]}
                   regionNote={indicator.regionNote?.[region]}
                   showYoYPercent={indicator.showYoYPercent}
+                  yoyOverlayIndicator={indicator.yoyOverlayIndicator}
                 />
               ))}
             </div>
