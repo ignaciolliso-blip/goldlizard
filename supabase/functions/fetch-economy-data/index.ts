@@ -76,6 +76,14 @@ const JOBS: Job[] = [
   { indicator_id: "gdp_absolute", region: "europe", source: "imf", imf_indicator: "NGDPD", imf_country: "EURO", transform: divideBy(1000), source_label: "IMF WEO (Euro Area)" },
   { indicator_id: "gdp_absolute", region: "spain", source: "imf", imf_indicator: "NGDPD", imf_country: "ESP", transform: divideBy(1000), source_label: "IMF WEO" },
 
+  // ===== REAL GDP GROWTH (annual %, IMF WEO NGDP_RPCH) =====
+  // Overlay series for "GDP (Absolute)" charts — replaces a YoY computed
+  // from nominal-USD GDP which was distorted by FX swings for non-USD regions.
+  { indicator_id: "gdp_growth_yoy", region: "us", source: "imf", imf_indicator: "NGDP_RPCH", imf_country: "USA", source_label: "IMF WEO" },
+  { indicator_id: "gdp_growth_yoy", region: "global", source: "imf", imf_indicator: "NGDP_RPCH", imf_country: "WEOWORLD", source_label: "IMF WEO" },
+  { indicator_id: "gdp_growth_yoy", region: "europe", source: "imf", imf_indicator: "NGDP_RPCH", imf_country: "EURO", source_label: "IMF WEO (Euro Area)" },
+  { indicator_id: "gdp_growth_yoy", region: "spain", source: "imf", imf_indicator: "NGDP_RPCH", imf_country: "ESP", source_label: "IMF WEO" },
+
   // ===== GOVERNMENT DEBT ABSOLUTE (USD trillions) =====
   // US: FRED federal debt (millions of $) → trillions = ÷ 1,000,000
   { indicator_id: "debt_absolute", region: "us", source: "fred", fred_series: "GFDEBTNQ", transform: divideBy(1_000_000), source_label: "FRED" },
