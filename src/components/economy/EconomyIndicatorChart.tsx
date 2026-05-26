@@ -454,6 +454,7 @@ export default function EconomyIndicatorChart({
   emptyStateNote,
   regionNote,
   showYoYPercent,
+  yoyOverlayIndicator,
 }: EconomyIndicatorChartProps) {
   const displayTitle = cardTitle || label;
   const isNotApplicable = sourceLabel === 'N/A';
@@ -467,16 +468,47 @@ export default function EconomyIndicatorChart({
     enabled: !isNotApplicable,
   });
 
+  const { data: overlayData } = useQuery({
+    queryKey: ['economy-chart', yoyOverlayIndicator, region],
+    queryFn: () => fetchChartData(yoyOverlayIndicator!, region),
+    staleTime: 5 * 60 * 1000,
+    enabled: !isNotApplicable && !!yoyOverlayIndicator,
+  });
+
+  const overlayByYear = useMemo(() => {
+    const map = new Map<string, number>();
+    if (!overlayData) return map;
+    for (const o of overlayData.observations) {
+      if (o.value == null) continue;
+      map.set(o.observation_date.slice(0, 4), Number(o.value));
+    }
+    for (const f of overlayData.forecasts) {
+      if (f.value == null) continue;
+      const y = f.forecast_date.slice(0, 4);
+      if (!map.has(y)) map.set(y, Number(f.value));
+    }
+    return map;
+  }, [overlayData]);
+
   const { series, hasForecast, isEmpty } = useMemo(() => {
     if (!data) return { series: { data: [] as ChartDatum[], subCategories: [] }, hasForecast: false, isEmpty: true };
     const built = buildSeries(data.observations, data.forecasts, zoom, chartType);
+    // Inject overlay YoY values by matching year
+    if (yoyOverlayIndicator && overlayByYear.size > 0) {
+      for (const row of built.data) {
+        const v = overlayByYear.get(row.date.slice(0, 4));
+        if (v != null) row.yoyPct = v;
+      }
+    }
     const empty = data.observations.length === 0 && data.forecasts.length === 0;
     return {
       series: built,
       hasForecast: data.forecasts.length > 0,
       isEmpty: empty,
     };
-  }, [data, zoom, chartType]);
+  }, [data, zoom, chartType, yoyOverlayIndicator, overlayByYear]);
+
+  const overlayActive = showYoYPercent || !!yoyOverlayIndicator;
 
   // Loading state
   if (isLoading) {
