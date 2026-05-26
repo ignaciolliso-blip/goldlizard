@@ -26,6 +26,14 @@ export interface IndicatorDefinition {
   regionNote?: Partial<Record<EconomyRegion, string>>;
   /** When true, overlay a YoY % change line on a secondary right Y-axis. */
   showYoYPercent?: boolean;
+  /** When set, fetch this secondary indicator and plot its values as the
+   *  right-axis overlay (instead of computing YoY from the primary series).
+   *  Used for indicators where a naive YoY is misleading (e.g. nominal-USD GDP
+   *  for non-USD regions, where FX swings distort growth). */
+  yoyOverlayIndicator?: string;
+  /** When true, the indicator is fetched/refreshed but not rendered as its own
+   *  card on the dashboard (e.g. it only feeds another chart as an overlay). */
+  hidden?: boolean;
 }
 
 const IMF_WEO = 'https://www.imf.org/en/Publications/WEO';
