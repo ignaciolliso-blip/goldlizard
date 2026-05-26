@@ -36,6 +36,9 @@ export interface EconomyIndicatorChartProps {
   accentColor?: string;
   /** When true, overlay a YoY % change line on a secondary right Y-axis. */
   showYoYPercent?: boolean;
+  /** When set, fetch this secondary indicator (same region) and use its values
+   *  as the right-axis overlay instead of computing YoY from the primary series. */
+  yoyOverlayIndicator?: string;
 }
 
 type ZoomMode = 'full' | 'ltm';
@@ -302,6 +305,8 @@ const ChartBody = forwardRef<HTMLDivElement, ChartBodyProps>(function ChartBody(
   const baseNumeric = data.map((d) => ({ ...d, ts: parseISODate(d.date)?.getTime() ?? 0 }));
   const numericData = showYoYPercent
     ? baseNumeric.map((d, i, arr) => {
+        // If overlay already injected an authoritative yoyPct, keep it as-is.
+        if ((d as any).yoyPct != null && Number.isFinite((d as any).yoyPct as number)) return d;
         const cur = d.actual ?? d.forecast;
         if (cur == null || !Number.isFinite(cur as number)) return d;
         // Find a prior row ~365 days before within ±45 day window
@@ -451,6 +456,7 @@ export default function EconomyIndicatorChart({
   emptyStateNote,
   regionNote,
   showYoYPercent,
+  yoyOverlayIndicator,
 }: EconomyIndicatorChartProps) {
   const displayTitle = cardTitle || label;
   const isNotApplicable = sourceLabel === 'N/A';
@@ -464,16 +470,47 @@ export default function EconomyIndicatorChart({
     enabled: !isNotApplicable,
   });
 
+  const { data: overlayData } = useQuery({
+    queryKey: ['economy-chart', yoyOverlayIndicator, region],
+    queryFn: () => fetchChartData(yoyOverlayIndicator!, region),
+    staleTime: 5 * 60 * 1000,
+    enabled: !isNotApplicable && !!yoyOverlayIndicator,
+  });
+
+  const overlayByYear = useMemo(() => {
+    const map = new Map<string, number>();
+    if (!overlayData) return map;
+    for (const o of overlayData.observations) {
+      if (o.value == null) continue;
+      map.set(o.observation_date.slice(0, 4), Number(o.value));
+    }
+    for (const f of overlayData.forecasts) {
+      if (f.value == null) continue;
+      const y = f.forecast_date.slice(0, 4);
+      if (!map.has(y)) map.set(y, Number(f.value));
+    }
+    return map;
+  }, [overlayData]);
+
   const { series, hasForecast, isEmpty } = useMemo(() => {
     if (!data) return { series: { data: [] as ChartDatum[], subCategories: [] }, hasForecast: false, isEmpty: true };
     const built = buildSeries(data.observations, data.forecasts, zoom, chartType);
+    // Inject overlay YoY values by matching year
+    if (yoyOverlayIndicator && overlayByYear.size > 0) {
+      for (const row of built.data) {
+        const v = overlayByYear.get(row.date.slice(0, 4));
+        if (v != null) row.yoyPct = v;
+      }
+    }
     const empty = data.observations.length === 0 && data.forecasts.length === 0;
     return {
       series: built,
       hasForecast: data.forecasts.length > 0,
       isEmpty: empty,
     };
-  }, [data, zoom, chartType]);
+  }, [data, zoom, chartType, yoyOverlayIndicator, overlayByYear]);
+
+  const overlayActive = showYoYPercent || !!yoyOverlayIndicator;
 
   // Loading state
   if (isLoading) {
@@ -567,7 +604,7 @@ export default function EconomyIndicatorChart({
           unit={unit}
           height={220}
           hasForecast={hasForecast}
-          showYoYPercent={showYoYPercent}
+          showYoYPercent={overlayActive}
         />
         <div className="flex items-center justify-between gap-3 pt-1">
           {notes || regionNote ? (
@@ -599,7 +636,7 @@ export default function EconomyIndicatorChart({
               unit={unit}
               height={480}
               hasForecast={hasForecast}
-              showYoYPercent={showYoYPercent}
+              showYoYPercent={overlayActive}
             />
             <div className="flex items-center justify-between gap-3 text-xs">
               <a
