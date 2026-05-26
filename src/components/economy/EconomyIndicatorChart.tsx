@@ -305,6 +305,8 @@ const ChartBody = forwardRef<HTMLDivElement, ChartBodyProps>(function ChartBody(
   const baseNumeric = data.map((d) => ({ ...d, ts: parseISODate(d.date)?.getTime() ?? 0 }));
   const numericData = showYoYPercent
     ? baseNumeric.map((d, i, arr) => {
+        // If overlay already injected an authoritative yoyPct, keep it as-is.
+        if (d.yoyPct != null && Number.isFinite(d.yoyPct as number)) return d;
         const cur = d.actual ?? d.forecast;
         if (cur == null || !Number.isFinite(cur as number)) return d;
         // Find a prior row ~365 days before within ±45 day window
