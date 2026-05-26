@@ -36,6 +36,9 @@ export interface EconomyIndicatorChartProps {
   accentColor?: string;
   /** When true, overlay a YoY % change line on a secondary right Y-axis. */
   showYoYPercent?: boolean;
+  /** When set, fetch this secondary indicator (same region) and use its values
+   *  as the right-axis overlay instead of computing YoY from the primary series. */
+  yoyOverlayIndicator?: string;
 }
 
 type ZoomMode = 'full' | 'ltm';
