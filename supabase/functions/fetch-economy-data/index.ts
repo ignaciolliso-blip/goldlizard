@@ -526,7 +526,10 @@ serve(async (req) => {
         notes: job.notes || null,
       }, { onConflict: "indicator_id,region" });
     }
+  }
   };
+
+
 
   // Run job processing in the background so we return immediately and avoid CPU time limit.
   // @ts-ignore - EdgeRuntime is available in Supabase Edge Functions
