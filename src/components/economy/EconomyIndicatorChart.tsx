@@ -604,7 +604,7 @@ export default function EconomyIndicatorChart({
           unit={unit}
           height={220}
           hasForecast={hasForecast}
-          showYoYPercent={showYoYPercent}
+          showYoYPercent={overlayActive}
         />
         <div className="flex items-center justify-between gap-3 pt-1">
           {notes || regionNote ? (
