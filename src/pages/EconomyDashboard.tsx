@@ -95,7 +95,7 @@ export default function EconomyDashboard() {
         </div>
 
         {/* Indicator rows */}
-        {INDICATOR_DEFINITIONS.map((indicator) => (
+        {INDICATOR_DEFINITIONS.filter((i) => !i.hidden).map((indicator) => (
           <section key={indicator.id} className="space-y-3">
             <div className="border-b border-border/40 pb-2">
               <h2 className="font-display text-lg text-foreground">{indicator.label}</h2>
