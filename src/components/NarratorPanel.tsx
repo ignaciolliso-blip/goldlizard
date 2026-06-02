@@ -170,7 +170,7 @@ const NarratorPanel = ({ asset, currentPrice, dashboardData, dataHash, accentCol
                       className={`flex items-center gap-1.5 text-xs ${accentBg} text-white px-2.5 py-1 rounded-md hover:opacity-90 transition-opacity`}
                     >
                       <Save size={12} />
-                      Update Analysis
+                      Update Analysis and Generate new +30 day prediction
                     </button>
                   </div>
                 </div>

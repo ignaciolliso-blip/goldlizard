@@ -45,7 +45,7 @@ export default function AnalysisHistoryTab({ snapshots, loading, onLoad, accentC
   if (snapshots.length === 0) {
     return (
       <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
-        No snapshots yet — click Update Analysis to save the first prediction.
+        No snapshots yet — click Update Analysis and Generate new +30 day prediction to save the first prediction.
       </div>
     );
   }
