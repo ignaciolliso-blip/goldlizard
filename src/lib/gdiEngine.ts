@@ -224,14 +224,9 @@ export function calculateGDI(
     aligned.set('PHYSICAL_DEMAND', quarterlyToDailyMap(demandEntries, allDates));
   }
 
-  // Tier 2: ETF Flows
-  if (etfFlows.length > 0) {
-    const etfEntries = etfFlows.map(e => ({
-      date: `${e.month}-01`,
-      value: e.flows_usd_bn,
-    }));
-    aligned.set('ETF_FLOWS', forwardFill(etfEntries as Observation[], allDates));
-  }
+  // NOTE: Gold ETF flows are deliberately NOT loaded into the GDI. They are a
+  // reactive/output signal (flows follow price), so they belong in evidence and
+  // downstream reconciliation, not as a predictor input.
 
   const ROLLING_WINDOW = 2520; // ~10 years of trading days
 
