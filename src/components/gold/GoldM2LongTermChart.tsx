@@ -318,10 +318,10 @@ export default function GoldM2LongTermChart({ currentGoldPrice, currentG5M2Billi
           <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.4} />
             <XAxis
-              dataKey="year"
+              dataKey="label"
               stroke="hsl(var(--muted-foreground))"
               tick={{ fontSize: 11 }}
-              tickFormatter={(v) => String(v)}
+              tickFormatter={(v) => useMonthly ? String(v).slice(0, 7) : String(v)}
               interval={xInterval}
             />
             <YAxis
