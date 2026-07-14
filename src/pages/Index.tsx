@@ -187,6 +187,8 @@ const Index = () => {
               ? rawData.fredResults['WM2NS'][rawData.fredResults['WM2NS'].length - 1].value * 4.6
               : undefined
           }
+          goldSpotMonthly={goldSpot}
+          usM2Monthly={rawData?.fredResults['WM2NS'] || []}
         />
 
         {/* Band 2: Projection Table */}
