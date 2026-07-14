@@ -32,8 +32,10 @@ export const VARIABLE_CONFIG: VariableConfig[] = [
   { id: 'REAL_FFR', name: 'Real Fed Funds Rate', tier: 'structural', weight: 0.08, unit: '%', invert: true, showCard: true },
 
   // Tier 2: Demand Flows (35%)
-  { id: 'PHYSICAL_DEMAND', name: 'Physical Gold Demand', tier: 'demand', weight: 0.20, unit: 't/qtr', invert: false, showCard: true },
-  { id: 'ETF_FLOWS', name: 'Gold ETF Flows', tier: 'demand', weight: 0.15, unit: '$B/mo', invert: false, showCard: true },
+  // NOTE: Gold ETF flows are intentionally excluded as a GDI input — they are a
+  // reactive/output variable (flows chase price), not a leading driver. They are
+  // still tracked as evidence and used downstream, but do not enter the index.
+  { id: 'PHYSICAL_DEMAND', name: 'Physical Gold Demand', tier: 'demand', weight: 0.35, unit: 't/qtr', invert: false, showCard: true },
 
   // Tier 3: Market Conditions (35%)
   { id: 'DFII10', name: '10Y Real Yield', tier: 'conditions', weight: 0.12, unit: '%', invert: true, showCard: true },
