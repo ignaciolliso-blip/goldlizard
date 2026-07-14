@@ -90,7 +90,7 @@ function ChartTooltip({ active, payload }: any) {
   return (
     <div className="bg-card border border-border rounded-lg p-3 shadow-lg text-xs space-y-1.5 min-w-[220px]">
       <div className="flex items-center justify-between border-b border-border pb-1 mb-1">
-        <span className="font-semibold text-foreground">{d.year}</span>
+        <span className="font-semibold text-foreground">{d.label ?? d.year}</span>
         <span className={`text-[10px] font-mono ${d.confidence === 'verified' ? 'text-green-400/80' : 'text-muted-foreground/70'}`}>
           {d.confidence === 'verified' ? '✓ verified' : '~ estimated'}
         </span>
