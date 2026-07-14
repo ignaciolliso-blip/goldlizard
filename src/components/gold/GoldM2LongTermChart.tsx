@@ -119,9 +119,13 @@ function ChartTooltip({ active, payload }: any) {
   );
 }
 
+interface Obs { date: string; value: number }
+
 interface Props {
   currentGoldPrice?: number;
   currentG5M2Billions?: number;  // G5 Global M2 = live FRED US M2 × 4.6
+  goldSpotMonthly?: Obs[];       // monthly (or higher-freq) gold spot series
+  usM2Monthly?: Obs[];           // FRED WM2NS in billions of USD
 }
 
 type RangeKey = '100y' | '50y' | '20y' | '10y' | '5y' | '3y' | '1y' | 'ytd';
@@ -136,7 +140,10 @@ const RANGES: { key: RangeKey; label: string; years: number | 'ytd' }[] = [
   { key: 'ytd',  label: 'YTD',  years: 'ytd' },
 ];
 
-export default function GoldM2LongTermChart({ currentGoldPrice, currentG5M2Billions }: Props) {
+const MONTHLY_RANGES: RangeKey[] = ['20y', '10y', '5y', '3y', '1y', 'ytd'];
+const G5_MULT = 4.6;
+
+export default function GoldM2LongTermChart({ currentGoldPrice, currentG5M2Billions, goldSpotMonthly, usM2Monthly }: Props) {
   const isMobile = useIsMobile();
   const [showAnnotations, setShowAnnotations] = useState(true);
   const [range, setRange] = useState<RangeKey>('100y');
@@ -157,34 +164,90 @@ export default function GoldM2LongTermChart({ currentGoldPrice, currentG5M2Billi
       const g5M2 = r.g5M2_T * 1e12;
       const ratio = (goldMarketCap / g5M2) * 100;
       return {
+        label: String(r.year),
         year: r.year,
         goldMarketCap,
         g5M2,
         ratio,
         goldPrice: price,
         goldTonnes: r.goldTonnes,
-        confidence: r.confidence,
+        confidence: r.confidence as 'verified' | 'estimated',
       };
     });
   }, [currentGoldPrice, currentG5M2Billions]);
 
+  const useMonthly = MONTHLY_RANGES.includes(range) && !!goldSpotMonthly?.length && !!usM2Monthly?.length;
+
+  const monthlyData = useMemo(() => {
+    if (!useMonthly) return [];
+    // Roll gold spot into monthly buckets (use last obs each month)
+    const gm = new Map<string, number>();
+    for (const o of goldSpotMonthly!) gm.set(o.date.slice(0, 7), o.value);
+    const mm = new Map<string, number>();
+    for (const o of usM2Monthly!) mm.set(o.date.slice(0, 7), o.value);
+
+    const months = Array.from(gm.keys()).sort();
+    if (!months.length) return [];
+
+    // Tonnes: interpolate between annual RAW_DATA anchors
+    const tonneAnchors = RAW_DATA.map(r => ({ year: r.year, tonnes: r.goldTonnes }));
+    function tonnesAt(year: number, monthIdx: number): number {
+      const t = year + monthIdx / 12;
+      for (let i = 0; i < tonneAnchors.length - 1; i++) {
+        const a = tonneAnchors[i], b = tonneAnchors[i + 1];
+        if (t >= a.year && t <= b.year) {
+          const f = (t - a.year) / (b.year - a.year);
+          return a.tonnes + f * (b.tonnes - a.tonnes);
+        }
+      }
+      return tonneAnchors[tonneAnchors.length - 1].tonnes;
+    }
+
+    let lastM2: number | null = null;
+    const rows: typeof allData = [];
+    for (const m of months) {
+      const [yStr, moStr] = m.split('-');
+      const y = Number(yStr); const mo = Number(moStr) - 1;
+      if (mm.has(m)) lastM2 = mm.get(m)!;
+      const price = gm.get(m)!;
+      if (lastM2 == null || !price) continue;
+      const tonnes = tonnesAt(y, mo);
+      const oz = tonnes * OZ_PER_TONNE;
+      const goldMarketCap = price * oz;
+      const g5M2 = lastM2 * 1e9 * G5_MULT;
+      rows.push({
+        label: m,
+        year: y + mo / 12,
+        goldMarketCap,
+        g5M2,
+        ratio: (goldMarketCap / g5M2) * 100,
+        goldPrice: price,
+        goldTonnes: Math.round(tonnes),
+        confidence: 'verified',
+      });
+    }
+    return rows;
+  }, [useMonthly, goldSpotMonthly, usM2Monthly, allData]);
+
   const chartData = useMemo(() => {
+    const source = useMonthly ? monthlyData : allData;
     if (range === 'ytd') {
       const currentYear = new Date().getFullYear();
-      const filtered = allData.filter(d => d.year >= currentYear);
-      return filtered.length ? filtered : allData.slice(-1);
+      const filtered = source.filter(d => d.year >= currentYear);
+      return filtered.length ? filtered : source.slice(-1);
     }
     const years = RANGES.find(r => r.key === range)?.years as number;
-    const cutoff = (allData[allData.length - 1]?.year ?? new Date().getFullYear()) - years;
-    const filtered = allData.filter(d => d.year >= cutoff);
-    return filtered.length >= 2 ? filtered : allData.slice(-2);
-  }, [allData, range]);
+    const latestYear = source[source.length - 1]?.year ?? new Date().getFullYear();
+    const cutoff = latestYear - years;
+    const filtered = source.filter(d => d.year >= cutoff);
+    return filtered.length >= 2 ? filtered : source.slice(-2);
+  }, [useMonthly, monthlyData, allData, range]);
 
   const maxAbsolute = useMemo(() => Math.max(...chartData.map(d => Math.max(d.goldMarketCap, d.g5M2))), [chartData]);
   const maxRatio    = useMemo(() => Math.max(...chartData.map(d => d.ratio)) * 1.2, [chartData]);
   const currentRatio = chartData[chartData.length - 1]?.ratio ?? 0;
   const ratioColor = currentRatio > 25 ? 'text-red-400' : currentRatio < 8 ? 'text-green-400' : 'text-yellow-400';
-  const xInterval = chartData.length > 40 ? (isMobile ? 9 : 4) : chartData.length > 15 ? 2 : chartData.length > 6 ? 1 : 0;
+  const xInterval = chartData.length > 60 ? (isMobile ? 23 : 11) : chartData.length > 40 ? (isMobile ? 9 : 4) : chartData.length > 15 ? 2 : chartData.length > 6 ? 1 : 0;
 
   return (
     <div className="bg-card border border-border rounded-xl p-5 sm:p-7 space-y-4">
