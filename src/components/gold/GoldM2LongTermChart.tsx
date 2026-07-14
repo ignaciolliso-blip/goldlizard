@@ -369,10 +369,10 @@ export default function GoldM2LongTermChart({ currentGoldPrice, currentG5M2Billi
               dot={false}
               name="G5 Global M2"
             />
-            {showAnnotations && ANNOTATIONS.map(a => (
+            {showAnnotations && !useMonthly && ANNOTATIONS.map(a => (
               <ReferenceLine
                 key={a.year}
-                x={a.year}
+                x={String(a.year)}
                 yAxisId="left"
                 stroke="hsl(var(--muted-foreground))"
                 strokeDasharray="2 4"
