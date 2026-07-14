@@ -79,7 +79,6 @@ export const DEFAULT_PROJECTIONS: Omit<ProjectionRow, 'current'>[] = [
   { variableId: 'GFDEGDQ188S', '3m': 122, '6m': 124, '1y': 127, '3y': 135, '5y': 142, method: 'CBO 10-year baseline projection', confidence: 5 },
   { variableId: 'REAL_FFR', '3m': 0.3, '6m': 0.0, '1y': -0.3, '3y': -0.5, '5y': -0.3, method: 'Fed Funds futures + structural attractor toward negative', confidence: 3 },
   { variableId: 'PHYSICAL_DEMAND', '3m': 500, '6m': 490, '1y': 470, '3y': 400, '5y': 350, method: 'S-curve saturation: CB target 25% reserves, current 20%', confidence: 3 },
-  { variableId: 'ETF_FLOWS', '3m': 5, '6m': 4, '1y': 3, '3y': 2, '5y': 2, method: 'Mean reversion from extreme; partially rate-dependent', confidence: 2 },
   { variableId: 'DFII10', '3m': 1.8, '6m': 1.5, '1y': 1.2, '3y': 0.8, '5y': 1.0, method: 'TIPS term structure + gradual easing', confidence: 2 },
   { variableId: 'DTWEXBGS', '3m': 98, '6m': 96, '1y': 94, '3y': 90, '5y': 88, method: 'JPM: DXY ~9% overvalued; structural weakening', confidence: 2 },
   { variableId: 'T10YIE', '3m': 2.5, '6m': 2.6, '1y': 2.7, '3y': 2.5, '5y': 2.4, method: 'Elevated near-term from oil; normalise long-term', confidence: 2 },
